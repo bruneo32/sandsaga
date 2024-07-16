@@ -1,0 +1,23 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Build program",
+			"preLaunchTask": "build",
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Run program",
+			"preLaunchTask": "run",
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Build and Run program",
+			"preLaunchTask": "build_run",
+		}
+	]
+}

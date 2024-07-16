@@ -1,0 +1,45 @@
+#!/bin/bash
+
+HERE=$(dirname "$(readlink -f "$0")")
+BUILD_DIR="$HERE/build"
+if [[ ! -d "$BUILD_DIR" ]]; then
+	mkdir -p "$BUILD_DIR"
+fi
+
+CLEAN_CMD="rm -Rf $BUILD_DIR/*"
+INSTALL_CMD='xargs -a requirements.txt sudo apt install'
+BUILD_CMD="cmake --build $BUILD_DIR"
+
+CMAKE_RELEASE_CMD="cmake -DCMAKE_BUILD_TYPE=Release -S $HERE -B $BUILD_DIR/"
+CMAKE_DEBUG_CMD="cmake -DCMAKE_BUILD_TYPE=Debug -S $HERE -B $BUILD_DIR/"
+
+
+if [[ -z "$1" ]]; then
+	echo "Usage: $0 [<action>|-c <target>]"
+	echo "Available actions:"
+	echo "  clean:    $CLEAN_CMD"
+	echo "  install:  $INSTALL_CMD"
+	echo "  build:    $BUILD_CMD"
+	echo "Available targets:"
+	echo "  release:  $CMAKE_RELEASE_CMD"
+	echo "  debug:    $CMAKE_DEBUG_CMD"
+	exit 1
+fi
+if [[ "$1" == "-c" ]]; then
+	cd $BUILD_DIR
+
+	if [[ "$2" == "release" ]]; then $CMAKE_RELEASE_CMD
+	elif [[ "$2" == "debug" ]]; then $CMAKE_DEBUG_CMD
+	else echo "Unknown target: $2"; exit 1; fi
+
+	cd $HERE
+elif [[ "$1" == "clean" ]]; then
+	$CLEAN_CMD
+elif [[ "$1" == "install" ]]; then
+	$INSTALL_CMD
+elif [[ "$1" == "build" ]]; then
+	$BUILD_CMD
+else
+	echo "Unknown action: $1"
+	exit 1
+fi

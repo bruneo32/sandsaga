@@ -1,0 +1,17 @@
+{
+	"files.associations": {
+		"*.zs": "typescript",
+		"*.h": "c",
+		"cstddef": "c",
+		"climits": "c",
+		"*.tcc": "c",
+		"random": "c"
+	},
+	"clangd.fallbackFlags": [
+		"-xc",
+		"-I${workspaceFolder}/**",
+		"-I/usr/include/SDL2",
+		"-Wno-switch"
+	],
+	"cmake.configureOnOpen": false
+}

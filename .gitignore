@@ -1,0 +1,6 @@
+# Compilers' output
+build/
+src/assets/res
+
+# Link to ./build/game_sdl2
+game
