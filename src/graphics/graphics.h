@@ -59,8 +59,17 @@ void Render_ResizeWindow(int newWidth, int newHeight, SDL_Rect *viewport,
 	}
 #define Render_Pixel_Color(x, y, c) Render_Pixel_RGBA(x, y, c.r, c.g, c.b, c.a)
 
+
 #define Render_image_ext(texture, x, y, w, h, angle, center, flip)             \
-	SDL_RenderCopyExF(__renderer, texture, NULL, &(SDL_FRect){x, y, w, h},     \
+	SDL_RenderCopyEx(__renderer, texture, NULL, &(SDL_Rect){x, y, w, h},     \
 					  angle, center, flip)
+
+void Render_subimage_ext(SDL_Texture *texture, int image_x, int image_y, int w,
+						 int h, int renderX, int renderY, const double angle,
+						 const SDL_Point *center, const SDL_RendererFlip flip);
+
+#define Render_subimage(texture, image_x, image_y, w, h, renderX, renderY)     \
+	Render_subimage_ext(texture, image_x, image_y, w, h, renderX, renderY, 0,  \
+						NULL, SDL_FLIP_NONE)
 
 #endif // _GRAPHICS_H
