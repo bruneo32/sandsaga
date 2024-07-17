@@ -100,7 +100,6 @@ void Render_SetPositionAndScale(int x, int y, float scalex, float scaley) {
 
 	/* Reset render target */
 	SDL_SetRenderTarget(__renderer, __rtex);
-
 }
 
 void Render_ResizeWindow(int newWidth, int newHeight, SDL_Rect *viewport,
@@ -127,4 +126,21 @@ void Render_ResizeWindow(int newWidth, int newHeight, SDL_Rect *viewport,
 	Render_SetPositionAndScale(offsetX, offsetY,
 							   (keepAspectRatio ? scale : scaleX),
 							   (keepAspectRatio ? scale : scaleY));
+}
+
+void Render_subimage_ext(SDL_Texture *texture, int image_x, int image_y, int w,
+						 int h, int renderX, int renderY, const double angle,
+						 const SDL_Point *center, const SDL_RendererFlip flip) {
+	/* Define source rectangle (sub-tile area in the tileset) */
+	SDL_Rect srcRect = {image_x, image_y, w,
+						h}; /*  Adjust TILE_SIZE if needed */
+
+	/* Define destination rectangle (where to render the sub-tile on the screen)
+	 */
+	SDL_Rect destRect = {renderX, renderY, w,
+						 h}; /*  Adjust position as needed */
+
+	/* Render the sub-tile from the tileset to the screen */
+	SDL_RenderCopyEx(__renderer, texture, &srcRect, &destRect, angle, center,
+					 flip);
 }

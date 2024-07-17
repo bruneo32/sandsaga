@@ -1,8 +1,9 @@
 #ifndef _ENGINE_H
 #define _ENGINE_H
 
-#include "../util.h"
 #include <stdint.h>
+
+#include "../util.h"
 
 #define CHUNK_MAX_X UINT16_MAX
 #define CHUNK_MAX_Y UINT16_MAX

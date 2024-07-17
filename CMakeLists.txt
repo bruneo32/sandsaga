@@ -45,11 +45,12 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE SDL_DISABLE_IMMINTRIN_H)
 # ===============================================================
 # Other C Modules
 
-add_subdirectory(	"src/graphics"	)
-add_subdirectory(	"src/engine"	)
+add_subdirectory( "src/assets" )
+add_subdirectory( "src/graphics" )
+add_subdirectory( "src/engine" )
 
 target_link_libraries(${PROJECT_NAME}
 	graphics
 	engine
-	# assets
+	assets
 	)
