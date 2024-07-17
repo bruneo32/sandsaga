@@ -56,8 +56,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGKILL, sigkillHandler);
 
 	/* Set random seed */
-	// srand(time(NULL));
-	srand(0);
+	srand(time(NULL));
+	// srand(0);
 
 	/* =============================================================== */
 	/* Init SDL */
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Initialize data */
-	seed_t SEED		 = 0;
+	seed_t SEED		 = rand();
 	Chunk  chunk_idx = {.x = CHUNK_MAX_X / 2, .y = 3};
 
 	/* Generate world */
@@ -308,8 +308,6 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
-
-		Render_Pixel_Color(player.x, player.y, C_RED);
 
 		/* =============================================================== */
 		/* Render game */
