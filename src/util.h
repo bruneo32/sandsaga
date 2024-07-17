@@ -6,37 +6,7 @@
 #include <string.h>
 
 
-/**
- * Cross-platform sleep function for C
- * @param int milliseconds
- */
-#ifdef WIN32
-#include <windows.h>
-#define sleep(ms) Sleep(ms)
-#else
-#include <unistd.h>
-#define sleep(ms) usleep(ms * 1000)
-#endif
-
-/* MISC */
-
-/* Enable attribute packing in tcc compiler */
-#if defined(__TINYC__)
-#pragma pack(1)
-#endif
-#define PACKED __attribute__((packed))
-
-
-typedef uint8_t byte;
-#define GRIDALIGN(p, s) ((p / s) * block_size)
-#define SWAP(a, b)                                                             \
-	{                                                                          \
-		a ^= b;                                                                \
-		b ^= a;                                                                \
-		a ^= b;                                                                \
-	}
-
-
+/* =============================================================== */
 /* MEMORY */
 /* `calloc` allocates all elements initialized to 0 ,
  * required for NULL callbacks
@@ -50,6 +20,8 @@ static void *memdup(const void *src, size_t size) {
 	return memcpy(dst, src, size);
 }
 
+
+/* =============================================================== */
 /* Mathematics */
 #define M_2PI			   6.28318530717958647688
 #define M_TWO_THIRDS_PLUS1 1.666666
@@ -71,5 +43,39 @@ static void *memdup(const void *src, size_t size) {
 #define LERP_SPEED_MEDIUM	  0.1
 #define LERP_SPEED_QUICK	  0.4
 #define LERP_SPEED_VERY_QUICK 0.7
+
+
+/* =============================================================== */
+/* MISC */
+
+typedef uint8_t byte;
+typedef int8_t	sbyte;
+
+#define GRIDALIGN(p, s) ((p / s) * block_size)
+
+#define SWAP(a, b)                                                             \
+	{                                                                          \
+		a ^= b;                                                                \
+		b ^= a;                                                                \
+		a ^= b;                                                                \
+	}
+
+/**
+ * Cross-platform sleep function for C
+ * @param int milliseconds
+ */
+#ifdef WIN32
+#include <windows.h>
+#define sleep(ms) Sleep(ms)
+#else
+#include <unistd.h>
+#define sleep(ms) usleep(ms * 1000)
+#endif
+
+/** Enable attribute packing in tcc compiler */
+#if defined(__TINYC__)
+#pragma pack(1)
+#endif
+#define PACKED __attribute__((packed))
 
 #endif // _UTILS_H
