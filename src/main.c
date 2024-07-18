@@ -7,6 +7,7 @@
 
 #include <SDL.h>
 
+#include "assets/res/VGA-ROM.F08.h"
 #include "assets/res/player_body.png.h"
 #include "assets/res/player_head.png.h"
 
@@ -16,6 +17,7 @@
 #include "engine/gameobjects.h"
 #include "engine/noise.h"
 #include "graphics/color.h"
+#include "graphics/font/font.h"
 #include "graphics/graphics.h"
 #include "util.h"
 
@@ -86,6 +88,8 @@ int main(int argc, char *argv[]) {
 	player_head = loadIMG_from_mem(res_player_head_png, res_player_head_png_len,
 								   __window, __renderer);
 
+	Font_SetCurrent(res_VGA_ROM_F08);
+
 	/* =============================================================== */
 	/* Init gameloop variables */
 	SDL_Rect   viewport = {-VIEWPORT_WIDTH, 0, VSCREEN_WIDTH, VIEWPORT_HEIGHT};
@@ -107,6 +111,8 @@ int main(int argc, char *argv[]) {
 	generate_chunk(SEED, (Chunk)(player.chunk_id.id + 2), VIEWPORT_WIDTH * 2,
 				   0);
 
+	player.x   = VIEWPORT_WIDTH + 32;
+	player.y   = 32;
 	viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
 					   -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
 	SDL_RenderSetViewport(__renderer, &viewport);
@@ -338,6 +344,23 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
+
+		Render_Setcolor(C_WHITE);
+		const char *__str = "Example centered text!";
+		draw_string(
+			__str, -viewport.x + VIEWPORT_WIDTH / 2 - FSTR_WIDTH(__str) / 2, 0);
+
+		for (uint8_t i = 0; i < ' '; i++)
+			draw_char(i, -viewport.x + i * 8, 16);
+
+		for (uint8_t i = ' '; i < '0'; i++)
+			draw_char(i, -viewport.x + (i - ' ') * 8, 24);
+
+		for (uint8_t i = '0'; i < 'Z' + 1; i++)
+			draw_char(i, -viewport.x + (i - '0') * 8, 32);
+
+		for (uint8_t i = 'Z' + 1; i < 127; i++)
+			draw_char(i, -viewport.x + (i - 'Z' + 1) * 8, 40);
 
 		/* =============================================================== */
 		/* Render game */
