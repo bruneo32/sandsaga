@@ -1,11 +1,6 @@
 {
 	"files.associations": {
-		"*.zs": "typescript",
 		"*.h": "c",
-		"cstddef": "c",
-		"climits": "c",
-		"*.tcc": "c",
-		"random": "c"
 	},
 	"clangd.fallbackFlags": [
 		"-xc",
