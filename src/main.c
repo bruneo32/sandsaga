@@ -23,6 +23,8 @@
 
 #define FPS			   60
 #define FRAME_DELAY_MS (1000 / FPS)
+#define CALCULATE_FPS(delta)                                                   \
+	(clamp(((int)(1.f / ((float)delta / 1000.f))), 0, FPS))
 
 #define VIEWPORT_WIDTH		  454
 #define VIEWPORT_HEIGHT		  256
@@ -345,22 +347,14 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		/* =============================================================== */
+		/* Draw UI */
+		char fps_str[4];
+		sprintf(fps_str, "%2i", CALCULATE_FPS(delta));
+
 		Render_Setcolor(C_WHITE);
-		const char *__str = "Example centered text!";
-		draw_string(
-			__str, -viewport.x + VIEWPORT_WIDTH / 2 - FSTR_WIDTH(__str) / 2, 0);
-
-		for (uint8_t i = 0; i < ' '; i++)
-			draw_char(i, -viewport.x + i * 8, 16);
-
-		for (uint8_t i = ' '; i < '0'; i++)
-			draw_char(i, -viewport.x + (i - ' ') * 8, 24);
-
-		for (uint8_t i = '0'; i < 'Z' + 1; i++)
-			draw_char(i, -viewport.x + (i - '0') * 8, 32);
-
-		for (uint8_t i = 'Z' + 1; i < 127; i++)
-			draw_char(i, -viewport.x + (i - 'Z' + 1) * 8, 40);
+		draw_string(fps_str, -viewport.x + VIEWPORT_WIDTH - FSTR_WIDTH(fps_str),
+					0);
 
 		/* =============================================================== */
 		/* Render game */
