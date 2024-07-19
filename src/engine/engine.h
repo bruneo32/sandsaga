@@ -3,8 +3,16 @@
 
 #include <stdint.h>
 
+#include "../graphics/graphics.h"
 #include "../util.h"
+#include "gameobjects.h"
 
+extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
+
+void update_object(int x, int y);
+
+/* =============================================================== */
+/* Chunks */
 #define CHUNK_MAX_X UINT16_MAX
 #define CHUNK_MAX_Y UINT16_MAX
 
@@ -23,5 +31,7 @@ typedef union chunk_u {
 		uint16_t x;
 	} PACKED;
 } Chunk;
+
+void generate_chunk(seed_t SEED, Chunk CHUNK, const int vx, const int vy);
 
 #endif /* _ENGINE_H */
