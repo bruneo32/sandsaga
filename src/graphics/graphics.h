@@ -8,6 +8,34 @@
 #include "../assets/assets.h"
 #include "color.h"
 
+#define FPS			   60
+#define FRAME_DELAY_MS (1000 / FPS)
+#define CALCULATE_FPS(delta)                                                   \
+	(clamp(((int)(1.f / ((float)delta / 1000.f))), 0, FPS))
+
+#define VIEWPORT_WIDTH		  454
+#define VIEWPORT_HEIGHT		  256
+#define VIEWPORT_WIDTH_M1	  (VIEWPORT_WIDTH - 1)
+#define VIEWPORT_HEIGHT_M1	  (VIEWPORT_HEIGHT - 1)
+#define VIEWPORT_WIDTH_DIV_2  (VIEWPORT_WIDTH / 2)
+#define VIEWPORT_HEIGHT_DIV_2 (VIEWPORT_HEIGHT / 2)
+
+#define VSCREEN_WIDTH	  (VIEWPORT_WIDTH * 3)
+#define VSCREEN_HEIGHT	  (VIEWPORT_HEIGHT)
+#define VSCREEN_WIDTH_M1  (VSCREEN_WIDTH - 1)
+#define VSCREEN_HEIGHT_M1 (VSCREEN_HEIGHT - 1)
+
+#define RENDER_XFACTOR 2
+#define RENDER_YFACTOR 2
+
+#define IS_IN_BOUNDS_H(x)  ((x >= 0) && (x < VSCREEN_WIDTH))
+#define IS_IN_BOUNDS_V(y)  ((y >= 0) && (y < VSCREEN_HEIGHT))
+#define IS_IN_BOUNDS(x, y) (IS_IN_BOUNDS_H(x) && IS_IN_BOUNDS_V(y))
+
+
+/* =============================================================== */
+/* Rendering */
+
 extern SDL_Window	*__window;
 extern SDL_Renderer *__renderer;
 
@@ -59,10 +87,9 @@ void Render_ResizeWindow(int newWidth, int newHeight, SDL_Rect *viewport,
 	}
 #define Render_Pixel_Color(x, y, c) Render_Pixel_RGBA(x, y, c.r, c.g, c.b, c.a)
 
-
 #define Render_image_ext(texture, x, y, w, h, angle, center, flip)             \
-	SDL_RenderCopyEx(__renderer, texture, NULL, &(SDL_Rect){x, y, w, h},     \
-					  angle, center, flip)
+	SDL_RenderCopyEx(__renderer, texture, NULL, &(SDL_Rect){x, y, w, h},       \
+					 angle, center, flip)
 
 void Render_subimage_ext(SDL_Texture *texture, int image_x, int image_y, int w,
 						 int h, int renderX, int renderY, const double angle,
