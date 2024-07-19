@@ -67,7 +67,8 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Init gameloop variables */
-	SDL_Rect   viewport = {-VIEWPORT_WIDTH, 0, VSCREEN_WIDTH, VIEWPORT_HEIGHT};
+	SDL_Rect   viewport = {-VIEWPORT_WIDTH, -VIEWPORT_HEIGHT, VSCREEN_WIDTH,
+						   VSCREEN_HEIGHT};
 	SDL_FPoint __renderer_scale;
 	short	   block_size	  = 1 << 3;
 	bool	   grid_mode	  = false;
@@ -80,16 +81,23 @@ int main(int argc, char *argv[]) {
 	seed_t SEED		= rand();
 	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = 3};
 
-	/* Generate world */
-	generate_chunk(SEED, (Chunk)player.chunk_id, 0, 0);
-	generate_chunk(SEED, (Chunk)(player.chunk_id.id + 1), VIEWPORT_WIDTH, 0);
-	generate_chunk(SEED, (Chunk)(player.chunk_id.id + 2), VIEWPORT_WIDTH * 2,
-				   0);
+	/* Generate world first instance*/
+	int chunk_start_x = player.chunk_id.x - 1;
+	int chunk_start_y = player.chunk_id.y - 1;
+	for (size_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
+		for (size_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
+			Chunk chunk = (Chunk){.x = i, .y = chunk_start_y};
+			generate_chunk(SEED, chunk, (i - chunk_start_x) * VIEWPORT_WIDTH,
+						   (j - chunk_start_y) * VIEWPORT_HEIGHT);
+		}
+	}
 
 	player.x   = VIEWPORT_WIDTH + 32;
-	player.y   = 32;
+	player.y   = VIEWPORT_HEIGHT + 32;
 	viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
 					   -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
+	viewport.y = clamp(-player.y + VIEWPORT_HEIGHT_DIV_2,
+					   -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
 	SDL_RenderSetViewport(__renderer, &viewport);
 
 	/* =============================================================== */
@@ -151,10 +159,66 @@ int main(int argc, char *argv[]) {
 					grid_mode = !grid_mode;
 					break;
 				case SDL_SCANCODE_W:
-					player.y -= PLAYER_SPEED;
+					player.y =
+						clamp(player.y - PLAYER_SPEED, 0, VSCREEN_HEIGHT);
+
+					/* If went to top chunk.
+					 * Move world to bottom and generate new chunks in top
+					 */
+					if (player.chunk_id.y > 1 && player.y < VIEWPORT_HEIGHT) {
+						player.y =
+							VIEWPORT_HEIGHT * 2 - (VIEWPORT_HEIGHT - player.y);
+						--player.chunk_id.y;
+
+						/* Move world to bottom */
+						memmove(&gameboard[VIEWPORT_HEIGHT][0],
+								&gameboard[0][0],
+								VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
+
+						/* Generate new world at top */
+						byte start_x = player.chunk_id.x - 1;
+						for (byte i = 0; i < 3; ++i) {
+							Chunk chunk = {.x = start_x + i,
+										   .y = player.chunk_id.y - 1};
+							generate_chunk(SEED, chunk, i * VIEWPORT_WIDTH, 0);
+						}
+					}
+
+					viewport.y = clamp(-player.y + VIEWPORT_HEIGHT_DIV_2,
+									   -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
+					SDL_RenderSetViewport(__renderer, &viewport);
 					break;
 				case SDL_SCANCODE_S:
-					player.y += PLAYER_SPEED;
+					player.y =
+						clamp(player.y + PLAYER_SPEED, 0, VSCREEN_HEIGHT);
+
+					/* If went to bottom chunk.
+					 * Move world to top and generate new chunks in bottom
+					 */
+					if (player.chunk_id.y < CHUNK_MAX_Y - 1 &&
+						player.y >= VIEWPORT_HEIGHT * 2) {
+						player.y =
+							VIEWPORT_HEIGHT + (player.y - VIEWPORT_HEIGHT * 2);
+						++player.chunk_id.y;
+
+						/* Move world to top */
+						memmove(&gameboard[0][0],
+								&gameboard[VIEWPORT_HEIGHT][0],
+								VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
+
+						/* Generate new world at bottom */
+						byte start_x = player.chunk_id.x - 1;
+						for (byte i = 0; i < 3; ++i) {
+							Chunk chunk = {.x = start_x + i,
+										   .y = player.chunk_id.y + 1};
+							generate_chunk(SEED, chunk, i * VIEWPORT_WIDTH,
+										   VIEWPORT_HEIGHT * 2);
+						}
+					}
+
+					viewport.y = clamp(-player.y + VIEWPORT_HEIGHT_DIV_2,
+									   -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
+					SDL_RenderSetViewport(__renderer, &viewport);
 					break;
 				case SDL_SCANCODE_A:
 					player.x = clamp(player.x - PLAYER_SPEED, 0, VSCREEN_WIDTH);
@@ -163,10 +227,12 @@ int main(int argc, char *argv[]) {
 					/* If went to left chunk.
 					 * Move world to right and generate new chunks in left
 					 */
-					if (player.x < VIEWPORT_WIDTH) {
+					if (player.chunk_id.x > 1 && player.x < VIEWPORT_WIDTH) {
 						player.x =
 							VIEWPORT_WIDTH * 2 - (VIEWPORT_WIDTH - player.x);
 						--player.chunk_id.x;
+
+						/* Move world to right */
 						for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
 							memmove(&gameboard[j][VIEWPORT_WIDTH * 2],
 									&gameboard[j][VIEWPORT_WIDTH],
@@ -174,8 +240,14 @@ int main(int argc, char *argv[]) {
 							memmove(&gameboard[j][VIEWPORT_WIDTH],
 									&gameboard[j][0], VIEWPORT_WIDTH);
 						}
-						generate_chunk(SEED, (Chunk)(player.chunk_id.id - 1), 0,
-									   0);
+
+						/* Generate new world at left */
+						byte start_j = player.chunk_id.y - 1;
+						for (byte j = 0; j < 3; ++j) {
+							Chunk chunk = {.x = player.chunk_id.x - 1,
+										   .y = start_j + j};
+							generate_chunk(SEED, chunk, 0, j * VIEWPORT_HEIGHT);
+						}
 					}
 
 					viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
@@ -189,10 +261,13 @@ int main(int argc, char *argv[]) {
 					/* If went to right chunk.
 					 * Move world to left and generate new chunks in right
 					 */
-					if (player.x >= VIEWPORT_WIDTH * 2) {
+					if (player.chunk_id.x < CHUNK_MAX_X - 1 &&
+						player.x >= VIEWPORT_WIDTH * 2) {
 						player.x =
 							VIEWPORT_WIDTH + (player.x - VIEWPORT_WIDTH * 2);
 						++player.chunk_id.x;
+
+						/* Move world to right */
 						for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
 							memmove(&gameboard[j][0],
 									&gameboard[j][VIEWPORT_WIDTH],
@@ -201,8 +276,15 @@ int main(int argc, char *argv[]) {
 									&gameboard[j][VIEWPORT_WIDTH * 2],
 									VIEWPORT_WIDTH);
 						}
-						generate_chunk(SEED, (Chunk)(player.chunk_id.id + 1),
-									   VIEWPORT_WIDTH * 2, 0);
+
+						/* Generate new world at right */
+						byte start_j = player.chunk_id.y - 1;
+						for (byte j = 0; j < 3; ++j) {
+							Chunk chunk = {.x = player.chunk_id.x + 1,
+										   .y = start_j + j};
+							generate_chunk(SEED, chunk, VIEWPORT_WIDTH * 2,
+										   j * VIEWPORT_HEIGHT);
+						}
 					}
 
 					viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
@@ -327,7 +409,7 @@ int main(int argc, char *argv[]) {
 
 		Render_Setcolor(C_WHITE);
 		draw_string(fps_str, -viewport.x + VIEWPORT_WIDTH - FSTR_WIDTH(fps_str),
-					0);
+					-viewport.y);
 
 		/* =============================================================== */
 		/* Render game */
@@ -360,6 +442,6 @@ void ResizeWindow(int newWidth, int newHeight, SDL_Rect viewport,
 	SDL_RenderSetScale(__renderer, new_scale->x, new_scale->y);
 
 	viewport.x = clamp(viewport.x, -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-	viewport.y = clamp(viewport.y, -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
+	viewport.y = clamp(viewport.y, -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
 	SDL_RenderSetViewport(__renderer, &viewport);
 }
