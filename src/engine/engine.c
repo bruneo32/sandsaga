@@ -4,17 +4,17 @@
 
 byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
-void update_object(int x, int y) {
+void update_object(const size_t x, const size_t y) {
 	byte *boardxy = &gameboard[y][x];
 	byte  type	  = GOBJECT(*boardxy);
 
 	/* Update object behaviour */
-	int left_or_right = (((rand() % 2) == 0) ? 1 : -1);
+	size_t left_or_right = (((rand() % 2) == 0) ? 1 : -1);
 
-	int up_y	= y - 1;
-	int down_y	= y + 1;
-	int left_x	= x - left_or_right;
-	int right_x = x + left_or_right;
+	size_t up_y	   = y - 1;
+	size_t down_y  = y + 1;
+	size_t left_x  = x - left_or_right;
+	size_t right_x = x + left_or_right;
 
 	switch (type) {
 	case GO_SAND: {
@@ -77,24 +77,25 @@ void update_object(int x, int y) {
 	}
 }
 
-void generate_chunk(seed_t SEED, Chunk CHUNK, const int vx, const int vy) {
-	int vx_max = vx + VIEWPORT_WIDTH;
-	int vy_max = vy + VIEWPORT_HEIGHT;
+void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
+					const size_t vy) {
+	const size_t vx_max = vx + VIEWPORT_WIDTH;
+	const size_t vy_max = vy + VIEWPORT_HEIGHT;
 
-	int world_x0 = CHUNK.x * VIEWPORT_WIDTH;
-	int world_y0 = CHUNK.y * VIEWPORT_HEIGHT;
+	const uint64_t world_x0 = CHUNK.x * VIEWPORT_WIDTH;
+	const uint64_t world_y0 = CHUNK.y * VIEWPORT_HEIGHT;
 
-	for (int y = vy; y < vy_max; ++y) {
-		for (int x = vx; x < vx_max; ++x) {
+	for (size_t y = vy; y < vy_max; ++y) {
+		for (size_t x = vx; x < vx_max; ++x) {
 			gameboard[y][x] = GO_STONE;
 		}
 	}
 
-	const int ground_height = 128;
-	for (int x = vx; x < vx_max; ++x) {
-		const int ground =
+	const size_t ground_height = 128;
+	for (size_t x = vx; x < vx_max; ++x) {
+		const size_t ground =
 			fabs(perlin2d(SEED, world_x0 + x, 0, 0.005, 1) * ground_height);
-		for (int y = vy; y < vy_max; ++y) {
+		for (size_t y = vy; y < vy_max; ++y) {
 			if (y < ground) {
 				gameboard[y][x] = GO_NONE;
 				continue;
