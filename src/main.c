@@ -1,6 +1,7 @@
 #include <math.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -82,10 +83,10 @@ int main(int argc, char *argv[]) {
 	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = 3};
 
 	/* Generate world first instance*/
-	int chunk_start_x = player.chunk_id.x - 1;
-	int chunk_start_y = player.chunk_id.y - 1;
-	for (size_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
-		for (size_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
+	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
+	chunk_axis_t chunk_start_y = player.chunk_id.y - 1;
+	for (chunk_axis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
+		for (chunk_axis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
 			Chunk chunk = (Chunk){.x = i, .y = chunk_start_y};
 			generate_chunk(SEED, chunk, (i - chunk_start_x) * VIEWPORT_WIDTH,
 						   (j - chunk_start_y) * VIEWPORT_HEIGHT);
@@ -176,8 +177,8 @@ int main(int argc, char *argv[]) {
 								VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
 
 						/* Generate new world at top */
-						byte start_x = player.chunk_id.x - 1;
-						for (byte i = 0; i < 3; ++i) {
+						chunk_axis_t start_x = player.chunk_id.x - 1;
+						for (uint_fast8_t i = 0; i < 3; ++i) {
 							Chunk chunk = {.x = start_x + i,
 										   .y = player.chunk_id.y - 1};
 							generate_chunk(SEED, chunk, i * VIEWPORT_WIDTH, 0);
@@ -207,8 +208,8 @@ int main(int argc, char *argv[]) {
 								VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
 
 						/* Generate new world at bottom */
-						byte start_x = player.chunk_id.x - 1;
-						for (byte i = 0; i < 3; ++i) {
+						chunk_axis_t start_x = player.chunk_id.x - 1;
+						for (uint_fast8_t i = 0; i < 3; ++i) {
 							Chunk chunk = {.x = start_x + i,
 										   .y = player.chunk_id.y + 1};
 							generate_chunk(SEED, chunk, i * VIEWPORT_WIDTH,
@@ -233,7 +234,7 @@ int main(int argc, char *argv[]) {
 						--player.chunk_id.x;
 
 						/* Move world to right */
-						for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
+						for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 							memmove(&gameboard[j][VIEWPORT_WIDTH * 2],
 									&gameboard[j][VIEWPORT_WIDTH],
 									VIEWPORT_WIDTH);
@@ -242,8 +243,8 @@ int main(int argc, char *argv[]) {
 						}
 
 						/* Generate new world at left */
-						byte start_j = player.chunk_id.y - 1;
-						for (byte j = 0; j < 3; ++j) {
+						chunk_axis_t start_j = player.chunk_id.y - 1;
+						for (uint_fast8_t j = 0; j < 3; ++j) {
 							Chunk chunk = {.x = player.chunk_id.x - 1,
 										   .y = start_j + j};
 							generate_chunk(SEED, chunk, 0, j * VIEWPORT_HEIGHT);
@@ -268,7 +269,7 @@ int main(int argc, char *argv[]) {
 						++player.chunk_id.x;
 
 						/* Move world to right */
-						for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
+						for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 							memmove(&gameboard[j][0],
 									&gameboard[j][VIEWPORT_WIDTH],
 									VIEWPORT_WIDTH);
@@ -278,8 +279,8 @@ int main(int argc, char *argv[]) {
 						}
 
 						/* Generate new world at right */
-						byte start_j = player.chunk_id.y - 1;
-						for (byte j = 0; j < 3; ++j) {
+						chunk_axis_t start_j = player.chunk_id.y - 1;
+						for (uint_fast8_t j = 0; j < 3; ++j) {
 							Chunk chunk = {.x = player.chunk_id.x + 1,
 										   .y = start_j + j};
 							generate_chunk(SEED, chunk, VIEWPORT_WIDTH * 2,
@@ -323,16 +324,18 @@ int main(int argc, char *argv[]) {
 			if (block_size == 1) {
 				gameboard[mouse_y][mouse_x] = current_object;
 			} else {
-				int bx =
+				uint_fast16_t bx =
 					(grid_mode ? GRIDALIGN(mouse_x, block_size) + block_size / 2
 							   : mouse_x);
-				int by =
+				uint_fast16_t by =
 					(grid_mode ? GRIDALIGN(mouse_y, block_size) + block_size / 2
 							   : mouse_y);
 
-				for (int j = clamp(by - block_size / 2, 0, VSCREEN_HEIGHT);
+				for (uint_fast16_t j =
+						 clamp(by - block_size / 2, 0, VSCREEN_HEIGHT);
 					 j < clamp(by + block_size / 2, 0, VSCREEN_HEIGHT); ++j) {
-					for (int i = clamp(bx - block_size / 2, 0, VSCREEN_WIDTH);
+					for (uint_fast16_t i =
+							 clamp(bx - block_size / 2, 0, VSCREEN_WIDTH);
 						 i < clamp(bx + block_size / 2, 0, VSCREEN_WIDTH);
 						 ++i) {
 						gameboard[j][i] = current_object;
@@ -344,10 +347,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* Update objects behaviour */
-		for (int j = VSCREEN_HEIGHT_M1; j >= 0; --j) {
+		for (uint_fast16_t j = VSCREEN_HEIGHT_M1; j > -1; --j) {
 			/* Horizontal loop has to be first evens and then odds, in order to
 			 * save some bugs with fluids */
-			for (int i = 0; i < VSCREEN_WIDTH; i += 2) {
+			for (uint_fast16_t i = 0; i < VSCREEN_WIDTH; i += 2) {
 				if (gameboard[j][i] != GO_NONE &&
 					!IS_GUPDATED(gameboard[j][i])) {
 					update_object(i, j);
@@ -368,10 +371,8 @@ int main(int argc, char *argv[]) {
 		Render_image_ext(player_head->texture, player.x, player.y, 16, 8, 0,
 						 (&(SDL_Point){8, 4}), player.fliph);
 
-		// for (int j = SCREEN_HEIGHT_M1; j >= 0; --j) {
-		for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
-			// for (int i = SCREEN_WIDTH_M1; i >= 0; --i) {
-			for (int i = 0; i < VSCREEN_WIDTH; ++i) {
+		for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
+			for (uint_fast16_t i = 0; i < VSCREEN_WIDTH; ++i) {
 				if (gameboard[j][i] != GO_NONE) {
 					gameboard[j][i] =
 						GOBJECT(gameboard[j][i]); /* Reset updated bit */
@@ -387,16 +388,17 @@ int main(int argc, char *argv[]) {
 		if (block_size == 1) {
 			Render_Pixel_Color(mouse_x, mouse_y, color);
 		} else {
-			int bx =
+			uint_fast16_t bx =
 				(grid_mode ? GRIDALIGN(mouse_x, block_size) + block_size / 2
 						   : mouse_x);
-			int by =
+			uint_fast16_t by =
 				(grid_mode ? GRIDALIGN(mouse_y, block_size) + block_size / 2
 						   : mouse_y);
 
-			for (int j = by - block_size / 2; j < by + block_size / 2; ++j) {
-				for (int i = bx - block_size / 2; i < bx + block_size / 2;
-					 ++i) {
+			for (uint_fast16_t j = by - block_size / 2; j < by + block_size / 2;
+				 ++j) {
+				for (uint_fast16_t i = bx - block_size / 2;
+					 i < bx + block_size / 2; ++i) {
 					Render_Pixel_Color(i, j, color);
 				}
 			}
