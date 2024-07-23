@@ -347,7 +347,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* Update objects behaviour */
-		for (uint_fast16_t j = VSCREEN_HEIGHT_M1; j > -1; --j) {
+		for (uint_fast16_t j = VSCREEN_HEIGHT_M1;; --j) {
 			/* Horizontal loop has to be first evens and then odds, in order to
 			 * save some bugs with fluids */
 			for (uint_fast16_t i = 0; i < VSCREEN_WIDTH; i += 2) {
@@ -360,6 +360,9 @@ int main(int argc, char *argv[]) {
 				if (i == VSCREEN_WIDTH_M1 - 1)
 					i = -1;
 			}
+
+			if (j == 0)
+				break;
 		}
 
 		/* =============================================================== */
