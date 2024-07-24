@@ -6,7 +6,7 @@ byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
 void update_object(const size_t x, const size_t y) {
 	byte *boardxy = &gameboard[y][x];
-	byte  type	  = GOBJECT(*boardxy);
+	byte  type	  = *boardxy;
 
 	/* Update object behaviour */
 	size_t left_or_right = (((rand() % 2) == 0) ? 1 : -1);
@@ -25,15 +25,15 @@ void update_object(const size_t x, const size_t y) {
 		if (IS_IN_BOUNDS(x, down_y)) {
 			if (*bottom == GO_NONE) {
 				*boardxy = GO_NONE;
-				*bottom	 = GUPDATE(GO_SAND);
+				*bottom	 = GO_SAND;
 			}
 
 			else if (IS_IN_BOUNDS_H(left_x) && *bottomleft == GO_NONE) {
 				*boardxy	= GO_NONE;
-				*bottomleft = GUPDATE(GO_SAND);
+				*bottomleft = GO_SAND;
 			} else if (IS_IN_BOUNDS_H(right_x) && *bottomright == GO_NONE) {
 				*boardxy	 = GO_NONE;
-				*bottomright = GUPDATE(GO_SAND);
+				*bottomright = GO_SAND;
 			}
 		}
 	} break;
@@ -47,30 +47,28 @@ void update_object(const size_t x, const size_t y) {
 
 		if (IS_IN_BOUNDS(x, down_y) && *bottom == GO_NONE) {
 			*boardxy = GO_NONE;
-			*bottom	 = GUPDATE(GO_WATER);
+			*bottom	 = GO_WATER;
 		}
 
 		else if (IS_IN_BOUNDS(left_x, down_y) && *bottomleft == GO_NONE) {
 			*boardxy	= GO_NONE;
-			*bottomleft = GUPDATE(GO_WATER);
+			*bottomleft = GO_WATER;
 		} else if (IS_IN_BOUNDS(right_x, down_y) && *bottomright == GO_NONE) {
 			*boardxy	 = GO_NONE;
-			*bottomright = GUPDATE(GO_WATER);
+			*bottomright = GO_WATER;
 		}
 
 		else if (IS_IN_BOUNDS(left_x, y) && *left == GO_NONE) {
 			*boardxy = GO_NONE;
-			*left	 = GUPDATE(GO_WATER);
+			*left	 = GO_WATER;
 		} else if (IS_IN_BOUNDS(right_x, y) && *right == GO_NONE) {
 			*boardxy = GO_NONE;
-			*right	 = GUPDATE(GO_WATER);
+			*right	 = GO_WATER;
 		}
 
 		/* Flow up in more dense fluids */
-		else if (IS_IN_BOUNDS(x, up_y) && !IS_GUPDATED(*top) &&
-				 *top > *boardxy && GO_IS_FLUID(*top)) {
-			*boardxy |= BITMASK_GO_UPDATED;
-			*top |= BITMASK_GO_UPDATED;
+		else if (IS_IN_BOUNDS(x, up_y) && *top > *boardxy &&
+				 GO_IS_FLUID(*top)) {
 			SWAP((*top), (*boardxy));
 		}
 	} break;
