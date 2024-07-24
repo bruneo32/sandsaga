@@ -48,6 +48,9 @@ static void *memdup(const void *src, size_t size) {
 
 /* =============================================================== */
 /* MISC */
+#ifndef UINT32_WIDTH
+#define UINT32_WIDTH 32
+#endif
 
 typedef uint8_t byte;
 typedef int8_t	sbyte;

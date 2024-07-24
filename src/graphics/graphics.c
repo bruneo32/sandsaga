@@ -3,14 +3,14 @@
 SDL_Window	 *__window	 = NULL;
 SDL_Renderer *__renderer = NULL;
 
-int __renderWidth  = 0;
-int __renderHeight = 0;
+uint32_t __windowWidth	= 0;
+uint32_t __windowHeight = 0;
 
-void Render_init(const char *WINDOW_TITLE, int WINDOW_WIDTH, int WINDOW_HEIGHT,
-				 int RENDER_WIDTH, int RENDER_HEIGHT) {
+void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
+				 uint32_t WINDOW_HEIGHT) {
 	/* Save data for calculations */
-	__renderWidth  = RENDER_WIDTH;
-	__renderHeight = RENDER_HEIGHT;
+	__windowWidth  = WINDOW_WIDTH;
+	__windowHeight = WINDOW_HEIGHT;
 
 	/* Initialize SDL2 */
 	if (0 != SDL_Init(SDL_INIT_VIDEO)) {
@@ -66,7 +66,7 @@ void Render_SetPosition(int x, int y) {
 	SDL_Texture *__rtex = SDL_GetRenderTarget(__renderer);
 	// SDL_Texture *__rtex = NULL;
 
-	SDL_Rect viewport = {x, y, __renderWidth, __renderHeight};
+	SDL_Rect viewport = {x, y, __windowWidth, __windowHeight};
 	SDL_RenderSetViewport(__renderer, &viewport);
 
 	if (!__rtex)
@@ -84,7 +84,7 @@ void Render_SetPositionAndScale(int x, int y, float scalex, float scaley) {
 	/* Save user-defined render target */
 	SDL_Texture *__rtex = SDL_GetRenderTarget(__renderer);
 
-	SDL_Rect viewport = {x, y, __renderWidth, __renderHeight};
+	SDL_Rect viewport = {x, y, __windowWidth, __windowHeight};
 
 	SDL_RenderSetScale(__renderer, scalex, scaley);
 	SDL_RenderSetViewport(__renderer, &viewport);
@@ -102,10 +102,9 @@ void Render_SetPositionAndScale(int x, int y, float scalex, float scaley) {
 	SDL_SetRenderTarget(__renderer, __rtex);
 }
 
-void Render_ResizeWindow(int newWidth, int newHeight, SDL_Rect *viewport,
-						 bool keepAspectRatio) {
-	float scaleX = ((float)newWidth / (float)__renderWidth);
-	float scaleY = ((float)newHeight / (float)__renderHeight);
+void Render_ResizeWindow(int newWidth, int newHeight, bool keepAspectRatio) {
+	float scaleX = ((float)newWidth / (float)__windowWidth);
+	float scaleY = ((float)newHeight / (float)__windowHeight);
 
 	float scale = 0.0;
 	if (keepAspectRatio)
@@ -113,9 +112,9 @@ void Render_ResizeWindow(int newWidth, int newHeight, SDL_Rect *viewport,
 
 	/* Calculate the new scaled dimensions */
 	int scaledWidth =
-		(int)((float)__renderWidth * (keepAspectRatio ? scale : scaleX));
+		(int)((float)__windowWidth * (keepAspectRatio ? scale : scaleX));
 	int scaledHeight =
-		(int)((float)__renderHeight * (keepAspectRatio ? scale : scaleY));
+		(int)((float)__windowHeight * (keepAspectRatio ? scale : scaleY));
 
 	/* Calculate centered positioning offset */
 	int offsetX =
