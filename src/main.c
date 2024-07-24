@@ -50,6 +50,10 @@ int main(int argc, char *argv[]) {
 	Render_Clearscreen_Color(C_BLUE);
 	Render_Update;
 
+	SDL_SetWindowSize(__window, VIEWPORT_WIDTH_M2, VIEWPORT_HEIGHT_M2);
+	SDL_SetWindowPosition(__window, SDL_WINDOWPOS_CENTERED,
+						  SDL_WINDOWPOS_CENTERED);
+
 	/* =============================================================== */
 	/* Load resources */
 	player.sprite = loadIMG_from_mem(
@@ -219,12 +223,12 @@ int main(int argc, char *argv[]) {
 					 */
 					if (player.chunk_id.x > 1 && player.x < VIEWPORT_WIDTH) {
 						player.x =
-							VIEWPORT_WIDTH * 2 - (VIEWPORT_WIDTH - player.x);
+							VIEWPORT_WIDTH_M2 - (VIEWPORT_WIDTH - player.x);
 						--player.chunk_id.x;
 
 						/* Move world to right */
 						for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
-							memmove(&gameboard[j][VIEWPORT_WIDTH * 2],
+							memmove(&gameboard[j][VIEWPORT_WIDTH_M2],
 									&gameboard[j][VIEWPORT_WIDTH],
 									VIEWPORT_WIDTH);
 							memmove(&gameboard[j][VIEWPORT_WIDTH],
@@ -250,9 +254,9 @@ int main(int argc, char *argv[]) {
 					 * Move world to left and generate new chunks in right
 					 */
 					if (player.chunk_id.x < CHUNK_MAX_X - 1 &&
-						player.x >= VIEWPORT_WIDTH * 2) {
+						player.x >= VIEWPORT_WIDTH_M2) {
 						player.x =
-							VIEWPORT_WIDTH + (player.x - VIEWPORT_WIDTH * 2);
+							VIEWPORT_WIDTH + (player.x - VIEWPORT_WIDTH_M2);
 						++player.chunk_id.x;
 
 						/* Move world to right */
@@ -261,7 +265,7 @@ int main(int argc, char *argv[]) {
 									&gameboard[j][VIEWPORT_WIDTH],
 									VIEWPORT_WIDTH);
 							memmove(&gameboard[j][VIEWPORT_WIDTH],
-									&gameboard[j][VIEWPORT_WIDTH * 2],
+									&gameboard[j][VIEWPORT_WIDTH_M2],
 									VIEWPORT_WIDTH);
 						}
 
@@ -270,7 +274,7 @@ int main(int argc, char *argv[]) {
 						for (uint_fast8_t j = 0; j < 3; ++j) {
 							Chunk chunk = {.x = player.chunk_id.x + 1,
 										   .y = start_j + j};
-							generate_chunk(SEED, chunk, VIEWPORT_WIDTH * 2,
+							generate_chunk(SEED, chunk, VIEWPORT_WIDTH_M2,
 										   j * VIEWPORT_HEIGHT);
 						}
 					}
