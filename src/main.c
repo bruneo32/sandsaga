@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
 	bool	   grid_mode	  = false;
 	byte	   current_object = GO_STONE;
 
+	SDL_RenderGetViewport(__renderer, &window_viewport);
 	SDL_RenderGetScale(__renderer, &window_scale.x, &window_scale.y);
 
 	/* =============================================================== */
@@ -352,7 +353,7 @@ int main(int argc, char *argv[]) {
 			 * save some bugs with fluids */
 			for (uint_fast16_t i = 0; i < VSCREEN_WIDTH; i += 2) {
 				const byte pixel = gameboard[j][i];
-				if (pixel != GO_NONE && !IS_GUPDATED(pixel))
+				if (pixel != GO_NONE)
 					update_object(i, j);
 
 				/* Next: odd numbers */
@@ -384,9 +385,9 @@ int main(int argc, char *argv[]) {
 			for (uint_fast16_t i = 0; i < camera.w; ++i) {
 				const uint_fast16_t x = i + camera.x;
 
-				const byte pixel = GOBJECT(gameboard[y][x]);
+				const byte pixel = gameboard[y][x];
 				if (pixel != GO_NONE) {
-					gameboard[y][x] = pixel; /* Reset updated bit */
+					// gameboard[y][x] = pixel; /* Reset updated bit */
 					Render_Pixel_Color(i, j, GO_COLORS[pixel]);
 				}
 			}
