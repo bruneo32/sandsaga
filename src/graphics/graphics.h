@@ -25,13 +25,9 @@
 #define VSCREEN_WIDTH_M1  (VSCREEN_WIDTH - 1)
 #define VSCREEN_HEIGHT_M1 (VSCREEN_HEIGHT - 1)
 
-#define RENDER_XFACTOR 2
-#define RENDER_YFACTOR 2
-
-#define IS_IN_BOUNDS_H(x)  ((x >= 0) && (x < VSCREEN_WIDTH))
-#define IS_IN_BOUNDS_V(y)  ((y >= 0) && (y < VSCREEN_HEIGHT))
-#define IS_IN_BOUNDS(x, y) (IS_IN_BOUNDS_H(x) && IS_IN_BOUNDS_V(y))
-
+#define IS_IN_BOUNDS_H(__x)	   ((__x >= 0) && (__x < VSCREEN_WIDTH))
+#define IS_IN_BOUNDS_V(__y)	   ((__y >= 0) && (__y < VSCREEN_HEIGHT))
+#define IS_IN_BOUNDS(__x, __y) (IS_IN_BOUNDS_H(__x) && IS_IN_BOUNDS_V(__y))
 
 /* =============================================================== */
 /* Rendering */
@@ -40,8 +36,8 @@ extern SDL_Window	*__window;
 extern SDL_Renderer *__renderer;
 
 /** Create a window and a renderer */
-void Render_init(const char *WINDOW_TITLE, int WINDOW_WIDTH, int WINDOW_HEIGHT,
-				 int RENDER_WIDTH, int RENDER_HEIGHT);
+void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
+				 uint32_t WINDOW_HEIGHT);
 #define Render_end                                                             \
 	{                                                                          \
 		SDL_DestroyRenderer(__renderer);                                       \
@@ -55,8 +51,7 @@ void Render_SetPositionAndScale(int x, int y, float scalex, float scaley);
 
 /** Resize the viewport to the center, keeping the aspect ratio of the original
  * size */
-void Render_ResizeWindow(int newWidth, int newHeight, SDL_Rect *viewport,
-						 bool keepAspectRatio);
+void Render_ResizeWindow(int newWidth, int newHeight, bool keepAspectRatio);
 
 #define Render_TogleFullscreen                                                 \
 	SDL_SetWindowFullscreen(__window, SDL_GetWindowFlags(__window) ^           \

@@ -24,15 +24,9 @@
 
 static volatile bool GAME_ON = true;
 
-static int WINDOW_WIDTH	 = VIEWPORT_WIDTH * RENDER_XFACTOR;
-static int WINDOW_HEIGHT = VIEWPORT_HEIGHT * RENDER_YFACTOR;
-
 #define PLAYER_SPEED 4
 static Player  player;
 static Sprite *player_head;
-
-void ResizeWindow(int newWidth, int newHeight, SDL_Rect viewport,
-				  SDL_FPoint *new_scale);
 
 /** Handle `CTRL + C` to quit the game */
 void sigkillHandler(int signum) { GAME_ON = false; }
@@ -47,12 +41,11 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Init SDL */
-	Render_init("Falling sand sandbox game", WINDOW_WIDTH, WINDOW_HEIGHT,
-				VSCREEN_WIDTH, VSCREEN_HEIGHT);
+	Render_init("Falling sand sandbox game", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
-	SDL_RenderSetScale(__renderer, RENDER_XFACTOR, RENDER_YFACTOR);
+	SDL_RenderSetLogicalSize(__renderer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
 	Render_Clearscreen_Color(C_BLUE);
 	Render_Update;
@@ -68,38 +61,39 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Init gameloop variables */
-	SDL_Rect   viewport = {-VIEWPORT_WIDTH, -VIEWPORT_HEIGHT, VSCREEN_WIDTH,
-						   VSCREEN_HEIGHT};
-	SDL_FPoint __renderer_scale;
+	SDL_Rect   window_viewport;
+	SDL_FPoint window_scale;
 	short	   block_size	  = 1 << 3;
 	bool	   grid_mode	  = false;
 	byte	   current_object = GO_STONE;
 
-	SDL_RenderGetScale(__renderer, &__renderer_scale.x, &__renderer_scale.y);
+	SDL_RenderGetScale(__renderer, &window_scale.x, &window_scale.y);
 
 	/* =============================================================== */
 	/* Initialize data */
 	seed_t SEED		= rand();
-	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = 3};
+	player.chunk_id = (Chunk){.x = 3, .y = 3};
+	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
 	/* Generate world first instance*/
 	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
 	chunk_axis_t chunk_start_y = player.chunk_id.y - 1;
 	for (chunk_axis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
 		for (chunk_axis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
-			Chunk chunk = (Chunk){.x = i, .y = chunk_start_y};
+			Chunk chunk = (Chunk){.x = i, .y = j};
 			generate_chunk(SEED, chunk, (i - chunk_start_x) * VIEWPORT_WIDTH,
 						   (j - chunk_start_y) * VIEWPORT_HEIGHT);
 		}
 	}
 
-	player.x   = VIEWPORT_WIDTH + 32;
-	player.y   = VIEWPORT_HEIGHT + 32;
-	viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
-					   -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-	viewport.y = clamp(-player.y + VIEWPORT_HEIGHT_DIV_2,
-					   -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
-	SDL_RenderSetViewport(__renderer, &viewport);
+	player.x = VIEWPORT_WIDTH + 32;
+	player.y = VIEWPORT_HEIGHT + 32;
+
+	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
+					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
+
+	camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2 + 12, 0,
+					 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 
 	/* =============================================================== */
 	/* Calculate ticks */
@@ -116,12 +110,9 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Get inputs */
-		int			 mouse_x, mouse_y;
+		Uint32		 mouse_x, mouse_y;
 		const Uint32 mouse_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
 		const Uint8 *keyboard	   = SDL_GetKeyboardState(NULL);
-
-		mouse_x = mouse_x / __renderer_scale.x - viewport.x;
-		mouse_y = mouse_y / __renderer_scale.y - viewport.y;
 
 		SDL_Event _event;
 		while (GAME_ON && (SDL_PollEvent(&_event))) {
@@ -185,9 +176,8 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-					viewport.y = clamp(-player.y + VIEWPORT_HEIGHT_DIV_2,
-									   -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
-					SDL_RenderSetViewport(__renderer, &viewport);
+					camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2 + 12, 0,
+									 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 					break;
 				case SDL_SCANCODE_S:
 					player.y =
@@ -217,9 +207,8 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-					viewport.y = clamp(-player.y + VIEWPORT_HEIGHT_DIV_2,
-									   -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
-					SDL_RenderSetViewport(__renderer, &viewport);
+					camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2 + 12, 0,
+									 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 					break;
 				case SDL_SCANCODE_A:
 					player.x = clamp(player.x - PLAYER_SPEED, 0, VSCREEN_WIDTH);
@@ -250,10 +239,8 @@ int main(int argc, char *argv[]) {
 							generate_chunk(SEED, chunk, 0, j * VIEWPORT_HEIGHT);
 						}
 					}
-
-					viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
-									   -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-					SDL_RenderSetViewport(__renderer, &viewport);
+					camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
+									 VSCREEN_WIDTH - VIEWPORT_WIDTH);
 					break;
 				case SDL_SCANCODE_D:
 					player.x = clamp(player.x + PLAYER_SPEED, 0, VSCREEN_WIDTH);
@@ -288,9 +275,8 @@ int main(int argc, char *argv[]) {
 						}
 					}
 
-					viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
-									   -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-					SDL_RenderSetViewport(__renderer, &viewport);
+					camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
+									 VSCREEN_WIDTH - VIEWPORT_WIDTH);
 					break;
 				}
 			} break;
@@ -302,13 +288,21 @@ int main(int argc, char *argv[]) {
 			case SDL_WINDOWEVENT:
 				switch (_event.window.event) {
 				case SDL_WINDOWEVENT_SIZE_CHANGED:
-					ResizeWindow(_event.window.data1, _event.window.data2,
-								 viewport, &__renderer_scale);
+					Render_ResizeWindow(_event.window.data1,
+										_event.window.data2, true);
+					SDL_RenderGetViewport(__renderer, &window_viewport);
+					SDL_RenderGetScale(__renderer, &window_scale.x,
+									   &window_scale.y);
 					break;
 				}
 				break;
 			}
 		}
+
+		mouse_x = mouse_x / window_scale.x - window_viewport.x;
+		mouse_y = mouse_y / window_scale.y - window_viewport.y;
+		const uint32_t mouse_wold_x = mouse_x + camera.x;
+		const uint32_t mouse_wold_y = mouse_y + camera.y;
 
 		/* =============================================================== */
 		/* Update game */
@@ -322,14 +316,16 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (block_size == 1) {
-				gameboard[mouse_y][mouse_x] = current_object;
+				gameboard[mouse_wold_y][mouse_wold_x] = current_object;
 			} else {
 				uint_fast16_t bx =
-					(grid_mode ? GRIDALIGN(mouse_x, block_size) + block_size / 2
-							   : mouse_x);
+					(grid_mode
+						 ? GRIDALIGN(mouse_wold_x, block_size) + block_size / 2
+						 : mouse_wold_x);
 				uint_fast16_t by =
-					(grid_mode ? GRIDALIGN(mouse_y, block_size) + block_size / 2
-							   : mouse_y);
+					(grid_mode
+						 ? GRIDALIGN(mouse_wold_y, block_size) + block_size / 2
+						 : mouse_wold_y);
 
 				for (uint_fast16_t j =
 						 clamp(by - block_size / 2, 0, VSCREEN_HEIGHT);
@@ -351,10 +347,9 @@ int main(int argc, char *argv[]) {
 			/* Horizontal loop has to be first evens and then odds, in order to
 			 * save some bugs with fluids */
 			for (uint_fast16_t i = 0; i < VSCREEN_WIDTH; i += 2) {
-				if (gameboard[j][i] != GO_NONE &&
-					!IS_GUPDATED(gameboard[j][i])) {
+				const byte pixel = gameboard[j][i];
+				if (pixel != GO_NONE && !IS_GUPDATED(pixel))
 					update_object(i, j);
-				}
 
 				/* Next: odd numbers */
 				if (i == VSCREEN_WIDTH_M1 - 1)
@@ -369,21 +364,31 @@ int main(int argc, char *argv[]) {
 		/* Draw game */
 		Render_Clearscreen_Color(GO_COLORS[GO_NONE]);
 
-		Render_image_ext(player.sprite->texture, player.x, player.y, 16, 24, 0,
-						 (&(SDL_Point){8, 12}), player.fliph);
-		Render_image_ext(player_head->texture, player.x, player.y, 16, 8, 0,
-						 (&(SDL_Point){8, 4}), player.fliph);
+		/* Draw player */
+		const uint_fast16_t player_screen_x = player.x - camera.x;
+		const uint_fast16_t player_screen_y = player.y - camera.y;
 
-		for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
-			for (uint_fast16_t i = 0; i < VSCREEN_WIDTH; ++i) {
-				if (gameboard[j][i] != GO_NONE) {
-					gameboard[j][i] =
-						GOBJECT(gameboard[j][i]); /* Reset updated bit */
-					Render_Pixel_Color(i, j, GO_COLORS[gameboard[j][i]]);
+		Render_image_ext(player.sprite->texture, player_screen_x,
+						 player_screen_y, 16, 24, 0, NULL, player.fliph);
+		Render_image_ext(player_head->texture, player_screen_x, player_screen_y,
+						 16, 8, 0, NULL, player.fliph);
+
+		/* Draw gameboard */
+		for (uint_fast16_t j = 0; j < camera.h; ++j) {
+			const uint_fast16_t y = j + camera.y;
+
+			for (uint_fast16_t i = 0; i < camera.w; ++i) {
+				const uint_fast16_t x = i + camera.x;
+
+				const byte pixel = GOBJECT(gameboard[y][x]);
+				if (pixel != GO_NONE) {
+					gameboard[y][x] = pixel; /* Reset updated bit */
+					Render_Pixel_Color(i, j, GO_COLORS[pixel]);
 				}
 			}
 		}
 
+		/* Draw mouse pointer */
 		Color color;
 		memcpy(&color, &GO_COLORS[current_object], sizeof(color));
 		color.a = 0xAF;
@@ -413,8 +418,7 @@ int main(int argc, char *argv[]) {
 		sprintf(fps_str, "%2i", CALCULATE_FPS(delta));
 
 		Render_Setcolor(C_WHITE);
-		draw_string(fps_str, -viewport.x + VIEWPORT_WIDTH - FSTR_WIDTH(fps_str),
-					-viewport.y);
+		draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
 
 		/* =============================================================== */
 		/* Render game */
@@ -428,25 +432,4 @@ int main(int argc, char *argv[]) {
 	}
 
 	return 0;
-}
-
-void ResizeWindow(int newWidth, int newHeight, SDL_Rect viewport,
-				  SDL_FPoint *new_scale) {
-
-	float scaleX = ((float)newWidth / (float)WINDOW_WIDTH);
-	float scaleY = ((float)newHeight / (float)WINDOW_HEIGHT);
-
-	float scale = fminf(scaleX, scaleY);
-
-	/* Calculate centered positioning offset */
-	int offsetX = (newWidth - scale) / scale / 2;
-	int offsetY = (newHeight - scale) / scale / 2;
-
-	new_scale->x = RENDER_XFACTOR * scale;
-	new_scale->y = RENDER_YFACTOR * scale;
-	SDL_RenderSetScale(__renderer, new_scale->x, new_scale->y);
-
-	viewport.x = clamp(viewport.x, -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-	viewport.y = clamp(viewport.y, -VSCREEN_HEIGHT + VIEWPORT_HEIGHT, 0);
-	SDL_RenderSetViewport(__renderer, &viewport);
 }
