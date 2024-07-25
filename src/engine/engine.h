@@ -10,6 +10,7 @@
 extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
 void update_object(const size_t x, const size_t y);
+void update_gameboard();
 
 /* =============================================================== */
 /* Chunks */
