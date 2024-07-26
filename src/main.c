@@ -46,22 +46,21 @@ int main(int argc, char *argv[]) {
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
 	SDL_RenderSetLogicalSize(__renderer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-
-	Render_Clearscreen_Color(C_BLUE);
-	Render_Update;
-
 	SDL_SetWindowSize(__window, VIEWPORT_WIDTH_M2, VIEWPORT_HEIGHT_M2);
 	SDL_SetWindowPosition(__window, SDL_WINDOWPOS_CENTERED,
 						  SDL_WINDOWPOS_CENTERED);
 
+	Render_Clearscreen_Color(C_BLUE);
+	Render_Update;
+
 	/* =============================================================== */
 	/* Load resources */
+	Font_SetCurrent(res_VGA_ROM_F08);
+
 	player.sprite = loadIMG_from_mem(
 		res_player_body_png, res_player_body_png_len, __window, __renderer);
 	player_head = loadIMG_from_mem(res_player_head_png, res_player_head_png_len,
 								   __window, __renderer);
-
-	Font_SetCurrent(res_VGA_ROM_F08);
 
 	/* =============================================================== */
 	/* Init gameloop variables */
@@ -115,9 +114,8 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Get inputs */
-		Uint32		 mouse_x, mouse_y;
+		int			 mouse_x, mouse_y;
 		const Uint32 mouse_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
-		const Uint8 *keyboard	   = SDL_GetKeyboardState(NULL);
 
 		SDL_Event _event;
 		while (GAME_ON && (SDL_PollEvent(&_event))) {
@@ -405,7 +403,7 @@ int main(int argc, char *argv[]) {
 		/* =============================================================== */
 		/* Draw UI */
 		char fps_str[4];
-		sprintf(fps_str, "%2i", CALCULATE_FPS(delta));
+		snprintf(fps_str, sizeof(fps_str), "%2i", CALCULATE_FPS(delta));
 
 		Render_Setcolor(C_WHITE);
 		draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
@@ -420,6 +418,9 @@ int main(int argc, char *argv[]) {
 		if (frameTicks < FRAME_DELAY_MS)
 			SDL_Delay(FRAME_DELAY_MS - frameTicks);
 	}
+
+	delete (player.sprite);
+	delete (player_head);
 
 	return 0;
 }

@@ -1,24 +1,22 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(CSand C)
-
 set(CMAKE_C_STANDARD 99)
 
-set(CMAKE_C_FLAGS_RELEASE_INIT "-O3 --strip-all -fnoseparate-code -DNDEBUG")
-set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -g -O0")
+set(CMAKE_C_FLAGS_RELEASE_INIT "-Ofast -s -fno-stack-protector -fomit-frame-pointer -DNDEBUG")
+set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -Wno-switch -Wno-format-truncation -g -O0")
+
+project(CSand C)
 
 # ===============================================================
 # Dependencies
-
 # Add SDL2 CMake modules
-find_package(SDL2 REQUIRED)
-# find_package(SDL2_image REQUIRED)
-
-# I couldn't get SDL2_image to work, so I'm just manually adding the requirement
-set(SDL2_IMAGE_LIBRARIES " -lSDL2_image")
-string(STRIP "${SDL2_IMAGE_LIBRARIES}" SDL2_IMAGE_LIBRARIES)
-
 add_definitions(-D_REENTRANT)
+
+set(SDL2_INCLUDE_DIRS "/usr/include/SDL2")
+set(SDL2_LIBRARIES "-lSDL2")
+
+set(SDL2_IMAGE_LIBRARIES "-lSDL2_image")
+
 include_directories(
 	${SDL2_INCLUDE_DIRS}
 	)

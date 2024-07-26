@@ -13,14 +13,11 @@
  * required for NULL callbacks
  */
 #define new(C) ((C *)calloc(sizeof(C), 1))
-static void *memdup(const void *src, size_t size) {
-	void *dst = malloc(size);
-	if (!dst)
-		return NULL;
-
-	return memcpy(dst, src, size);
-}
-
+#define delete(O)                                                              \
+	if (O) {                                                                   \
+		free(O);                                                               \
+		O = NULL;                                                              \
+	}
 
 /* =============================================================== */
 /* Mathematics */
