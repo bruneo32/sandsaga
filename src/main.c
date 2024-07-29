@@ -22,6 +22,7 @@
 #include "graphics/graphics.h"
 #include "util.h"
 
+static size_t		 fps_	 = FPS;
 static volatile bool GAME_ON = true;
 
 #define PLAYER_SPEED 4
@@ -66,6 +67,8 @@ int main(int argc, char *argv[]) {
 	/* Init gameloop variables */
 	SDL_Rect   window_viewport;
 	SDL_FPoint window_scale;
+	size_t	   frame_cx = 0;
+	char	   fps_str[4];
 	short	   block_size	  = 1 << 3;
 	bool	   grid_mode	  = false;
 	byte	   current_object = GO_STONE;
@@ -402,8 +405,6 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Draw UI */
-		char fps_str[4];
-		snprintf(fps_str, sizeof(fps_str), "%2i", CALCULATE_FPS(delta));
 
 		Render_Setcolor(C_WHITE);
 		draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
@@ -417,6 +418,14 @@ int main(int argc, char *argv[]) {
 		frameTicks = SDL_GetTicks() - currentTicks;
 		if (frameTicks < FRAME_DELAY_MS)
 			SDL_Delay(FRAME_DELAY_MS - frameTicks);
+
+		++frame_cx;
+		if (frame_cx % 4 == 0) {
+			fps_ = CALCULATE_FPS(delta);
+			if (fps_ > FPS - 5)
+				fps_ = FPS;
+			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+		}
 	}
 
 	delete (player.sprite);
