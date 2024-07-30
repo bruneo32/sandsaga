@@ -9,8 +9,21 @@
 
 extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
+#define SUBCHUNK_SIZE UINT32_WIDTH
+#define SUBCHUNK_VMAX (VSCREEN_HEIGHT / SUBCHUNK_SIZE)
+
+extern uint32_t subchunkopt[SUBCHUNK_VMAX];
+void			set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
+
+#define ResetSubchunks                                                         \
+	for (uint_fast8_t __j = 0; __j < SUBCHUNK_VMAX; ++__j)                     \
+		subchunkopt[__j] = -1;
+#define set_subchunk_world(_on, _x, _y) set_subchunk(_on, _x / 32, _y / 32)
+#define is_subchunk_active(_i, _j)		(0 != (subchunkopt[_j] & BIT(_i)))
+
 void update_object(const size_t x, const size_t y);
 void update_gameboard();
+void draw_gameboard_world();
 
 /* =============================================================== */
 /* Chunks */

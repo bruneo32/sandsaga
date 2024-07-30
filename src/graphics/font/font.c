@@ -12,7 +12,7 @@ void draw_char(unsigned char c, int x, int y) {
 		for (uint_fast8_t i = 0; i < BITFONT_CHAR_WIDTH; ++i) {
 			/* If the bit at the current position is set, draw a pixel,
 			 * the color is driven by Render_Setcolor() */
-			if ((*charat & (1 << (7 - i))) != 0)
+			if ((*charat & BITL(UINT8_WIDTH, i)) != 0)
 				Render_Pixel(x + i, y + j);
 		}
 

@@ -2,6 +2,7 @@
 
 SDL_Window	 *__window	 = NULL;
 SDL_Renderer *__renderer = NULL;
+SDL_Texture	 *vscreen_	 = NULL;
 
 uint32_t __windowWidth	= 0;
 uint32_t __windowHeight = 0;
@@ -31,16 +32,25 @@ void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 	}
 
 	/* Create a 2D renderer */
-	__renderer = SDL_CreateRenderer(
-		__window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+	__renderer = SDL_CreateRenderer(__window, -1,
+									SDL_RENDERER_ACCELERATED |
+										SDL_RENDERER_TARGETTEXTURE |
+										SDL_RENDERER_PRESENTVSYNC);
 	if (!__renderer) {
 		fprintf(stderr, "Error creating renderer: %s\n", SDL_GetError());
 		SDL_DestroyWindow(__window);
 		SDL_Quit();
 		exit(-3);
 	}
-
 	SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
+
+	vscreen_ = SDL_CreateTexture(__renderer, SDL_PIXELFORMAT_RGBA8888,
+								 SDL_TEXTUREACCESS_TARGET, VSCREEN_WIDTH,
+								 VSCREEN_HEIGHT);
+
+	SDL_SetTextureBlendMode(vscreen_, SDL_BLENDMODE_BLEND);
+	Render_SetcolorRGBA(0xFF, 0xFF, 0xFF, 0);
+	SDL_RenderClear(__renderer);
 }
 
 void Render_Rescale(float scalex, float scaley) {
