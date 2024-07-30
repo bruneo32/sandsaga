@@ -29,9 +29,12 @@
 #define fequals(f1, f2)				fequals_E(f1, f2, DBL_EPSILON)
 #define fequalsf(f1, f2)			fequalsf_E(f1, f2, FLT_EPSILON)
 
-#define radtodeg(rad)			 (rad * (180.0 / M_PI))
-#define degtorad(deg)			 (deg * (M_PI / 180.0))
-#define clamp(x, low, high)		 (x < low ? low : (x > high ? high : x))
+#define radtodeg(rad) (rad * (180.0 / M_PI))
+#define degtorad(deg) (deg * (M_PI / 180.0))
+#define clamp(x, low, high)                                                    \
+	((x) < (low) ? (low) : ((x) > (high) ? (high) : (x)))
+#define clamp_high(x, high)		 ((x) > (high) ? (high) : (x))
+#define clamp_low(x, low)		 ((x) < (low) ? (low) : (x))
 #define lerp(a, b, t)			 ((1 - t) * a + t * b)
 #define lengthdir_x(length, dir) (length * cos(dir))
 #define lengthdir_y(length, dir) (length * sin(dir))
@@ -45,9 +48,24 @@
 
 /* =============================================================== */
 /* MISC */
+#ifndef UINT8_WIDTH
+#define UINT8_WIDTH 8
+#endif
+#ifndef UINT16_WIDTH
+#define UINT16_WIDTH 16
+#endif
 #ifndef UINT32_WIDTH
 #define UINT32_WIDTH 32
 #endif
+#ifndef UINT64_WIDTH
+#define UINT64_WIDTH 64
+#endif
+
+/** Big Endian single bitmask */
+#define BIT(_i) (1 << _i)
+
+/** Little Endian single bitmask */
+#define BITL(_bits, _i) (1 << ((_bits - 1) - _i))
 
 typedef uint8_t byte;
 typedef int8_t	sbyte;

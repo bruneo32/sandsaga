@@ -26,8 +26,8 @@ enum GameObject_t /* : uint8_t */ {
 #define GO_IS_SOLID(go) (go > GO_LAST_FLUID && go <= GO_LAST_SOLID)
 
 static const Color GO_COLORS[] = {
-	/* None (DKGRAY) */
-	{0x11, 0x11, 0x11, 0xFF},
+	/* None (transparent) */
+	{0xFF, 0xFF, 0xFF, 0},
 	/* Water */
 	{0x7F, 0x7F, 0xFF, 0xAF},
 	/* Sand */

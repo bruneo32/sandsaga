@@ -69,18 +69,20 @@ int main(int argc, char *argv[]) {
 	SDL_FPoint window_scale;
 	size_t	   frame_cx = 0;
 	char	   fps_str[4];
-	short	   block_size	  = 1 << 3;
-	bool	   grid_mode	  = false;
-	byte	   current_object = GO_STONE;
+	snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+	short block_size	 = 1 << 3;
+	bool  grid_mode		 = false;
+	byte  current_object = GO_STONE;
 
 	SDL_RenderGetViewport(__renderer, &window_viewport);
 	SDL_RenderGetScale(__renderer, &window_scale.x, &window_scale.y);
 
 	/* =============================================================== */
 	/* Initialize data */
-	seed_t SEED		= rand();
-	player.chunk_id = (Chunk){.x = 3, .y = 3};
-	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
+	seed_t SEED			  = rand();
+	player.chunk_id		  = (Chunk){.x = CHUNK_MAX_X - 2, .y = CHUNK_MAX_X - 2};
+	SDL_Rect	   camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
+	const SDL_Rect screenport = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
 	/* Generate world first instance*/
 	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
@@ -155,6 +157,14 @@ int main(int argc, char *argv[]) {
 					break;
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
+					break;
+				case SDL_SCANCODE_KP_MINUS:
+					if (block_size > 1)
+						block_size >>= 1;
+					break;
+				case SDL_SCANCODE_KP_PLUS:
+					if (block_size < 256)
+						block_size <<= 1;
 					break;
 				case SDL_SCANCODE_W:
 					player.y =
@@ -305,10 +315,14 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		mouse_x = mouse_x / window_scale.x - window_viewport.x;
-		mouse_y = mouse_y / window_scale.y - window_viewport.y;
-		const uint32_t mouse_wold_x = mouse_x + camera.x;
-		const uint32_t mouse_wold_y = mouse_y + camera.y;
+		mouse_x = clamp((mouse_x / window_scale.x - window_viewport.x), 0,
+						VIEWPORT_WIDTH);
+		mouse_y = clamp((mouse_y / window_scale.y - window_viewport.y), 0,
+						VIEWPORT_HEIGHT);
+		const uint32_t mouse_wold_x =
+			clamp((mouse_x + camera.x), 0, VSCREEN_WIDTH);
+		const uint32_t mouse_wold_y =
+			clamp((mouse_y + camera.y), 0, VSCREEN_HEIGHT);
 
 		/* =============================================================== */
 		/* Update game */
@@ -324,23 +338,22 @@ int main(int argc, char *argv[]) {
 			if (block_size == 1) {
 				gameboard[mouse_wold_y][mouse_wold_x] = current_object;
 			} else {
-				uint_fast16_t bx =
+				int_fast16_t bx =
 					(grid_mode
 						 ? GRIDALIGN(mouse_wold_x, block_size) + block_size / 2
 						 : mouse_wold_x);
-				uint_fast16_t by =
+				int_fast16_t by =
 					(grid_mode
 						 ? GRIDALIGN(mouse_wold_y, block_size) + block_size / 2
 						 : mouse_wold_y);
 
-				for (uint_fast16_t j =
-						 clamp(by - block_size / 2, 0, VSCREEN_HEIGHT);
-					 j < clamp(by + block_size / 2, 0, VSCREEN_HEIGHT); ++j) {
-					for (uint_fast16_t i =
-							 clamp(bx - block_size / 2, 0, VSCREEN_WIDTH);
-						 i < clamp(bx + block_size / 2, 0, VSCREEN_WIDTH);
+				for (int_fast16_t j = clamp_low(by - block_size / 2, 0);
+					 j < clamp_high(by + block_size / 2, VSCREEN_HEIGHT); ++j) {
+					for (int_fast16_t i = clamp_low(bx - block_size / 2, 0);
+						 i < clamp_high(bx + block_size / 2, VSCREEN_WIDTH);
 						 ++i) {
 						gameboard[j][i] = current_object;
+						set_subchunk_world(1, i, j);
 					}
 				}
 			}
@@ -353,7 +366,7 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Draw game */
-		Render_Clearscreen_Color(GO_COLORS[GO_NONE]);
+		Render_Clearscreen_Color(C_DKGRAY);
 
 		/* Draw player */
 		const uint_fast16_t player_screen_x = player.x - camera.x;
@@ -365,19 +378,13 @@ int main(int argc, char *argv[]) {
 						 16, 8, 0, NULL, player.fliph);
 
 		/* Draw gameboard */
-		for (uint_fast16_t j = 0; j < camera.h; ++j) {
-			const uint_fast16_t y = j + camera.y;
+		SDL_SetRenderTarget(__renderer, vscreen_);
+		draw_gameboard_world();
+		SDL_SetRenderTarget(__renderer, NULL);
 
-			for (uint_fast16_t i = 0; i < camera.w; ++i) {
-				const uint_fast16_t x = i + camera.x;
-
-				const byte pixel = gameboard[y][x];
-				if (pixel != GO_NONE) {
-					// gameboard[y][x] = pixel; /* Reset updated bit */
-					Render_Pixel_Color(i, j, GO_COLORS[pixel]);
-				}
-			}
-		}
+		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
+		SDL_RenderCopy(__renderer, vscreen_, &camera, &screenport);
+		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
 
 		/* Draw mouse pointer */
 		Color color;
@@ -387,17 +394,17 @@ int main(int argc, char *argv[]) {
 		if (block_size == 1) {
 			Render_Pixel_Color(mouse_x, mouse_y, color);
 		} else {
-			uint_fast16_t bx =
+			int_fast16_t bx =
 				(grid_mode ? GRIDALIGN(mouse_x, block_size) + block_size / 2
 						   : mouse_x);
-			uint_fast16_t by =
+			int_fast16_t by =
 				(grid_mode ? GRIDALIGN(mouse_y, block_size) + block_size / 2
 						   : mouse_y);
 
-			for (uint_fast16_t j = by - block_size / 2; j < by + block_size / 2;
-				 ++j) {
-				for (uint_fast16_t i = bx - block_size / 2;
-					 i < bx + block_size / 2; ++i) {
+			for (int_fast16_t j = clamp_low((by - block_size / 2), 0);
+				 j < clamp_high(by + block_size / 2, VIEWPORT_HEIGHT); ++j) {
+				for (int_fast16_t i = clamp_low((bx - block_size / 2), 0);
+					 i < clamp_high(bx + block_size / 2, VIEWPORT_WIDTH); ++i) {
 					Render_Pixel_Color(i, j, color);
 				}
 			}

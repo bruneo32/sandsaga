@@ -36,6 +36,7 @@
 
 extern SDL_Window	*__window;
 extern SDL_Renderer *__renderer;
+extern SDL_Texture	*vscreen_;
 
 /** Create a window and a renderer */
 void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
