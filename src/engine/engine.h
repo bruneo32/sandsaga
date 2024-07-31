@@ -40,6 +40,10 @@ typedef union chunk_u {
 	} PACKED;
 } Chunk;
 
+#define GEN_WATERSEA_OFFSET_X 128
+#define GEN_SKY_Y			  512
+#define GEN_TOP_LAYER_Y		  1024
+#define GEN_BEDROCK_MARGIN_Y  512
 void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx, const size_t vy);
 
 #endif /* _ENGINE_H */

@@ -14,36 +14,74 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j) {
 
 void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 					const size_t vy) {
-	const size_t vx_max = vx + VIEWPORT_WIDTH;
-	const size_t vy_max = vy + VIEWPORT_HEIGHT;
-
-	const uint64_t world_x0 = CHUNK.x * VIEWPORT_WIDTH;
-	const uint64_t world_y0 = CHUNK.y * VIEWPORT_HEIGHT;
-
-	for (size_t y = vy; y < vy_max; ++y) {
-		for (size_t x = vx; x < vx_max; ++x) {
-			gameboard[y][x] = GO_STONE;
-		}
+	if (CHUNK.y < GEN_SKY_Y ||
+		(CHUNK.y == GEN_SKY_Y &&
+		 (CHUNK.x < GEN_WATERSEA_OFFSET_X ||
+		  CHUNK.x > CHUNK_MAX_X - GEN_WATERSEA_OFFSET_X))) {
+		/* Empty sky */
+		for (uint_fast16_t y = vy; y < vy + VIEWPORT_HEIGHT; ++y)
+			memset(&gameboard[y][vx], GO_NONE, VIEWPORT_WIDTH);
+		ResetSubchunks;
+		return;
+	} else if (CHUNK.y > CHUNK_MAX_X - GEN_BEDROCK_MARGIN_Y) {
+		/* Bedrock */
+		for (uint_fast16_t y = vy; y < vy + VIEWPORT_HEIGHT; ++y)
+			memset(&gameboard[y][vx], GO_STONE, VIEWPORT_WIDTH);
+		ResetSubchunks;
+		return;
+	} else if (CHUNK.x < GEN_WATERSEA_OFFSET_X ||
+			   CHUNK.x > CHUNK_MAX_X - GEN_WATERSEA_OFFSET_X) {
+		/* Water sea */
+		for (uint_fast16_t y = vy; y < vy + VIEWPORT_HEIGHT; ++y)
+			memset(&gameboard[y][vx], GO_WATER, VIEWPORT_WIDTH);
+		ResetSubchunks;
+		return;
 	}
 
-	const size_t ground_height = 128;
-	for (size_t x = vx; x < vx_max; ++x) {
-		const size_t ground =
-			fabs(perlin2d(SEED, world_x0 + x, 0, 0.005, 1) * ground_height);
-		for (size_t y = vy; y < vy_max; ++y) {
-			if (y < ground) {
-				gameboard[y][x] = GO_NONE;
-				continue;
+	// const uint_fast64_t vx_max = clamp_high(vx + VIEWPORT_WIDTH,
+	// VSCREEN_WIDTH);
+	const uint_fast64_t vy_max =
+		clamp_high(vy + VIEWPORT_HEIGHT, VSCREEN_HEIGHT);
+
+	const uint_fast64_t world_x0 = CHUNK.x * VIEWPORT_WIDTH;
+	const uint_fast64_t world_y0 = CHUNK.y * VIEWPORT_HEIGHT;
+
+	/* Rock base */
+	for (uint_fast16_t y = vy; y < vy_max; ++y)
+		memset(&gameboard[y][vx], GO_STONE, VIEWPORT_WIDTH);
+
+	/* GENERATE */
+	for (uint_fast64_t x = 0; x < VIEWPORT_WIDTH; ++x) {
+		const uint_fast64_t world_x = world_x0 + x;
+		const uint_fast16_t gbx		= vx + x;
+
+		const uint_fast64_t ground_height =
+			(CHUNK.y < GEN_TOP_LAYER_Y)
+				? fabs(perlin2d(SEED, world_x, 0, 0.001, 2) *
+					   (GEN_TOP_LAYER_Y - GEN_SKY_Y))
+				: 0;
+
+		for (uint_fast64_t y = 0; y < VIEWPORT_HEIGHT; ++y) {
+			const uint_fast64_t world_y = world_y0 + y;
+			const uint_fast16_t gby		= vy + y;
+
+			if (CHUNK.y < GEN_TOP_LAYER_Y) {
+				const uint_fast64_t ground =
+					(GEN_SKY_Y * VIEWPORT_HEIGHT) + ground_height;
+
+				if (world_y < ground) {
+					gameboard[gby][gbx] = GO_NONE;
+					continue;
+				}
 			}
 
-			const double noise =
-				perlin2d(SEED, world_x0 + x, world_y0 + y, 0.01, 4);
-			if (noise > 0.9) {
-				gameboard[y][x] = GO_NONE;
+			const double noise = perlin2d(SEED, world_x, world_y, 0.007, 4);
+			if (noise > 0.88) {
+				gameboard[gby][gbx] = GO_NONE;
 			} else if (noise > 0.75) {
-				gameboard[y][x] = GO_WATER;
+				gameboard[gby][gbx] = GO_WATER;
 			} else if (noise > 0.6) {
-				gameboard[y][x] = GO_SAND;
+				gameboard[gby][gbx] = GO_SAND;
 			}
 		}
 	}
@@ -196,17 +234,9 @@ void draw_gameboard_world() {
 
 				_draw_block(start_i, start_j, end_i, end_j);
 			}
-	}
 
-	/* Draw test lines */
-	Render_Setcolor(C_RED);
-	for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += SUBCHUNK_SIZE) {
-		for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += SUBCHUNK_SIZE) {
-			Render_Pixel_Color(
-				_i, _j,
-				((!is_subchunk_active(_i / 32, _j / 32)) ? C_RED : C_GREEN));
-			set_subchunk_world(0,_i,_j);
-		}
+		/* Reset subchunk */
+		subchunkopt[sj] = 0;
 	}
 
 #undef _draw_block
