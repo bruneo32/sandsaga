@@ -79,10 +79,9 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Initialize data */
-	seed_t SEED			  = rand();
-	player.chunk_id		  = (Chunk){.x = CHUNK_MAX_X - 2, .y = CHUNK_MAX_X - 2};
-	SDL_Rect	   camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
-	const SDL_Rect screenport = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
+	seed_t SEED		= rand();
+	player.chunk_id = (Chunk){.x = GEN_WATERSEA_OFFSET_X, .y = GEN_SKY_Y};
+	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
 	/* Generate world first instance*/
 	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
@@ -94,9 +93,10 @@ int main(int argc, char *argv[]) {
 						   (j - chunk_start_y) * VIEWPORT_HEIGHT);
 		}
 	}
+	ResetSubchunks;
 
-	player.x = VIEWPORT_WIDTH + 32;
-	player.y = VIEWPORT_HEIGHT + 32;
+	player.x = VIEWPORT_WIDTH + VIEWPORT_WIDTH_DIV_2;
+	player.y = VIEWPORT_HEIGHT;
 
 	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
 					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
@@ -190,6 +190,7 @@ int main(int argc, char *argv[]) {
 										   .y = player.chunk_id.y - 1};
 							generate_chunk(SEED, chunk, i * VIEWPORT_WIDTH, 0);
 						}
+						ResetSubchunks;
 					}
 
 					camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2 + 12, 0,
@@ -221,6 +222,7 @@ int main(int argc, char *argv[]) {
 							generate_chunk(SEED, chunk, i * VIEWPORT_WIDTH,
 										   VIEWPORT_HEIGHT * 2);
 						}
+						ResetSubchunks;
 					}
 
 					camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2 + 12, 0,
@@ -254,6 +256,7 @@ int main(int argc, char *argv[]) {
 										   .y = start_j + j};
 							generate_chunk(SEED, chunk, 0, j * VIEWPORT_HEIGHT);
 						}
+						ResetSubchunks;
 					}
 					camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
 									 VSCREEN_WIDTH - VIEWPORT_WIDTH);
@@ -271,7 +274,7 @@ int main(int argc, char *argv[]) {
 							VIEWPORT_WIDTH + (player.x - VIEWPORT_WIDTH_M2);
 						++player.chunk_id.x;
 
-						/* Move world to right */
+						/* Move world to left */
 						for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 							memmove(&gameboard[j][0],
 									&gameboard[j][VIEWPORT_WIDTH],
@@ -289,6 +292,7 @@ int main(int argc, char *argv[]) {
 							generate_chunk(SEED, chunk, VIEWPORT_WIDTH_M2,
 										   j * VIEWPORT_HEIGHT);
 						}
+						ResetSubchunks;
 					}
 
 					camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
@@ -379,11 +383,11 @@ int main(int argc, char *argv[]) {
 
 		/* Draw gameboard */
 		SDL_SetRenderTarget(__renderer, vscreen_);
-		draw_gameboard_world();
+		draw_gameboard_world(&camera);
 		SDL_SetRenderTarget(__renderer, NULL);
 
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
-		SDL_RenderCopy(__renderer, vscreen_, &camera, &screenport);
+		SDL_RenderCopy(__renderer, vscreen_, &camera, NULL);
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
 
 		/* Draw mouse pointer */
@@ -415,6 +419,11 @@ int main(int argc, char *argv[]) {
 
 		Render_Setcolor(C_WHITE);
 		draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
+
+		char str_xy[10];
+		snprintf(str_xy, sizeof(str_xy), "%i,%i", player.chunk_id.x,
+				 player.chunk_id.y);
+		draw_string(str_xy, 0, 0);
 
 		/* =============================================================== */
 		/* Render game */
