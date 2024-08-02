@@ -62,15 +62,15 @@
 #endif
 
 /** Big Endian single bitmask */
-#define BIT(_i) (1 << _i)
+#define BIT(_i) (1 << (_i))
 
 /** Little Endian single bitmask */
-#define BITL(_bits, _i) (1 << ((_bits - 1) - _i))
+#define BITL(_bits, _i) (1 << ((_bits - 1) - (_i)))
 
 typedef uint8_t byte;
 typedef int8_t	sbyte;
 
-#define GRIDALIGN(p, s) ((p / s) * block_size)
+#define GRIDALIGN(p, s) ((p / s) * s)
 
 #define SWAP(a, b)                                                             \
 	{                                                                          \
@@ -78,18 +78,6 @@ typedef int8_t	sbyte;
 		(b) ^= (a);                                                            \
 		(a) ^= (b);                                                            \
 	}
-
-/**
- * Cross-platform sleep function for C
- * @param int milliseconds
- */
-#ifdef WIN32
-#include <windows.h>
-#define sleep(ms) Sleep(ms)
-#else
-#include <unistd.h>
-#define sleep(ms) usleep(ms * 1000)
-#endif
 
 /** Enable attribute packing in tcc compiler */
 #if defined(__TINYC__)

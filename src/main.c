@@ -25,7 +25,7 @@
 static size_t		 fps_	 = FPS;
 static volatile bool GAME_ON = true;
 
-#define PLAYER_SPEED 4
+#define PLAYER_SPEED 6
 static Player  player;
 static Sprite *player_head;
 
@@ -79,8 +79,9 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Initialize data */
-	seed_t SEED		= rand();
-	player.chunk_id = (Chunk){.x = GEN_WATERSEA_OFFSET_X, .y = GEN_SKY_Y};
+	seed_t SEED = rand();
+	player.chunk_id =
+		(Chunk){.x = GEN_WATERSEA_OFFSET_X + 1, .y = GEN_SKY_Y + 1};
 	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
 	/* Generate world first instance*/
@@ -96,7 +97,7 @@ int main(int argc, char *argv[]) {
 	ResetSubchunks;
 
 	player.x = VIEWPORT_WIDTH + VIEWPORT_WIDTH_DIV_2;
-	player.y = VIEWPORT_HEIGHT;
+	player.y = VIEWPORT_HEIGHT + VIEWPORT_HEIGHT_DIV_2;
 
 	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
 					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
@@ -166,7 +167,7 @@ int main(int argc, char *argv[]) {
 					if (block_size < 256)
 						block_size <<= 1;
 					break;
-				case SDL_SCANCODE_W:
+				case SDL_SCANCODE_W: {
 					player.y =
 						clamp(player.y - PLAYER_SPEED, 0, VSCREEN_HEIGHT);
 
@@ -193,10 +194,19 @@ int main(int argc, char *argv[]) {
 						ResetSubchunks;
 					}
 
+					const int start_cam_y = camera.y;
 					camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2 + 12, 0,
 									 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
-					break;
-				case SDL_SCANCODE_S:
+					const int end_cam_y = camera.y;
+
+					/* Activate the next to subchunk on the top to draw it
+					 * when entered the camera rect */
+					for (uint_fast16_t j = end_cam_y; j <= start_cam_y; j++)
+						for (uint_fast16_t i = camera.x;
+							 i < camera.x + camera.w; i++)
+							set_subchunk_world(1, i, j);
+				} break;
+				case SDL_SCANCODE_S: {
 					player.y =
 						clamp(player.y + PLAYER_SPEED, 0, VSCREEN_HEIGHT);
 
@@ -225,10 +235,19 @@ int main(int argc, char *argv[]) {
 						ResetSubchunks;
 					}
 
+					const int start_cam_y = camera.y + camera.h - 1;
 					camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2 + 12, 0,
 									 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
-					break;
-				case SDL_SCANCODE_A:
+					const int end_cam_y = camera.y + camera.h - 1;
+
+					/* Activate the next to subchunk on the bottom to draw it
+					 * when entered the camera rect */
+					for (uint_fast16_t j = start_cam_y; j < end_cam_y; j++)
+						for (uint_fast16_t i = camera.x;
+							 i < camera.x + camera.w; i++)
+							set_subchunk_world(1, i, j);
+				} break;
+				case SDL_SCANCODE_A: {
 					player.x = clamp(player.x - PLAYER_SPEED, 0, VSCREEN_WIDTH);
 					player.fliph = true;
 
@@ -258,10 +277,20 @@ int main(int argc, char *argv[]) {
 						}
 						ResetSubchunks;
 					}
+
+					const int start_cam_x = camera.x;
 					camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
 									 VSCREEN_WIDTH - VIEWPORT_WIDTH);
-					break;
-				case SDL_SCANCODE_D:
+					const int end_cam_x = camera.x;
+
+					/* Activate the next to subchunk on the left to draw it
+					 * when entered the camera rect */
+					for (uint_fast16_t i = end_cam_x; i <= start_cam_x; i++)
+						for (uint_fast16_t j = camera.y;
+							 j < camera.y + camera.h; j++)
+							set_subchunk_world(1, i, j);
+				} break;
+				case SDL_SCANCODE_D: {
 					player.x = clamp(player.x + PLAYER_SPEED, 0, VSCREEN_WIDTH);
 					player.fliph = false;
 
@@ -295,9 +324,18 @@ int main(int argc, char *argv[]) {
 						ResetSubchunks;
 					}
 
+					const int start_cam_x = camera.x + camera.w - 1;
 					camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2 + 8, 0,
 									 VSCREEN_WIDTH - VIEWPORT_WIDTH);
-					break;
+					const int end_cam_x = camera.x + camera.w - 1;
+
+					/* Activate the next to subchunk on the right to draw it
+					 * when entered the camera rect */
+					for (uint_fast16_t i = start_cam_x; i <= end_cam_x; i++)
+						for (uint_fast16_t j = camera.y;
+							 j < camera.y + camera.h; j++)
+							set_subchunk_world(1, i, j);
+				} break;
 				}
 			} break;
 
@@ -341,6 +379,7 @@ int main(int argc, char *argv[]) {
 
 			if (block_size == 1) {
 				gameboard[mouse_wold_y][mouse_wold_x] = current_object;
+				set_subchunk_world(1, mouse_wold_x, mouse_wold_y);
 			} else {
 				int_fast16_t bx =
 					(grid_mode

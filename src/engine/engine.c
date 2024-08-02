@@ -84,7 +84,7 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 	}
 }
 
-void update_object(const size_t x, const size_t y) {
+bool update_object(const size_t x, const size_t y) {
 	byte *boardxy = &gameboard[y][x];
 	byte  type	  = *boardxy;
 
@@ -108,6 +108,7 @@ void update_object(const size_t x, const size_t y) {
 				*bottom	 = GUPDATE(GO_SAND);
 				set_subchunk_world(1, x, down_y);
 				set_subchunk_world(1, x, y);
+				return true;
 			}
 
 			else if (IS_IN_BOUNDS_H(left_x) && *bottomleft == GO_NONE) {
@@ -115,11 +116,13 @@ void update_object(const size_t x, const size_t y) {
 				*bottomleft = GUPDATE(GO_SAND);
 				set_subchunk_world(1, left_x, down_y);
 				set_subchunk_world(1, x, y);
+				return true;
 			} else if (IS_IN_BOUNDS_H(right_x) && *bottomright == GO_NONE) {
 				*boardxy	 = GO_NONE;
 				*bottomright = GUPDATE(GO_SAND);
 				set_subchunk_world(1, right_x, down_y);
 				set_subchunk_world(1, x, y);
+				return true;
 			}
 
 			/* Flow down in less dense fluids */
@@ -129,6 +132,7 @@ void update_object(const size_t x, const size_t y) {
 				*boardxy |= BITMASK_GO_UPDATED;
 				set_subchunk_world(1, x, y);
 				set_subchunk_world(1, x, down_y);
+				return true;
 			}
 		}
 	} break;
@@ -144,6 +148,7 @@ void update_object(const size_t x, const size_t y) {
 			*bottom	 = GUPDATE(GO_WATER);
 			set_subchunk_world(1, x, down_y);
 			set_subchunk_world(1, x, y);
+			return true;
 		}
 
 		else if (IS_IN_BOUNDS(left_x, down_y) && *bottomleft == GO_NONE) {
@@ -151,11 +156,13 @@ void update_object(const size_t x, const size_t y) {
 			*bottomleft = GUPDATE(GO_WATER);
 			set_subchunk_world(1, left_x, down_y);
 			set_subchunk_world(1, x, y);
+			return true;
 		} else if (IS_IN_BOUNDS(right_x, down_y) && *bottomright == GO_NONE) {
 			*boardxy	 = GO_NONE;
 			*bottomright = GUPDATE(GO_WATER);
 			set_subchunk_world(1, right_x, down_y);
 			set_subchunk_world(1, x, y);
+			return true;
 		}
 
 		else if (IS_IN_BOUNDS(left_x, y) && *left == GO_NONE) {
@@ -163,88 +170,83 @@ void update_object(const size_t x, const size_t y) {
 			*left	 = GUPDATE(GO_WATER);
 			set_subchunk_world(1, left_x, y);
 			set_subchunk_world(1, x, y);
+			return true;
 		} else if (IS_IN_BOUNDS(right_x, y) && *right == GO_NONE) {
 			*boardxy = GO_NONE;
 			*right	 = GUPDATE(GO_WATER);
 			set_subchunk_world(1, right_x, y);
 			set_subchunk_world(1, x, y);
+			return true;
 		}
 	} break;
 	}
+
+	return false;
 }
 
 void update_gameboard() {
-#define _update_block(_sx, _sy, _ex, _ey)                                      \
-	for (uint_fast16_t __j = _ey - 1;; --__j) {                                \
-		/* Horizontal loop has to be first evens and then odds, in order to    \
-		 * save some bugs with fluids */                                       \
-		for (uint_fast16_t __i = _sx; __i < _ex; __i += 2) {                   \
-			const byte pixel_ = gameboard[__j][__i];                           \
-			if (pixel_ != GO_NONE && !IS_GUPDATED(pixel_))                     \
-				update_object(__i, __j);                                       \
-			/* Next: odd numbers */                                            \
-			if (__i == _ex - 2)                                                \
-				__i = -1;                                                      \
-		}                                                                      \
-		if (__j == _sy)                                                        \
-			break;                                                             \
-	}
 
+	/* Traverse all subchunks */
 	for (uint_fast8_t sj = SUBCHUNK_SIZE - 1;; --sj) {
 		uint_fast16_t start_j = sj * SUBCHUNK_HEIGHT;
 		uint_fast16_t end_j	  = start_j + SUBCHUNK_HEIGHT;
+
 		if (end_j > VSCREEN_HEIGHT)
 			end_j = VSCREEN_HEIGHT;
 
-		if (subchunkopt[sj] == -1) {
-			/* Draw whole row */
-			_update_block(0, start_j, VSCREEN_WIDTH, end_j);
-		} else
-			for (uint_fast8_t si = 0; si < SUBCHUNK_SIZE; ++si) {
-				const bool is_active = is_subchunk_active(si, sj);
-				if (!is_active)
-					continue;
+		for (uint_fast8_t si = 0; si < SUBCHUNK_SIZE; ++si) {
+			const bool is_active = is_subchunk_active(si, sj);
 
-				/* Activate top subchunk for gravity purposes */
-				if (sj > 0)
-					set_subchunk(1, si, sj - 1);
+			/* Skip inactive subchunks */
+			if (!is_active)
+				continue;
 
-				uint_fast16_t start_i = si * SUBCHUNK_WIDTH;
-				uint_fast16_t end_i	  = start_i + SUBCHUNK_WIDTH;
+			uint_fast16_t start_i = si * SUBCHUNK_WIDTH;
+			uint_fast16_t end_i	  = start_i + SUBCHUNK_WIDTH;
 
-				if (end_i > VSCREEN_WIDTH)
-					end_i = VSCREEN_WIDTH;
+			/* Check if subchunk is out of bounds */
+			if (end_i > VSCREEN_WIDTH)
+				end_i = VSCREEN_WIDTH;
 
-				_update_block(start_i, start_j, end_i, end_j);
+			/* Is there any object to update? */
+			bool p = false;
+
+			/* Update block */
+			for (uint_fast16_t j = end_j - 1;; --j) {
+				/* Horizontal loop has to be first odds and then
+				 * evens, in order to save some bugs with fluids */
+				for (uint_fast16_t i = start_i + 1; i <= end_i; i += 2) {
+					const byte pixel_ = gameboard[j][i];
+
+					if (pixel_ != GO_NONE && !IS_GUPDATED(pixel_)) {
+						bool u = update_object(i, j);
+						if (!p && u)
+							p = true;
+					}
+
+					/* Next: even numbers */
+					if (i == end_i - 1)
+						i = 0;
+				}
+
+				if (j == start_j)
+					break;
 			}
+
+			/* Activate top subchunk for gravity purposes
+			 * (only if this subchunk has movement) */
+			if (sj > 0 && p)
+				set_subchunk(1, si, sj - 1);
+		}
 
 		if (sj == 0)
 			break;
 	}
-
-#undef _update_block
 }
 
 void draw_gameboard_world(const SDL_Rect *camera) {
-#define _draw_block(_sx, _sy, _ex, _ey)                                        \
-	for (uint_fast16_t __j = _ey - 1;; --__j) {                                \
-		for (uint_fast16_t __i = _sx; __i < _ex; ++__i) {                      \
-			if (IS_GUPDATED(gameboard[__j][__i])) {                            \
-				if (!p)                                                        \
-					p = true;                                                  \
-				/* Reset BITMASK_GO_UPDATED */                                 \
-				gameboard[__j][__i] = GOBJECT(gameboard[__j][__i]);            \
-			}                                                                  \
-			if (camera != NULL &&                                              \
-				((__i >= camera->x && __i < camera->x + camera->w) &&          \
-				 (__j >= camera->y && __j < camera->y + camera->h))) {         \
-				Render_Pixel_Color(__i, __j, GO_COLORS[gameboard[__j][__i]]);  \
-			}                                                                  \
-		}                                                                      \
-		if (__j == _sy)                                                        \
-			break;                                                             \
-	}
 
+	/* Traverse all subchunks */
 	for (uint_fast8_t sj = SUBCHUNK_SIZE - 1;; --sj) {
 		uint_fast16_t start_j = sj * SUBCHUNK_HEIGHT;
 		uint_fast16_t end_j	  = start_j + SUBCHUNK_HEIGHT;
@@ -252,7 +254,10 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 			end_j = VSCREEN_HEIGHT;
 
 		for (uint_fast8_t si = 0; si < SUBCHUNK_SIZE; ++si) {
-			if (!is_subchunk_active(si, sj))
+			const bool is_active = is_subchunk_active(si, sj);
+
+			/* Skip inactive subchunks */
+			if (!is_active)
 				continue;
 
 			uint_fast16_t start_i = si * SUBCHUNK_WIDTH;
@@ -261,10 +266,32 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 			if (end_i > VSCREEN_WIDTH)
 				end_i = VSCREEN_WIDTH;
 
+			/* Is there any object to update? */
 			bool p = false;
 
-			_draw_block(start_i, start_j, end_i, end_j);
+			/* Draw block */
+			for (uint_fast16_t j = end_j - 1;; --j) {
+				for (uint_fast16_t i = start_i; i < end_i; ++i) {
+					/* Reset BITMASK_GO_UPDATED and track P */
+					if (IS_GUPDATED(gameboard[j][i])) {
+						if (!p)
+							p = true;
+						gameboard[j][i] = GOBJECT(gameboard[j][i]);
+					}
 
+					/* If is in camera bounds, draw it */
+					if (!camera ||
+						((i >= camera->x - 1 && i <= camera->x + camera->w) &&
+						 (j >= camera->y - 1 && j <= camera->y + camera->h))) {
+						Render_Pixel_Color(i, j, GO_COLORS[gameboard[j][i]]);
+					}
+				}
+
+				if (j == start_j)
+					break;
+			}
+
+			/* Disable subchunk if no movement for next iteration */
 			if (!p)
 				set_subchunk(0, si, sj);
 		}
@@ -279,6 +306,4 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 			Render_Pixel_Color(
 				_i, _j,
 				((!is_subchunk_active_world(_i, _j)) ? C_RED : C_GREEN));
-
-#undef _draw_block
 }
