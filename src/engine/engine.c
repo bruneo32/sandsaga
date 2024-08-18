@@ -184,6 +184,7 @@ bool update_object(const size_t x, const size_t y) {
 	return false;
 }
 
+/* TODO: Allow extra processed subchunks as Queue */
 void update_gameboard() {
 
 	/* Traverse all subchunks */
@@ -194,15 +195,18 @@ void update_gameboard() {
 		if (end_j > VSCREEN_HEIGHT)
 			end_j = VSCREEN_HEIGHT;
 
-		for (uint_fast8_t si = 0; si < SUBCHUNK_SIZE; ++si) {
+		for (uint_fast8_t si = SUBCHUNK_SIZE - 1;; --si) {
 			const bool is_active = is_subchunk_active(si, sj);
 
 			/* Skip inactive subchunks */
-			if (!is_active)
+			if (!is_active) {
+				if (si == 0)
+					break;
 				continue;
+			}
 
 			uint_fast16_t start_i = si * SUBCHUNK_WIDTH;
-			uint_fast16_t end_i	  = start_i + SUBCHUNK_WIDTH;
+			uint_fast16_t end_i	  = start_i + SUBCHUNK_WIDTH - 1;
 
 			/* Check if subchunk is out of bounds */
 			if (end_i > VSCREEN_WIDTH)
@@ -225,8 +229,8 @@ void update_gameboard() {
 					}
 
 					/* Next: even numbers */
-					if (i == end_i - 1)
-						i = 0;
+					if (i == end_i)
+						i = start_i - 2;
 				}
 
 				if (j == start_j)
@@ -235,8 +239,14 @@ void update_gameboard() {
 
 			/* Activate top subchunk for gravity purposes
 			 * (only if this subchunk has movement) */
-			if (sj > 0 && p)
+			if (sj > 0 && p) {
 				set_subchunk(1, si, sj - 1);
+				set_subchunk(1, si - 1, sj);
+				set_subchunk(1, si + 1, sj);
+			}
+
+			if (si == 0)
+				break;
 		}
 
 		if (sj == 0)
