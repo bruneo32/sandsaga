@@ -2,6 +2,7 @@
 
 #include "noise.h"
 
+size_t WORLD_SEED = 0;
 bool DEBUG_ON = false;
 byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
