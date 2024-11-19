@@ -3,6 +3,12 @@
 #include "noise.h"
 
 byte	   gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
+
+/**
+ * The subchunk optimization is only for the drawing step,
+ * as it is the most expensive step.
+ * The update step is fluent with the current VSCREEN size.
+ */
 subchunk_t subchunkopt[SUBCHUNK_SIZE];
 
 void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j) {
@@ -92,9 +98,11 @@ bool update_object(const size_t x, const size_t y) {
 	size_t left_or_right = (((rand() % 2) == 0) ? 1 : -1);
 
 	// size_t up_y	   = y - 1;
-	size_t down_y  = y + 1;
-	size_t left_x  = x - left_or_right;
-	size_t right_x = x + left_or_right;
+	size_t down_y	= y + 1;
+	size_t left_x	= x - left_or_right;
+	size_t left_x2	= x - left_or_right - left_or_right;
+	size_t right_x	= x + left_or_right;
+	size_t right_x2 = x + left_or_right + left_or_right;
 
 	switch (type) {
 	case GO_SAND: {
@@ -153,6 +161,38 @@ bool update_object(const size_t x, const size_t y) {
 			return true;
 		}
 
+		if (IS_IN_BOUNDS_H(right_x)) {
+			/* If there is a blocking fluid try to move it when its density is
+			 * lower, this makes the water look more fluent */
+			if (*right == GO_WATER && gameboard[y][right_x2] < GO_WATER) {
+				update_object(right_x, y);
+			}
+
+			if (*right == GO_NONE) {
+				*boardxy = GO_NONE;
+				*right	 = GUPDATE(GO_WATER);
+				set_subchunk_world(1, right_x, y);
+				set_subchunk_world(1, x, y);
+				return true;
+			}
+		}
+
+		if (IS_IN_BOUNDS_H(left_x)) {
+			/* If there is a blocking fluid try to move it when its density is
+			 * lower, this makes the water look more fluent */
+			if (*left == GO_WATER && gameboard[y][left_x2] < GO_WATER) {
+				update_object(left_x, y);
+			}
+
+			if (*left == GO_NONE) {
+				*boardxy = GO_NONE;
+				*left	 = GUPDATE(GO_WATER);
+				set_subchunk_world(1, left_x, y);
+				set_subchunk_world(1, x, y);
+				return true;
+			}
+		}
+
 		if (IS_IN_BOUNDS(right_x, down_y) && *bottomright == GO_NONE) {
 			*boardxy	 = GO_NONE;
 			*bottomright = GUPDATE(GO_WATER);
@@ -169,119 +209,52 @@ bool update_object(const size_t x, const size_t y) {
 			return true;
 		}
 
-		if (IS_IN_BOUNDS(right_x, y) && *right == GO_NONE) {
-			*boardxy = GO_NONE;
-			*right	 = GUPDATE(GO_WATER);
-			set_subchunk_world(1, right_x, y);
-			set_subchunk_world(1, x, y);
-			return true;
-		}
-
-		if (IS_IN_BOUNDS(left_x, y) && *left == GO_NONE) {
-			*boardxy = GO_NONE;
-			*left	 = GUPDATE(GO_WATER);
-			set_subchunk_world(1, left_x, y);
-			set_subchunk_world(1, x, y);
-			return true;
-		}
-
 	} break;
 	}
 
 	return false;
 }
 
-void update_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
-						 size_t end_j, bool *p, bool force) {
-
-	/* Update block */
-	for (size_t j = end_j - 1;; --j) {
-
-		/* Horizontal loop has to be first odds and then
-		 * evens, in order to save some bugs with fluids */
-		for (size_t i = end_i - 1;; i -= 2) {
-			const byte pixel_ = gameboard[j][i];
-
-			if (pixel_ != GO_NONE && (force || !IS_GUPDATED(pixel_))) {
-				bool u = update_object(i, j);
-				if (p && u)
-					*p = true;
-			}
-
-			/* Next: even numbers */
-			if (i == start_i - 1)
-				i = end_i;
-			else if (i == start_i)
-				break;
-		}
-
-		if (j == start_j)
-			break;
-	}
-}
-
-void update_subchunk(size_t si, size_t sj, bool *p, bool force) {
-	size_t start_i = si * SUBCHUNK_WIDTH;
-	size_t end_i   = start_i + SUBCHUNK_WIDTH;
-	size_t start_j = sj * SUBCHUNK_HEIGHT;
-	size_t end_j   = start_j + SUBCHUNK_HEIGHT;
-
-	/* Check if subchunk is out of bounds */
-	if (start_i >= VSCREEN_WIDTH - 1 || start_j >= VSCREEN_HEIGHT - 1)
-		return;
-
-	if (end_i > VSCREEN_WIDTH)
-		end_i = VSCREEN_WIDTH;
-	if (end_j > VSCREEN_HEIGHT)
-		end_j = VSCREEN_HEIGHT;
-
-	update_subchunk_pos(start_i, end_i, start_j, end_j, p, force);
-}
-
 void update_gameboard() {
-	/* Traverse all subchunks */
-	for (uint_fast8_t sj = SUBCHUNK_SIZE - 1;; --sj) {
-		size_t start_j = sj * SUBCHUNK_HEIGHT;
-		size_t end_j   = start_j + SUBCHUNK_HEIGHT;
+	static bool left_to_right = false;
 
-		if (end_j > VSCREEN_HEIGHT)
-			end_j = VSCREEN_HEIGHT;
+	for (size_t j = VSCREEN_HEIGHT_M1;; --j) {
+		if (left_to_right) {
+			/* Horizontal loop has to be first odds and then
+			 * evens, in order to save some bugs with fluids */
+			for (size_t i = 0;; i += 2) {
+				const byte pixel_ = gameboard[j][i];
+				if (pixel_ != GO_NONE && !IS_GUPDATED(pixel_)) {
+					update_object(i, j);
+				}
 
-		for (uint_fast8_t si = SUBCHUNK_SIZE - 1;; --si) {
-			/* Skip inactive subchunks */
-			const bool is_active = is_subchunk_active(si, sj);
-			if (!is_active) {
-				if (si == 0)
+				/* Next: even numbers */
+				if (i == VSCREEN_WIDTH)
+					i = -1;
+				else if (i == VSCREEN_WIDTH_M1)
 					break;
-				continue;
 			}
-
-			size_t start_i = si * SUBCHUNK_WIDTH;
-			size_t end_i   = start_i + SUBCHUNK_WIDTH;
-
-			if (end_i > VSCREEN_WIDTH)
-				end_i = VSCREEN_WIDTH;
-
-			/* Is there any object to update? */
-			bool p = false;
-
-			update_subchunk_pos(start_i, end_i, start_j, end_j, &p, false);
-
-			/* Activate top subchunk for gravity purposes
-			 * (only if this subchunk has movement) */
-			if (sj > 0 && p) {
-				set_subchunk(1, si, sj - 1);
-				set_subchunk(1, si - 1, sj);
-				set_subchunk(1, si + 1, sj);
+		} else {
+			/* Horizontal loop has to be first odds and then
+			 * evens, in order to save some bugs with fluids */
+			for (size_t i = VSCREEN_WIDTH_M1;; i -= 2) {
+				const byte pixel_ = gameboard[j][i];
+				if (pixel_ != GO_NONE && !IS_GUPDATED(pixel_)) {
+					update_object(i, j);
+				}
+				/* Next: even numbers */
+				if (i == -1)
+					i = VSCREEN_WIDTH;
+				else if (i == 0)
+					break;
 			}
-
-			if (si == 0)
-				break;
 		}
 
-		if (sj == 0)
+		if (j == 0)
 			break;
 	}
+
+	left_to_right = !left_to_right;
 }
 
 void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,

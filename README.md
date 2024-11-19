@@ -5,6 +5,7 @@ Sandfalling simulator in C
 ```sh
 ./setup install  # Currently only for debian, check requirements.txt otherwise
 ./setup -c debug
+./bake_assets.sh
 ./setup build
 ```
 
