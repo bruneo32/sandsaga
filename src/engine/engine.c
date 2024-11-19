@@ -2,7 +2,8 @@
 
 #include "noise.h"
 
-byte	   gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
+bool DEBUG_ON = false;
+byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
 /**
  * The subchunk optimization is only for the drawing step,
@@ -275,16 +276,20 @@ void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
 			if (!camera ||
 				((i >= camera->x - 1 && i <= camera->x + camera->w) &&
 				 (j >= camera->y - 1 && j <= camera->y + camera->h))) {
+				if (DEBUG_ON) {
+					Color CUSTOM_COL;
+					memcpy(&CUSTOM_COL, &GO_COLORS[gameboard[j][i]],
+						   sizeof(Color));
+					if (u) {
+						CUSTOM_COL.r = 0xFF - CUSTOM_COL.r;
+						CUSTOM_COL.g = 0xFF - CUSTOM_COL.g;
+						CUSTOM_COL.b = 0xFF - CUSTOM_COL.b;
+					}
 
-				Color CUSTOM_COL;
-				memcpy(&CUSTOM_COL, &GO_COLORS[gameboard[j][i]], sizeof(Color));
-				// if (u) {
-				// 	CUSTOM_COL.r = 0xFF - CUSTOM_COL.r;
-				// 	CUSTOM_COL.g = 0xFF - CUSTOM_COL.g;
-				// 	CUSTOM_COL.b = 0xFF - CUSTOM_COL.b;
-				// }
-
-				Render_Pixel_Color(i, j, CUSTOM_COL);
+					Render_Pixel_Color(i, j, CUSTOM_COL);
+				} else {
+					Render_Pixel_Color(i, j, GO_COLORS[gameboard[j][i]]);
+				}
 			}
 
 			if (i == start_i)
@@ -357,9 +362,11 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 	}
 
 	/* Draw test points */
-	for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += SUBCHUNK_HEIGHT)
-		for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += SUBCHUNK_WIDTH)
-			Render_Pixel_Color(
-				_i, _j,
-				((!is_subchunk_active_world(_i, _j)) ? C_RED : C_GREEN));
+	if (DEBUG_ON) {
+		for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += SUBCHUNK_HEIGHT)
+			for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += SUBCHUNK_WIDTH)
+				Render_Pixel_Color(
+					_i, _j,
+					((!is_subchunk_active_world(_i, _j)) ? C_RED : C_GREEN));
+	}
 }
