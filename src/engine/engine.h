@@ -7,6 +7,7 @@
 #include "../util.h"
 #include "gameobjects.h"
 
+extern size_t WORLD_SEED;
 extern bool DEBUG_ON;
 
 extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
