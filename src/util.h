@@ -79,6 +79,9 @@ typedef int8_t	sbyte;
 		(a) ^= (b);                                                            \
 	}
 
+#define UNIQUE_NAME(counter) __tmp_##counter##__
+#define repeat(n) for (size_t UNIQUE_NAME(__COUNTER__) = 0; UNIQUE_NAME(__COUNTER__) < n; ++UNIQUE_NAME(__COUNTER__))
+
 /** Enable attribute packing in tcc compiler */
 #if defined(__TINYC__)
 #pragma pack(1)
