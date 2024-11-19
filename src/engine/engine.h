@@ -7,6 +7,8 @@
 #include "../util.h"
 #include "gameobjects.h"
 
+extern bool DEBUG_ON;
+
 extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
 /* 32-bit subchunk_t means 32x32 subchunks filling VSCREEN */

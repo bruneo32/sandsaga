@@ -156,6 +156,9 @@ int main(int argc, char *argv[]) {
 				case SDL_SCANCODE_F4:
 					Render_TogleFullscreen;
 					break;
+				case SDL_SCANCODE_F3:
+					DEBUG_ON = !DEBUG_ON;
+					break;
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
 					break;
@@ -455,14 +458,16 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Draw UI */
+		if (DEBUG_ON) {
+			Render_Setcolor(C_WHITE);
+			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+			draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
 
-		Render_Setcolor(C_WHITE);
-		draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
-
-		char str_xy[10];
-		snprintf(str_xy, sizeof(str_xy), "%i,%i", player.chunk_id.x,
-				 player.chunk_id.y);
-		draw_string(str_xy, 0, 0);
+			char str_xy[10];
+			snprintf(str_xy, sizeof(str_xy), "%i,%i", player.chunk_id.x,
+					 player.chunk_id.y);
+			draw_string(str_xy, 0, 0);
+		}
 
 		/* =============================================================== */
 		/* Render game */
@@ -479,7 +484,6 @@ int main(int argc, char *argv[]) {
 			fps_ = CALCULATE_FPS(delta);
 			if (fps_ > FPS - 5)
 				fps_ = FPS;
-			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
 		}
 	}
 
