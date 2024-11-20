@@ -3,7 +3,8 @@
 #include "noise.h"
 
 size_t WORLD_SEED = 0;
-bool DEBUG_ON = false;
+bool   DEBUG_ON	  = false;
+
 byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
 /**
@@ -99,23 +100,25 @@ bool update_object(const size_t x, const size_t y) {
 	/* Update object behaviour */
 	size_t left_or_right = (((rand() % 2) == 0) ? 1 : -1);
 
-	// size_t up_y	   = y - 1;
+	size_t up_y		= y - 1;
 	size_t down_y	= y + 1;
 	size_t left_x	= x - left_or_right;
 	size_t left_x2	= x - left_or_right - left_or_right;
 	size_t right_x	= x + left_or_right;
 	size_t right_x2 = x + left_or_right + left_or_right;
 
+	byte *bottom = &gameboard[down_y][x];
+
 	switch (type) {
 	case GO_SAND: {
-		byte *bottom	  = &gameboard[down_y][x];
+#define OBJECT GO_SAND
 		byte *bottomleft  = &gameboard[down_y][left_x];
 		byte *bottomright = &gameboard[down_y][right_x];
 
 		if (IS_IN_BOUNDS(x, down_y)) {
 			if (*bottom == GO_NONE) {
 				*boardxy = GO_NONE;
-				*bottom	 = GUPDATE(GO_SAND);
+				*bottom	 = GUPDATE(OBJECT);
 				set_subchunk_world(1, x, down_y);
 				set_subchunk_world(1, x, y);
 				return true;
@@ -123,7 +126,7 @@ bool update_object(const size_t x, const size_t y) {
 
 			if (IS_IN_BOUNDS_H(right_x) && *bottomright == GO_NONE) {
 				*boardxy	 = GO_NONE;
-				*bottomright = GUPDATE(GO_SAND);
+				*bottomright = GUPDATE(OBJECT);
 				set_subchunk_world(1, right_x, down_y);
 				set_subchunk_world(1, x, y);
 				return true;
@@ -131,33 +134,24 @@ bool update_object(const size_t x, const size_t y) {
 
 			if (IS_IN_BOUNDS_H(left_x) && *bottomleft == GO_NONE) {
 				*boardxy	= GO_NONE;
-				*bottomleft = GUPDATE(GO_SAND);
+				*bottomleft = GUPDATE(OBJECT);
 				set_subchunk_world(1, left_x, down_y);
 				set_subchunk_world(1, x, y);
 				return true;
 			}
-
-			/* Flow down in less dense fluids */
-			if (*bottom < *boardxy && GO_IS_FLUID(*bottom)) {
-				SWAP(*bottom, *boardxy);
-				*bottom |= BITMASK_GO_UPDATED;
-				*boardxy |= BITMASK_GO_UPDATED;
-				set_subchunk_world(1, x, y);
-				set_subchunk_world(1, x, down_y);
-				return true;
-			}
 		}
+#undef OBJECT
 	} break;
 	case GO_WATER: {
-		byte *bottom	  = &gameboard[down_y][x];
+#define OBJECT GO_WATER
 		byte *bottomleft  = &gameboard[down_y][left_x];
 		byte *bottomright = &gameboard[down_y][right_x];
 		byte *left		  = &gameboard[y][left_x];
 		byte *right		  = &gameboard[y][right_x];
 
-		if (IS_IN_BOUNDS(x, down_y) && *bottom == GO_NONE) {
+		if (IS_IN_BOUNDS_V(down_y) && *bottom == GO_NONE) {
 			*boardxy = GO_NONE;
-			*bottom	 = GUPDATE(GO_WATER);
+			*bottom	 = GUPDATE(OBJECT);
 			set_subchunk_world(1, x, down_y);
 			set_subchunk_world(1, x, y);
 			return true;
@@ -166,13 +160,15 @@ bool update_object(const size_t x, const size_t y) {
 		if (IS_IN_BOUNDS_H(right_x)) {
 			/* If there is a blocking fluid try to move it when its density is
 			 * lower, this makes the water look more fluent */
-			if (*right == GO_WATER && gameboard[y][right_x2] < GO_WATER) {
-				update_object(right_x, y);
+			if (IS_IN_BOUNDS_H(right_x2) && *right == OBJECT &&
+				gameboard[y][right_x2] < OBJECT) {
+				if (update_object(right_x2, y))
+					update_object(right_x, y);
 			}
 
 			if (*right == GO_NONE) {
 				*boardxy = GO_NONE;
-				*right	 = GUPDATE(GO_WATER);
+				*right	 = GUPDATE(OBJECT);
 				set_subchunk_world(1, right_x, y);
 				set_subchunk_world(1, x, y);
 				return true;
@@ -182,13 +178,15 @@ bool update_object(const size_t x, const size_t y) {
 		if (IS_IN_BOUNDS_H(left_x)) {
 			/* If there is a blocking fluid try to move it when its density is
 			 * lower, this makes the water look more fluent */
-			if (*left == GO_WATER && gameboard[y][left_x2] < GO_WATER) {
-				update_object(left_x, y);
+			if (IS_IN_BOUNDS_H(left_x2) && *left == OBJECT &&
+				gameboard[y][left_x2] < OBJECT) {
+				if (update_object(left_x2, y))
+					update_object(left_x, y);
 			}
 
 			if (*left == GO_NONE) {
 				*boardxy = GO_NONE;
-				*left	 = GUPDATE(GO_WATER);
+				*left	 = GUPDATE(OBJECT);
 				set_subchunk_world(1, left_x, y);
 				set_subchunk_world(1, x, y);
 				return true;
@@ -197,7 +195,7 @@ bool update_object(const size_t x, const size_t y) {
 
 		if (IS_IN_BOUNDS(right_x, down_y) && *bottomright == GO_NONE) {
 			*boardxy	 = GO_NONE;
-			*bottomright = GUPDATE(GO_WATER);
+			*bottomright = GUPDATE(OBJECT);
 			set_subchunk_world(1, right_x, down_y);
 			set_subchunk_world(1, x, y);
 			return true;
@@ -205,13 +203,93 @@ bool update_object(const size_t x, const size_t y) {
 
 		if (IS_IN_BOUNDS(left_x, down_y) && *bottomleft == GO_NONE) {
 			*boardxy	= GO_NONE;
-			*bottomleft = GUPDATE(GO_WATER);
+			*bottomleft = GUPDATE(OBJECT);
 			set_subchunk_world(1, left_x, down_y);
 			set_subchunk_world(1, x, y);
 			return true;
 		}
-
+#undef OBJECT
 	} break;
+	case GO_VAPOR: {
+#define OBJECT GO_VAPOR
+		byte *up	  = &gameboard[up_y][x];
+		byte *upleft  = &gameboard[up_y][left_x];
+		byte *upright = &gameboard[up_y][right_x];
+		byte *left	  = &gameboard[y][left_x];
+		byte *right	  = &gameboard[y][right_x];
+
+		if (IS_IN_BOUNDS_V(up_y) && *up == GO_NONE) {
+			*boardxy = GO_NONE;
+			*up		 = GUPDATE(OBJECT);
+			set_subchunk_world(1, x, up_y);
+			set_subchunk_world(1, x, y);
+			return true;
+		}
+
+		if (IS_IN_BOUNDS_H(right_x)) {
+			/* If there is a blocking fluid try to move it when its density is
+			 * lower, this makes the water look more fluent */
+			if (IS_IN_BOUNDS_H(right_x2) && *right == OBJECT &&
+				gameboard[y][right_x2] < OBJECT) {
+				if (update_object(right_x2, y))
+					update_object(right_x, y);
+			}
+
+			if (*right == GO_NONE) {
+				*boardxy = GO_NONE;
+				*right	 = GUPDATE(OBJECT);
+				set_subchunk_world(1, right_x, y);
+				set_subchunk_world(1, x, y);
+				return true;
+			}
+		}
+
+		if (IS_IN_BOUNDS_H(left_x)) {
+			if (*left == GO_NONE) {
+				/* If there is a blocking fluid try to move it when its density
+				 * is lower, this makes the water look more fluent */
+				if (IS_IN_BOUNDS_H(left_x2) && *left == OBJECT &&
+					gameboard[y][left_x2] < OBJECT) {
+					if (update_object(left_x2, y))
+						update_object(left_x, y);
+				}
+
+				*boardxy = GO_NONE;
+				*left	 = GUPDATE(OBJECT);
+				set_subchunk_world(1, left_x, y);
+				set_subchunk_world(1, x, y);
+				return true;
+			}
+		}
+
+		if (IS_IN_BOUNDS(right_x, up_y) && *upright == GO_NONE) {
+			*boardxy = GO_NONE;
+			*upright = GUPDATE(OBJECT);
+			set_subchunk_world(1, right_x, up_y);
+			set_subchunk_world(1, x, y);
+			return true;
+		}
+
+		if (IS_IN_BOUNDS(left_x, up_y) && *upleft == GO_NONE) {
+			*boardxy = GO_NONE;
+			*upleft	 = GUPDATE(OBJECT);
+			set_subchunk_world(1, left_x, up_y);
+			set_subchunk_world(1, x, y);
+			return true;
+		}
+#undef OBJECT
+	} break;
+	}
+
+	/* Flow down in less dense fluids */
+	if (GO_IS_FLUID(type) && IS_IN_BOUNDS_V(down_y) && GO_IS_FLUID(*bottom) &&
+		*bottom < type) {
+		SWAP(*bottom, *boardxy);
+		*bottom |= BITMASK_GO_UPDATED;
+		*boardxy |= BITMASK_GO_UPDATED;
+		set_subchunk_world(1, x, y);
+		set_subchunk_world(1, x, down_y);
+		return true;
 	}
 
 	return false;
@@ -362,8 +440,19 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 			break;
 	}
 
-	/* Draw test points */
 	if (DEBUG_ON) {
+		/* Draw chunk lines */
+		Render_SetcolorRGBA(0, 127, 255, 64);
+		for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += 2) {
+			Render_Pixel(VIEWPORT_WIDTH, _j);
+			Render_Pixel(VSCREEN_TWO_THIRDS_WIDTH, _j);
+		}
+		for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += 2) {
+			Render_Pixel(_i, VIEWPORT_HEIGHT);
+			Render_Pixel(_i, VSCREEN_TWO_THIRDS_HEIGHT);
+		}
+
+		/* Draw test points */
 		for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += SUBCHUNK_HEIGHT)
 			for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += SUBCHUNK_WIDTH)
 				Render_Pixel_Color(

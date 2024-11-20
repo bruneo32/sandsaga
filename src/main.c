@@ -161,6 +161,8 @@ int main(int argc, char *argv[]) {
 					break;
 				case SDL_SCANCODE_F3:
 					DEBUG_ON = !DEBUG_ON;
+					if (!DEBUG_ON)
+						ResetSubchunks;
 					break;
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
