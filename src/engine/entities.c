@@ -100,6 +100,12 @@ void move_player(Player *player, SDL_Rect *camera, const Uint8 *keyboard) {
 		player->x = clamp(player->x, 0, VSCREEN_WIDTH);
 	}
 
+	player->x = clamp(player->x, VIEWPORT_WIDTH_DIV_2 + 1,
+					  (VSCREEN_WIDTH - VIEWPORT_WIDTH_DIV_2));
+
+	player->y = clamp(player->y, VIEWPORT_HEIGHT_DIV_2 + 1,
+					  (VSCREEN_HEIGHT - VIEWPORT_HEIGHT_DIV_2));
+
 	/* Generate new chunks and move camera */
 
 	if (player->y < player_sy) {

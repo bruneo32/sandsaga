@@ -196,8 +196,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		move_player(&player, &camera, SDL_GetKeyboardState(NULL));
-
 		mouse_x = clamp((mouse_x / window_scale.x - window_viewport.x), 0,
 						VIEWPORT_WIDTH);
 		mouse_y = clamp((mouse_y / window_scale.y - window_viewport.y), 0,
@@ -247,6 +245,7 @@ int main(int argc, char *argv[]) {
 
 		/* Update objects behaviour */
 		update_gameboard();
+		move_player(&player, &camera, SDL_GetKeyboardState(NULL));
 
 		/* =============================================================== */
 		/* Draw game */
@@ -343,7 +342,7 @@ int main(int argc, char *argv[]) {
 			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
 			draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
 
-			char str_xy[10];
+			char str_xy[14];
 			snprintf(str_xy, sizeof(str_xy), "%i,%i", player.chunk_id.x,
 					 player.chunk_id.y);
 			draw_string(str_xy, 0, 0);

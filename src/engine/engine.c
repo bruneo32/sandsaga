@@ -338,7 +338,7 @@ void update_gameboard() {
 }
 
 void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
-					   size_t end_j, bool *p, const SDL_Rect *camera) {
+					   size_t end_j, const SDL_Rect *camera) {
 
 	/* Draw block */
 	for (size_t j = end_j - 1;; --j) {
@@ -346,8 +346,7 @@ void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
 			/* Reset BITMASK_GO_UPDATED and track P */
 			const bool u = IS_GUPDATED(gameboard[j][i]);
 			if (u) {
-				if (p)
-					*p = true;
+				set_subchunk_world(1, i, j);
 				gameboard[j][i] = GOBJECT(gameboard[j][i]);
 			}
 
@@ -380,25 +379,6 @@ void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
 	}
 }
 
-void draw_subchunk(uint_fast8_t si, uint_fast8_t sj, bool *p,
-				   const SDL_Rect *camera) {
-	size_t start_i = si * SUBCHUNK_WIDTH;
-	size_t end_i   = start_i + SUBCHUNK_WIDTH;
-	size_t start_j = sj * SUBCHUNK_HEIGHT;
-	size_t end_j   = start_j + SUBCHUNK_HEIGHT;
-
-	/* Check if subchunk is out of bounds */
-	if (start_i >= VSCREEN_WIDTH - 1 || (start_j >= VSCREEN_HEIGHT - 1))
-		return;
-
-	if (end_i > VSCREEN_WIDTH)
-		end_i = VSCREEN_WIDTH;
-	if (end_j > VSCREEN_HEIGHT)
-		end_j = VSCREEN_HEIGHT;
-
-	draw_subchunk_pos(start_i, end_i, start_j, end_j, p, camera);
-}
-
 void draw_gameboard_world(const SDL_Rect *camera) {
 
 	/* Traverse all subchunks */
@@ -407,6 +387,15 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 		size_t end_j   = start_j + SUBCHUNK_HEIGHT;
 		if (end_j > VSCREEN_HEIGHT)
 			end_j = VSCREEN_HEIGHT;
+
+		if (subchunkopt[sj] == -1) {
+			/* The whole line of subchunks is active */
+			subchunkopt[sj] = 0;
+			draw_subchunk_pos(0, VSCREEN_WIDTH_M1, start_j, end_j, camera);
+			if (sj == 0)
+				break;
+			continue;
+		}
 
 		for (uint_fast8_t si = SUBCHUNK_SIZE - 1;; --si) {
 
@@ -423,14 +412,8 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 			if (end_i > VSCREEN_WIDTH)
 				end_i = VSCREEN_WIDTH;
 
-			/* Is there any object to update? */
-			bool p = false;
-
-			draw_subchunk_pos(start_i, end_i, start_j, end_j, &p, camera);
-
-			/* Disable subchunk if no movement for next iteration */
-			if (!p)
-				set_subchunk(0, si, sj);
+			set_subchunk(0, si, sj);
+			draw_subchunk_pos(start_i, end_i, start_j, end_j, camera);
 
 			if (si == 0)
 				break;
