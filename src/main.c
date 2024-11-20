@@ -319,10 +319,12 @@ int main(int argc, char *argv[]) {
 			Render_Pixel_Color(mouse_x, mouse_y, color);
 		} else {
 			int_fast16_t bx =
-				(grid_mode ? GRIDALIGN(mouse_x, block_size) + block_size / 2
+				(grid_mode ? (GRIDALIGN(mouse_wold_x, block_size) - camera.x) +
+								 block_size / 2
 						   : mouse_x);
 			int_fast16_t by =
-				(grid_mode ? GRIDALIGN(mouse_y, block_size) + block_size / 2
+				(grid_mode ? (GRIDALIGN(mouse_wold_y, block_size) - camera.y) +
+								 block_size / 2
 						   : mouse_y);
 
 			for (int_fast16_t j = clamp_low((by - block_size / 2), 0);
