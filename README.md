@@ -1,16 +1,9 @@
 # SandSaga
 Sandfalling simulator in C
 
-# Build
-```sh
-./setup install  # Currently only for debian, check requirements.txt otherwise
-./setup -c debug
-./bake_assets.sh
-./setup build
-```
-
-# Play
-Run `./build/game_sdl2`
+# Build and Run
+Bake assets before building: `./bake_assets.sh`\
+Use vscode extension for CMake, select a preset and launch it with **CTRL+F5**
 
 # Some resources license or apreciation
 ### FNTCOL16

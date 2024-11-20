@@ -1,6 +1,7 @@
 {
 	"files.associations": {
 		"*.h": "c",
+		"*.ci": "c"
 	},
 	"clangd.fallbackFlags": [
 		"-xc",
@@ -8,5 +9,13 @@
 		"-I/usr/include/SDL2",
 		"-Wno-switch"
 	],
-	"cmake.configureOnOpen": false
+	"cmake.configureOnOpen": false,
+	"cmake.configureOnEdit": false,
+	"cmake.clearOutputBeforeBuild": false,
+	"cmake.revealLog": "error",
+    "cmake.useCMakePresets": "always",
+	"cmake.pinnedCommands": [
+		"workbench.action.tasks.configureTaskRunner",
+		"workbench.action.tasks.runTask"
+	]
 }
