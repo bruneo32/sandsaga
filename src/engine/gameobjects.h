@@ -7,6 +7,9 @@
 enum GameObject_t /* : uint8_t */ {
 	GO_NONE = 0,
 
+	/* Gases */
+	GO_VAPOR,
+
 	/* Fluids */
 	GO_WATER,
 	GO_SAND,
@@ -15,7 +18,7 @@ enum GameObject_t /* : uint8_t */ {
 	GO_STONE,
 
 	/* Enum defs */
-	GO_FIRST = GO_WATER,
+	GO_FIRST = 1,
 	GO_LAST	 = GO_STONE,
 
 	GO_LAST_FLUID = GO_SAND,
@@ -28,6 +31,8 @@ enum GameObject_t /* : uint8_t */ {
 static const Color GO_COLORS[] = {
 	/* None (transparent) */
 	{0xFF, 0xFF, 0xFF, 0},
+	/* Vapor */
+	{0x7F, 0xFF, 0xFF, 0x69},
 	/* Water */
 	{0x7F, 0x7F, 0xFF, 0xAF},
 	/* Sand */
