@@ -1,29 +1,20 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.25)
 
 set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_C_FLAGS_RELEASE_INIT "-Ofast -s -fno-stack-protector -fomit-frame-pointer -DNDEBUG")
 set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -Wno-switch -Wno-format-truncation -g -O0")
 
-project(CSand C)
+cmake_policy(SET CMP0079 NEW)
 
-# ===============================================================
-# Dependencies
-# Add SDL2 CMake modules
-add_definitions(-D_REENTRANT)
-
-set(SDL2_INCLUDE_DIRS "/usr/include/SDL2")
-set(SDL2_LIBRARIES "-lSDL2")
-
-set(SDL2_IMAGE_LIBRARIES "-lSDL2_image")
-
-include_directories(
-	${SDL2_INCLUDE_DIRS}
+project(SandSaga
+	VERSION 0.1.0.0
+	DESCRIPTION "Sand falling simulator in C minigame"
+	HOMEPAGE_URL ""
+	LANGUAGES C
 	)
 
 link_libraries(
-	${SDL2_LIBRARIES}
-	${SDL2_IMAGE_LIBRARIES}
 	m # Link lib-math
 	)
 
@@ -38,7 +29,10 @@ set_target_properties(
 		OUTPUT_NAME game_sdl2
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE SDL_DISABLE_IMMINTRIN_H)
+# ===============================================================
+# Dependencies
+# Add SDL2 CMake modules
+include(cmake/SDL2.cmake)
 
 # ===============================================================
 # Other C Modules
