@@ -124,6 +124,7 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Get inputs */
+		static bool	 LCTRL;
 		int			 mouse_x, mouse_y;
 		const Uint32 mouse_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
 
@@ -132,9 +133,21 @@ int main(int argc, char *argv[]) {
 			switch (_event.type) {
 			case SDL_MOUSEWHEEL:
 				if (_event.wheel.y > 0) {
+					if (LCTRL) {
+						if (block_size < 256)
+							block_size <<= 1;
+						break;
+					}
+
 					current_object =
 						clamp(current_object + 1, GO_FIRST, GO_LAST);
 				} else {
+					if (LCTRL) {
+						if (block_size > 1)
+							block_size >>= 1;
+						break;
+					}
+
 					current_object =
 						clamp(current_object - 1, GO_FIRST, GO_LAST);
 				}
@@ -159,11 +172,15 @@ int main(int argc, char *argv[]) {
 					continue;
 				case SDL_SCANCODE_F4:
 					Render_TogleFullscreen;
+					ResetSubchunks; /* Redraw */
 					break;
 				case SDL_SCANCODE_F3:
 					DEBUG_ON = !DEBUG_ON;
-					if (!DEBUG_ON)
+					if (!DEBUG_ON) /* Clear debug artifacts */
 						ResetSubchunks;
+					break;
+				case SDL_SCANCODE_LCTRL:
+					LCTRL = true;
 					break;
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
@@ -176,7 +193,20 @@ int main(int argc, char *argv[]) {
 					if (block_size < 256)
 						block_size <<= 1;
 					break;
+				case SDL_SCANCODE_RIGHTBRACKET:
+					current_object =
+						clamp(current_object + 1, GO_FIRST, GO_LAST);
+					break;
+				case SDL_SCANCODE_LEFTBRACKET:
+					current_object =
+						clamp(current_object - 1, GO_FIRST, GO_LAST);
+					break;
 				}
+			} break;
+			case SDL_KEYUP: {
+				case SDL_SCANCODE_LCTRL:
+					LCTRL = false;
+					break;
 			} break;
 
 			/* Handle SDL events */
@@ -245,8 +275,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* Update objects behaviour */
-		update_gameboard();
 		move_player(&player, &camera, SDL_GetKeyboardState(NULL));
+		update_gameboard();
 
 		/* =============================================================== */
 		/* Draw game */

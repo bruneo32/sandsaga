@@ -89,6 +89,16 @@ void Render_ResizeWindow(int newWidth, int newHeight, bool keepAspectRatio);
 	}
 #define Render_Pixel_Color(x, y, c) Render_Pixel_RGBA(x, y, c.r, c.g, c.b, c.a)
 
+#define Render_Line(x1, y1, x2, y2)                                            \
+	SDL_RenderDrawLine(__renderer, x1, y1, x2, y2);
+#define Render_Line_RGBA(x1, y1, x2, y2, r, g, b, a)                           \
+	{                                                                          \
+		Render_SetcolorRGBA(r, g, b, a);                                       \
+		Render_Line(x1, y1, x2, y2);                                           \
+	}
+#define Render_Line_Color(x1, y1, x2, y2, c)                                   \
+	Render_Line_RGBA(x1, y1, x2, y2, c.r, c.g, c.b, c.a)
+
 #define Render_image_ext(texture, x, y, w, h, angle, center, flip)             \
 	SDL_RenderCopyEx(__renderer, texture, NULL, &(SDL_Rect){x, y, w, h},       \
 					 angle, center, flip)
