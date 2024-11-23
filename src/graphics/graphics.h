@@ -4,6 +4,7 @@
 #include <SDL.h>
 #include <math.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "../assets/assets.h"
 #include "color.h"

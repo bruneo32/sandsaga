@@ -1,7 +1,8 @@
 # Compilers' output
+dist/
 build/
 res/*.bak
 src/assets/res
 
-# Link to ./build/game_sdl2
-game
+# Libraries
+mingw_libs/

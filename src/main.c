@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #include "assets/res/VGA-ROM.F08.h"
@@ -33,7 +34,7 @@ void sigkillHandler(int signum) { GAME_ON = false; }
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, sigkillHandler);
-	signal(SIGKILL, sigkillHandler);
+
 
 	/* Set random seed */
 	srand(time(NULL));
