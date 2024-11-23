@@ -13,7 +13,8 @@
 	"cmake.configureOnEdit": false,
 	"cmake.clearOutputBeforeBuild": false,
 	"cmake.revealLog": "error",
-    "cmake.useCMakePresets": "always",
+	"cmake.useCMakePresets": "always",
+	"cmake.allowUnsupportedPresetsVersions": true,
 	"cmake.pinnedCommands": [
 		"workbench.action.tasks.configureTaskRunner",
 		"workbench.action.tasks.runTask"

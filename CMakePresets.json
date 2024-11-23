@@ -1,5 +1,5 @@
 {
-	"version": 3,
+	"version": 8,
 	"cmakeMinimumRequired": {
 		"major": 3,
 		"minor": 25,
@@ -31,6 +31,8 @@
 			"binaryDir": "${sourceDir}/build/win64-mingw32/debug",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Debug",
+				"SDL2_PATH": "mingw_libs/SDL2-2.30.9/x86_64-w64-mingw32",
+				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.8.2/x86_64-w64-mingw32",
 				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake"
 			}
 		},
@@ -41,8 +43,19 @@
 			"binaryDir": "${sourceDir}/build/win64-mingw32/release",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Release",
-				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake"
+				"SDL2_PATH": "mingw_libs/SDL2-2.30.9/x86_64-w64-mingw32",
+				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.8.2/x86_64-w64-mingw32",
+				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake",
+				"DIST_BUILDER": "windows"
 			}
+		}
+	],
+	"packagePresets": [
+		{
+			"name": "Windows",
+			"description": "Package the Windows Release build into a ZIP",
+			"displayName": "Windows ZIP Package",
+			"configurePreset": "win64-release-mingw64"
 		}
 	]
 }
