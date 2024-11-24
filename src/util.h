@@ -14,9 +14,9 @@
  */
 #define new(C) ((C *)calloc(sizeof(C), 1))
 #define delete(O)                                                              \
-	if (O) {                                                                   \
-		free(O);                                                               \
-		O = NULL;                                                              \
+	if ((O) != NULL) {                                                         \
+		free((void *)(O));                                                     \
+		(O) = NULL;                                                            \
 	}
 
 /* =============================================================== */
@@ -80,7 +80,9 @@ typedef int8_t	sbyte;
 	}
 
 #define UNIQUE_NAME(counter) __tmp_##counter##__
-#define repeat(n) for (size_t UNIQUE_NAME(__COUNTER__) = 0; UNIQUE_NAME(__COUNTER__) < n; ++UNIQUE_NAME(__COUNTER__))
+#define repeat(n)                                                              \
+	for (size_t UNIQUE_NAME(__COUNTER__) = 0; UNIQUE_NAME(__COUNTER__) < n;    \
+		 ++UNIQUE_NAME(__COUNTER__))
 
 /** Enable attribute packing in tcc compiler */
 #if defined(__TINYC__)

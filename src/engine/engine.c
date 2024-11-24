@@ -2,8 +2,10 @@
 
 #include "noise.h"
 
+/* Prevent the release optimizations from removing DEBUG_ON */
+bool DEBUG_ON __attribute__((used)) = false;
+
 size_t WORLD_SEED = 0;
-bool   DEBUG_ON	  = false;
 
 byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
