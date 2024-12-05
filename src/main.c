@@ -1,52 +1,32 @@
 #include <math.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include <SDL.h>
 
+#include "assets/res/VGA-ROM.F08.h"
+#include "assets/res/player_body.png.h"
+#include "assets/res/player_head.png.h"
+
 #include "assets/assets.h"
 #include "engine/engine.h"
+#include "engine/entities.h"
 #include "engine/gameobjects.h"
 #include "engine/noise.h"
 #include "graphics/color.h"
+#include "graphics/font/font.h"
 #include "graphics/graphics.h"
 #include "util.h"
 
-#define FPS			   60
-#define FRAME_DELAY_MS (1000 / FPS)
-
-#define VIEWPORT_WIDTH		  228
-#define VIEWPORT_HEIGHT		  128
-#define VIEWPORT_WIDTH_M1	  (VIEWPORT_WIDTH - 1)
-#define VIEWPORT_HEIGHT_M1	  (VIEWPORT_HEIGHT - 1)
-#define VIEWPORT_WIDTH_DIV_2  (VIEWPORT_WIDTH / 2)
-#define VIEWPORT_HEIGHT_DIV_2 (VIEWPORT_HEIGHT / 2)
-
-#define VSCREEN_WIDTH	  (VIEWPORT_WIDTH * 3)
-#define VSCREEN_HEIGHT	  (VIEWPORT_HEIGHT)
-#define VSCREEN_WIDTH_M1  (VSCREEN_WIDTH - 1)
-#define VSCREEN_HEIGHT_M1 (VSCREEN_HEIGHT - 1)
-
-#define RENDER_XFACTOR 4
-#define RENDER_YFACTOR 4
-static int WINDOW_WIDTH	 = VIEWPORT_WIDTH * RENDER_XFACTOR;
-static int WINDOW_HEIGHT = VIEWPORT_HEIGHT * RENDER_YFACTOR;
-
-#define IS_IN_BOUNDS_H(x)  ((x >= 0) && (x < VSCREEN_WIDTH))
-#define IS_IN_BOUNDS_V(y)  ((y >= 0) && (y < VSCREEN_HEIGHT))
-#define IS_IN_BOUNDS(x, y) (IS_IN_BOUNDS_H(x) && IS_IN_BOUNDS_V(y))
-
+static size_t		 fps_	 = FPS;
 static volatile bool GAME_ON = true;
 
-static byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
-
-void update_object(int x, int y);
-void generate_chunk(seed_t SEED, Chunk CHUNK, const int vx, const int vy);
-void ResizeWindow(int newWidth, int newHeight, SDL_Rect viewport,
-				  SDL_FPoint *new_scale);
+static Player  player;
+static Sprite *player_head;
 
 /** Handle `CTRL + C` to quit the game */
 void sigkillHandler(int signum) { GAME_ON = false; }
@@ -56,45 +36,77 @@ int main(int argc, char *argv[]) {
 	signal(SIGKILL, sigkillHandler);
 
 	/* Set random seed */
-	// srand(time(NULL));
-	srand(0);
+	srand(time(NULL));
+	// srand(0);
 
 	/* =============================================================== */
 	/* Init SDL */
-	Render_init("Falling sand sandbox game", WINDOW_WIDTH, WINDOW_HEIGHT,
-				VSCREEN_WIDTH, VSCREEN_HEIGHT);
+	Render_init("Falling sand sandbox game", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
-	SDL_RenderSetScale(__renderer, RENDER_XFACTOR, RENDER_YFACTOR);
+	SDL_RenderSetLogicalSize(__renderer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+	SDL_SetWindowSize(__window, VIEWPORT_WIDTH_M2, VIEWPORT_HEIGHT_M2);
+	SDL_SetWindowPosition(__window, SDL_WINDOWPOS_CENTERED,
+						  SDL_WINDOWPOS_CENTERED);
 
 	Render_Clearscreen_Color(C_BLUE);
 	Render_Update;
 
 	/* =============================================================== */
-	/* Init gameloop variables */
-	SDL_Rect   viewport = {-VIEWPORT_WIDTH, 0, VSCREEN_WIDTH, VIEWPORT_HEIGHT};
-	SDL_FPoint __renderer_scale;
-	short	   block_size	  = 1 << 3;
-	bool	   grid_mode	  = false;
-	byte	   current_object = GO_STONE;
+	/* Load resources */
+	Font_SetCurrent(res_VGA_ROM_F08);
 
-	SDL_RenderGetScale(__renderer, &__renderer_scale.x, &__renderer_scale.y);
+	player.sprite = loadIMG_from_mem(
+		res_player_body_png, res_player_body_png_len, __window, __renderer);
+	player_head = loadIMG_from_mem(res_player_head_png, res_player_head_png_len,
+								   __window, __renderer);
+
+	/* =============================================================== */
+	/* Init gameloop variables */
+	SDL_Rect   window_viewport;
+	SDL_FPoint window_scale;
+	size_t	   frame_cx = 0;
+	char	   fps_str[4];
+	snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+	short block_size	 = 1 << 3;
+	bool  grid_mode		 = false;
+	byte  current_object = GO_STONE;
+
+	SDL_RenderGetViewport(__renderer, &window_viewport);
+	SDL_RenderGetScale(__renderer, &window_scale.x, &window_scale.y);
 
 	/* =============================================================== */
 	/* Initialize data */
-	seed_t SEED		 = 0;
-	Chunk  chunk_idx = {.x = CHUNK_MAX_X / 2, .y = 3};
+	WORLD_SEED = rand();
+	player.chunk_id =
+		(Chunk){.x = GEN_WATERSEA_OFFSET_X + 1, .y = GEN_SKY_Y + 1};
+	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
-	/* Generate world */
-	generate_chunk(SEED, chunk_idx, 0, 0);
-	generate_chunk(SEED, (Chunk)(chunk_idx.id + 1), VIEWPORT_WIDTH, 0);
-	generate_chunk(SEED, (Chunk)(chunk_idx.id + 2), VIEWPORT_WIDTH * 2, 0);
+	/* Generate world first instance*/
+	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
+	chunk_axis_t chunk_start_y = player.chunk_id.y - 1;
+	for (chunk_axis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
+		for (chunk_axis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
+			Chunk chunk = (Chunk){.x = i, .y = j};
+			generate_chunk(WORLD_SEED, chunk,
+						   (i - chunk_start_x) * VIEWPORT_WIDTH,
+						   (j - chunk_start_y) * VIEWPORT_HEIGHT);
+		}
+	}
+	ResetSubchunks;
 
-	SDL_Point player = {32 + VIEWPORT_WIDTH, 32};
-	viewport.x		 = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
-							 -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-	SDL_RenderSetViewport(__renderer, &viewport);
+	player.flying = true;
+	player.width  = 16;
+	player.height = 24;
+	player.x	  = VIEWPORT_WIDTH + VIEWPORT_WIDTH_DIV_2;
+	player.y	  = VIEWPORT_HEIGHT + VIEWPORT_HEIGHT_DIV_2;
+
+	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
+					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
+
+	camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2, 0,
+					 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 
 	/* =============================================================== */
 	/* Calculate ticks */
@@ -113,10 +125,6 @@ int main(int argc, char *argv[]) {
 		/* Get inputs */
 		int			 mouse_x, mouse_y;
 		const Uint32 mouse_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
-		const Uint8 *keyboard	   = SDL_GetKeyboardState(NULL);
-
-		mouse_x = mouse_x / __renderer_scale.x - viewport.x;
-		mouse_y = mouse_y / __renderer_scale.y - viewport.y;
 
 		SDL_Event _event;
 		while (GAME_ON && (SDL_PollEvent(&_event))) {
@@ -151,58 +159,21 @@ int main(int argc, char *argv[]) {
 				case SDL_SCANCODE_F4:
 					Render_TogleFullscreen;
 					break;
+				case SDL_SCANCODE_F3:
+					DEBUG_ON = !DEBUG_ON;
+					if (!DEBUG_ON)
+						ResetSubchunks;
+					break;
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
 					break;
-				case SDL_SCANCODE_A:
-					player.x = clamp(player.x - 2, 0, VSCREEN_WIDTH);
-
-					/* If went to left chunk.
-					 * Move world to right and generate new chunks in left
-					 */
-					if (player.x < VIEWPORT_WIDTH) {
-						player.x =
-							VIEWPORT_WIDTH * 2 - (VIEWPORT_WIDTH - player.x);
-						--chunk_idx.x;
-						for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
-							memmove(&gameboard[j][VIEWPORT_WIDTH * 2],
-									&gameboard[j][VIEWPORT_WIDTH],
-									VIEWPORT_WIDTH);
-							memmove(&gameboard[j][VIEWPORT_WIDTH],
-									&gameboard[j][0], VIEWPORT_WIDTH);
-						}
-						generate_chunk(SEED, (Chunk)(chunk_idx.id - 1), 0, 0);
-					}
-
-					viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
-									   -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-					SDL_RenderSetViewport(__renderer, &viewport);
+				case SDL_SCANCODE_KP_MINUS:
+					if (block_size > 1)
+						block_size >>= 1;
 					break;
-				case SDL_SCANCODE_D:
-					player.x = clamp(player.x + 2, 0, VSCREEN_WIDTH);
-
-					/* If went to right chunk.
-					 * Move world to left and generate new chunks in right
-					 */
-					if (player.x >= VIEWPORT_WIDTH * 2) {
-						player.x =
-							VIEWPORT_WIDTH + (player.x - VIEWPORT_WIDTH * 2);
-						++chunk_idx.x;
-						for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
-							memmove(&gameboard[j][0],
-									&gameboard[j][VIEWPORT_WIDTH],
-									VIEWPORT_WIDTH);
-							memmove(&gameboard[j][VIEWPORT_WIDTH],
-									&gameboard[j][VIEWPORT_WIDTH * 2],
-									VIEWPORT_WIDTH);
-						}
-						generate_chunk(SEED, (Chunk)(chunk_idx.id + 1),
-									   VIEWPORT_WIDTH * 2, 0);
-					}
-
-					viewport.x = clamp(-player.x + VIEWPORT_WIDTH_DIV_2,
-									   -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-					SDL_RenderSetViewport(__renderer, &viewport);
+				case SDL_SCANCODE_KP_PLUS:
+					if (block_size < 256)
+						block_size <<= 1;
 					break;
 				}
 			} break;
@@ -214,13 +185,25 @@ int main(int argc, char *argv[]) {
 			case SDL_WINDOWEVENT:
 				switch (_event.window.event) {
 				case SDL_WINDOWEVENT_SIZE_CHANGED:
-					ResizeWindow(_event.window.data1, _event.window.data2,
-								 viewport, &__renderer_scale);
+					Render_ResizeWindow(_event.window.data1,
+										_event.window.data2, true);
+					SDL_RenderGetViewport(__renderer, &window_viewport);
+					SDL_RenderGetScale(__renderer, &window_scale.x,
+									   &window_scale.y);
 					break;
 				}
 				break;
 			}
 		}
+
+		mouse_x = clamp((mouse_x / window_scale.x - window_viewport.x), 0,
+						VIEWPORT_WIDTH);
+		mouse_y = clamp((mouse_y / window_scale.y - window_viewport.y), 0,
+						VIEWPORT_HEIGHT);
+		const uint32_t mouse_wold_x =
+			clamp((mouse_x + camera.x), 0, VSCREEN_WIDTH);
+		const uint32_t mouse_wold_y =
+			clamp((mouse_y + camera.y), 0, VSCREEN_HEIGHT);
 
 		/* =============================================================== */
 		/* Update game */
@@ -234,21 +217,25 @@ int main(int argc, char *argv[]) {
 			}
 
 			if (block_size == 1) {
-				gameboard[mouse_y][mouse_x] = current_object;
+				gameboard[mouse_wold_y][mouse_wold_x] = current_object;
+				set_subchunk_world(1, mouse_wold_x, mouse_wold_y);
 			} else {
-				int bx =
-					(grid_mode ? GRIDALIGN(mouse_x, block_size) + block_size / 2
-							   : mouse_x);
-				int by =
-					(grid_mode ? GRIDALIGN(mouse_y, block_size) + block_size / 2
-							   : mouse_y);
+				int_fast16_t bx =
+					(grid_mode
+						 ? GRIDALIGN(mouse_wold_x, block_size) + block_size / 2
+						 : mouse_wold_x);
+				int_fast16_t by =
+					(grid_mode
+						 ? GRIDALIGN(mouse_wold_y, block_size) + block_size / 2
+						 : mouse_wold_y);
 
-				for (int j = clamp(by - block_size / 2, 0, VSCREEN_HEIGHT);
-					 j < clamp(by + block_size / 2, 0, VSCREEN_HEIGHT); ++j) {
-					for (int i = clamp(bx - block_size / 2, 0, VSCREEN_WIDTH);
-						 i < clamp(bx + block_size / 2, 0, VSCREEN_WIDTH);
+				for (int_fast16_t j = clamp_low(by - block_size / 2, 0);
+					 j < clamp_high(by + block_size / 2, VSCREEN_HEIGHT); ++j) {
+					for (int_fast16_t i = clamp_low(bx - block_size / 2, 0);
+						 i < clamp_high(bx + block_size / 2, VSCREEN_WIDTH);
 						 ++i) {
 						gameboard[j][i] = current_object;
+						set_subchunk_world(1, i, j);
 					}
 				}
 			}
@@ -257,36 +244,72 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* Update objects behaviour */
-		for (int j = VSCREEN_HEIGHT_M1; j >= 0; --j) {
-			/* Horizontal loop has to be first evens and then odds, in order to
-			 * save some bugs with fluids */
-			for (int i = 0; i < VSCREEN_WIDTH; i += 2) {
-				if (gameboard[j][i] != GO_NONE &&
-					!IS_GUPDATED(gameboard[j][i])) {
-					update_object(i, j);
-				}
-
-				/* Next: odd numbers */
-				if (i == VSCREEN_WIDTH_M1 - 1)
-					i = -1;
-			}
-		}
+		update_gameboard();
+		move_player(&player, &camera, SDL_GetKeyboardState(NULL));
 
 		/* =============================================================== */
 		/* Draw game */
-		Render_Clearscreen_Color(GO_COLORS[GO_NONE]);
-		// for (int j = SCREEN_HEIGHT_M1; j >= 0; --j) {
-		for (int j = 0; j < VSCREEN_HEIGHT; ++j) {
-			// for (int i = SCREEN_WIDTH_M1; i >= 0; --i) {
-			for (int i = 0; i < VSCREEN_WIDTH; ++i) {
-				if (gameboard[j][i] != GO_NONE) {
-					gameboard[j][i] =
-						GOBJECT(gameboard[j][i]); /* Reset updated bit */
-					Render_Pixel_Color(i, j, GO_COLORS[gameboard[j][i]]);
-				}
-			}
+		Render_Clearscreen_Color(C_DKGRAY);
+
+		/* Draw player */
+		const uint_fast16_t player_screen_x = player.x - camera.x;
+		const uint_fast16_t player_screen_y = player.y - camera.y;
+
+		Render_image_ext(player.sprite->texture,
+						 player_screen_x - (player.width / 2),
+						 player_screen_y - (player.height / 2), player.width,
+						 player.height, 0, NULL, player.fliph);
+		Render_image_ext(player_head->texture,
+						 player_screen_x - (player.width / 2),
+						 player_screen_y - (player.height / 2), 16, 8, 0, NULL,
+						 player.fliph);
+
+		if (DEBUG_ON) {
+			const short player_height_2 = player.height / 2;
+			const short player_width_4	= player.width / 4;
+			const short player_screen_top =
+				player_screen_y - player_height_2 + 1;
+			const short player_screen_bottom =
+				player_screen_y + player_height_2 - 1;
+			const short player_screen_left =
+				player_screen_x - player_width_4 + 1;
+			const short player_screen_right =
+				player_screen_x + player_width_4 - 1;
+
+			const size_t forward = (!player.fliph) ? 1 : -1;
+
+			Render_Pixel_RGBA(player_screen_x, player_screen_y, 255, 0, 0, 255);
+
+			Render_Pixel_RGBA(player_screen_left, player_screen_top, 0, 255,
+							  255, 255);
+			Render_Pixel_RGBA(player_screen_right, player_screen_top, 0, 255,
+							  255, 255);
+
+			Render_Pixel_RGBA(player_screen_left, player_screen_bottom, 0, 255,
+							  0, 255);
+			Render_Pixel_RGBA(player_screen_right, player_screen_bottom, 0, 255,
+							  0, 255);
+
+			Render_Pixel_RGBA(player_screen_left, player_screen_bottom - 4, 255,
+							  255, 0, 255);
+			Render_Pixel_RGBA(player_screen_right, player_screen_bottom - 4,
+							  255, 255, 0, 255);
+
+			Render_Pixel_RGBA(player_screen_x +
+								  (forward * (player_width_4 - 1)),
+							  player_screen_y, 255, 0, 255, 255);
 		}
 
+		/* Draw gameboard */
+		SDL_SetRenderTarget(__renderer, vscreen_);
+		draw_gameboard_world(&camera);
+		SDL_SetRenderTarget(__renderer, NULL);
+
+		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
+		SDL_RenderCopy(__renderer, vscreen_, &camera, NULL);
+		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
+
+		/* Draw mouse pointer */
 		Color color;
 		memcpy(&color, &GO_COLORS[current_object], sizeof(color));
 		color.a = 0xAF;
@@ -294,22 +317,36 @@ int main(int argc, char *argv[]) {
 		if (block_size == 1) {
 			Render_Pixel_Color(mouse_x, mouse_y, color);
 		} else {
-			int bx =
-				(grid_mode ? GRIDALIGN(mouse_x, block_size) + block_size / 2
+			int_fast16_t bx =
+				(grid_mode ? (GRIDALIGN(mouse_wold_x, block_size) - camera.x) +
+								 block_size / 2
 						   : mouse_x);
-			int by =
-				(grid_mode ? GRIDALIGN(mouse_y, block_size) + block_size / 2
+			int_fast16_t by =
+				(grid_mode ? (GRIDALIGN(mouse_wold_y, block_size) - camera.y) +
+								 block_size / 2
 						   : mouse_y);
 
-			for (int j = by - block_size / 2; j < by + block_size / 2; ++j) {
-				for (int i = bx - block_size / 2; i < bx + block_size / 2;
-					 ++i) {
+			for (int_fast16_t j = clamp_low((by - block_size / 2), 0);
+				 j < clamp_high(by + block_size / 2, VIEWPORT_HEIGHT); ++j) {
+				for (int_fast16_t i = clamp_low((bx - block_size / 2), 0);
+					 i < clamp_high(bx + block_size / 2, VIEWPORT_WIDTH); ++i) {
 					Render_Pixel_Color(i, j, color);
 				}
 			}
 		}
 
-		Render_Pixel_Color(player.x, player.y, C_RED);
+		/* =============================================================== */
+		/* Draw UI */
+		if (DEBUG_ON) {
+			Render_Setcolor(C_WHITE);
+			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+			draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
+
+			char str_xy[14];
+			snprintf(str_xy, sizeof(str_xy), "%i,%i", player.chunk_id.x,
+					 player.chunk_id.y);
+			draw_string(str_xy, 0, 0);
+		}
 
 		/* =============================================================== */
 		/* Render game */
@@ -320,137 +357,17 @@ int main(int argc, char *argv[]) {
 		frameTicks = SDL_GetTicks() - currentTicks;
 		if (frameTicks < FRAME_DELAY_MS)
 			SDL_Delay(FRAME_DELAY_MS - frameTicks);
+
+		++frame_cx;
+		if (frame_cx % 4 == 0) {
+			fps_ = CALCULATE_FPS(delta);
+			if (fps_ > FPS - 5)
+				fps_ = FPS;
+		}
 	}
+
+	delete (player.sprite);
+	delete (player_head);
 
 	return 0;
-}
-
-void update_object(int x, int y) {
-	byte *boardxy = &gameboard[y][x];
-	byte  type	  = GOBJECT(*boardxy);
-
-	/* Update object behaviour */
-	int left_or_right = (((rand() % 2) == 0) ? 1 : -1);
-
-	int up_y	= y - 1;
-	int down_y	= y + 1;
-	int left_x	= x - left_or_right;
-	int right_x = x + left_or_right;
-
-	switch (type) {
-	case GO_SAND: {
-		byte *bottom	  = &gameboard[down_y][x];
-		byte *bottomleft  = &gameboard[down_y][left_x];
-		byte *bottomright = &gameboard[down_y][right_x];
-
-		if (IS_IN_BOUNDS(x, down_y)) {
-			if (*bottom == GO_NONE) {
-				*boardxy = GO_NONE;
-				*bottom	 = GUPDATE(GO_SAND);
-			}
-
-			else if (IS_IN_BOUNDS_H(left_x) && *bottomleft == GO_NONE) {
-				*boardxy	= GO_NONE;
-				*bottomleft = GUPDATE(GO_SAND);
-			} else if (IS_IN_BOUNDS_H(right_x) && *bottomright == GO_NONE) {
-				*boardxy	 = GO_NONE;
-				*bottomright = GUPDATE(GO_SAND);
-			}
-		}
-	} break;
-	case GO_WATER: {
-		byte *top		  = &gameboard[up_y][x];
-		byte *bottom	  = &gameboard[down_y][x];
-		byte *bottomleft  = &gameboard[down_y][left_x];
-		byte *bottomright = &gameboard[down_y][right_x];
-		byte *left		  = &gameboard[y][left_x];
-		byte *right		  = &gameboard[y][right_x];
-
-		if (IS_IN_BOUNDS(x, down_y) && *bottom == GO_NONE) {
-			*boardxy = GO_NONE;
-			*bottom	 = GUPDATE(GO_WATER);
-		}
-
-		else if (IS_IN_BOUNDS(left_x, down_y) && *bottomleft == GO_NONE) {
-			*boardxy	= GO_NONE;
-			*bottomleft = GUPDATE(GO_WATER);
-		} else if (IS_IN_BOUNDS(right_x, down_y) && *bottomright == GO_NONE) {
-			*boardxy	 = GO_NONE;
-			*bottomright = GUPDATE(GO_WATER);
-		}
-
-		else if (IS_IN_BOUNDS(left_x, y) && *left == GO_NONE) {
-			*boardxy = GO_NONE;
-			*left	 = GUPDATE(GO_WATER);
-		} else if (IS_IN_BOUNDS(right_x, y) && *right == GO_NONE) {
-			*boardxy = GO_NONE;
-			*right	 = GUPDATE(GO_WATER);
-		}
-
-		/* Flow up in more dense fluids */
-		else if (IS_IN_BOUNDS(x, up_y) && !IS_GUPDATED(*top) &&
-				 *top > *boardxy && GO_IS_FLUID(*top)) {
-			*boardxy |= BITMASK_GO_UPDATED;
-			*top |= BITMASK_GO_UPDATED;
-			SWAP((*top), (*boardxy));
-		}
-	} break;
-	}
-}
-
-void generate_chunk(seed_t SEED, Chunk CHUNK, const int vx, const int vy) {
-	int vx_max = vx + VIEWPORT_WIDTH;
-	int vy_max = vy + VIEWPORT_HEIGHT;
-
-	int world_x0 = CHUNK.x * VIEWPORT_WIDTH;
-	int world_y0 = CHUNK.y * VIEWPORT_HEIGHT;
-
-	for (int y = vy; y < vy_max; ++y) {
-		for (int x = vx; x < vx_max; ++x) {
-			gameboard[y][x] = GO_STONE;
-		}
-	}
-
-	const int ground_height = 128;
-	for (int x = vx; x < vx_max; ++x) {
-		const int ground =
-			fabs(perlin2d(SEED, world_x0 + x, 0, 0.005, 1) * ground_height);
-		for (int y = vy; y < vy_max; ++y) {
-			if (y < ground) {
-				gameboard[y][x] = GO_NONE;
-				continue;
-			}
-
-			const double noise =
-				perlin2d(SEED, world_x0 + x, world_y0 + y, 0.01, 4);
-			if (noise > 0.9) {
-				gameboard[y][x] = GO_NONE;
-			} else if (noise > 0.75) {
-				gameboard[y][x] = GO_WATER;
-			} else if (noise > 0.6) {
-				gameboard[y][x] = GO_SAND;
-			}
-		}
-	}
-}
-
-void ResizeWindow(int newWidth, int newHeight, SDL_Rect viewport,
-				  SDL_FPoint *new_scale) {
-
-	float scaleX = ((float)newWidth / (float)WINDOW_WIDTH);
-	float scaleY = ((float)newHeight / (float)WINDOW_HEIGHT);
-
-	float scale = fminf(scaleX, scaleY);
-
-	/* Calculate centered positioning offset */
-	int offsetX = (newWidth - scale) / scale / 2;
-	int offsetY = (newHeight - scale) / scale / 2;
-
-	new_scale->x = RENDER_XFACTOR * scale;
-	new_scale->y = RENDER_YFACTOR * scale;
-	SDL_RenderSetScale(__renderer, new_scale->x, new_scale->y);
-
-	viewport.x = clamp(viewport.x, -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-	viewport.y = clamp(viewport.y, -VSCREEN_WIDTH + VIEWPORT_WIDTH, 0);
-	SDL_RenderSetViewport(__renderer, &viewport);
 }

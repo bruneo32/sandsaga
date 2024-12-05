@@ -7,6 +7,6 @@
 
 #include "engine.h"
 
-double perlin2d(seed_t SEED, double x, double y, double freq, int depth);
+double perlin2d(seed_t SEED, double x, double y, double freq, size_t depth);
 
 #endif // _NOISE_H
