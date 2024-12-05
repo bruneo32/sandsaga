@@ -1,6 +1,9 @@
 file(GLOB engine_src
-	"engine.h"
 	"gameobjects.h"
+	"engine.h"
+	"engine.c"
+	"entities.h"
+	"entities.c"
 	"noise.h"
 	"noise.c"
 	)
