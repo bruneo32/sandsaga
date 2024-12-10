@@ -1,23 +1,29 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 
+#ifdef __cplusplus
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <stddef.h>
+#else
 #include <float.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-
 /* =============================================================== */
-/* MEMORY */
-/* `calloc` allocates all elements initialized to 0 ,
- * required for NULL callbacks
- */
+/* The following definitions create errors in C++ */
 #define new(C) ((C *)calloc(sizeof(C), 1))
 #define delete(O)                                                              \
 	if ((O) != NULL) {                                                         \
 		free((void *)(O));                                                     \
 		(O) = NULL;                                                            \
 	}
+#define clamp(x, low, high)                                                    \
+	((x) < (low) ? (low) : ((x) > (high) ? (high) : (x)))
+#endif
 
 /* =============================================================== */
 /* Mathematics */
@@ -31,8 +37,6 @@
 
 #define radtodeg(rad) (rad * (180.0 / M_PI))
 #define degtorad(deg) (deg * (M_PI / 180.0))
-#define clamp(x, low, high)                                                    \
-	((x) < (low) ? (low) : ((x) > (high) ? (high) : (x)))
 #define clamp_high(x, high)		 ((x) > (high) ? (high) : (x))
 #define clamp_low(x, low)		 ((x) < (low) ? (low) : (x))
 #define lerp(a, b, t)			 ((1 - t) * a + t * b)
@@ -44,7 +48,6 @@
 #define LERP_SPEED_MEDIUM	  0.1
 #define LERP_SPEED_QUICK	  0.4
 #define LERP_SPEED_VERY_QUICK 0.7
-
 
 /* =============================================================== */
 /* MISC */
@@ -65,7 +68,7 @@
 #define BIT(_i) (1 << (_i))
 
 /** Little Endian single bitmask */
-#define BITL(_bits, _i) (1 << ((_bits - 1) - (_i)))
+#define BITL(_bits, _i) (1 << (((_bits) - 1) - (_i)))
 
 typedef uint8_t byte;
 typedef int8_t	sbyte;
