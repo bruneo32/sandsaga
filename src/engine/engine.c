@@ -34,36 +34,34 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 		 (CHUNK.x < GEN_WATERSEA_OFFSET_X ||
 		  CHUNK.x > CHUNK_MAX_X - GEN_WATERSEA_OFFSET_X))) {
 		/* Empty sky */
-		for (uint_fast16_t y = vy; y < vy + VIEWPORT_HEIGHT; ++y)
-			memset(&gameboard[y][vx], GO_NONE, VIEWPORT_WIDTH);
+		for (uint_fast16_t y = vy; y < vy + CHUNK_SIZE; ++y)
+			memset(&gameboard[y][vx], GO_NONE, CHUNK_SIZE);
 		return;
 	} else if (CHUNK.y > CHUNK_MAX_X - GEN_BEDROCK_MARGIN_Y) {
 		/* Bedrock */
-		for (uint_fast16_t y = vy; y < vy + VIEWPORT_HEIGHT; ++y)
-			memset(&gameboard[y][vx], GO_STONE, VIEWPORT_WIDTH);
+		for (uint_fast16_t y = vy; y < vy + CHUNK_SIZE; ++y)
+			memset(&gameboard[y][vx], GO_STONE, CHUNK_SIZE);
 		return;
 	} else if (CHUNK.x < GEN_WATERSEA_OFFSET_X ||
 			   CHUNK.x > CHUNK_MAX_X - GEN_WATERSEA_OFFSET_X) {
 		/* Water sea */
-		for (uint_fast16_t y = vy; y < vy + VIEWPORT_HEIGHT; ++y)
-			memset(&gameboard[y][vx], GO_WATER, VIEWPORT_WIDTH);
+		for (uint_fast16_t y = vy; y < vy + CHUNK_SIZE; ++y)
+			memset(&gameboard[y][vx], GO_WATER, CHUNK_SIZE);
 		return;
 	}
 
-	// const uint_fast16_t vx_max = clamp_high(vx + VIEWPORT_WIDTH,
-	// VSCREEN_WIDTH);
-	const uint_fast16_t vy_max =
-		clamp_high(vy + VIEWPORT_HEIGHT, VSCREEN_HEIGHT);
+	// const uint_fast16_t vx_max = clamp_high(vx + CHUNK_SIZE, VSCREEN_WIDTH);
+	const uint_fast16_t vy_max = clamp_high(vy + CHUNK_SIZE, VSCREEN_HEIGHT);
 
-	const uint_fast64_t world_x0 = CHUNK.x * VIEWPORT_WIDTH;
-	const uint_fast64_t world_y0 = CHUNK.y * VIEWPORT_HEIGHT;
+	const uint_fast64_t world_x0 = CHUNK.x * CHUNK_SIZE;
+	const uint_fast64_t world_y0 = CHUNK.y * CHUNK_SIZE;
 
 	/* Rock base */
 	for (uint_fast16_t y = vy; y < vy_max; ++y)
-		memset(&gameboard[y][vx], GO_STONE, VIEWPORT_WIDTH);
+		memset(&gameboard[y][vx], GO_STONE, CHUNK_SIZE);
 
 	/* GENERATE */
-	for (uint_fast16_t x = 0; x < VIEWPORT_WIDTH; ++x) {
+	for (uint_fast16_t x = 0; x < CHUNK_SIZE; ++x) {
 		const uint_fast64_t world_x = world_x0 + x;
 		const uint_fast16_t gbx		= vx + x;
 
@@ -73,13 +71,13 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 					   (GEN_TOP_LAYER_Y - GEN_SKY_Y))
 				: 0;
 
-		for (uint_fast16_t y = 0; y < VIEWPORT_HEIGHT; ++y) {
+		for (uint_fast16_t y = 0; y < CHUNK_SIZE; ++y) {
 			const uint_fast64_t world_y = world_y0 + y;
 			const uint_fast16_t gby		= vy + y;
 
 			if (CHUNK.y < GEN_TOP_LAYER_Y) {
 				const uint_fast64_t ground =
-					(GEN_SKY_Y * VIEWPORT_HEIGHT) + ground_height;
+					(GEN_SKY_Y * CHUNK_SIZE) + ground_height;
 
 				if (world_y < ground) {
 					gameboard[gby][gbx] = GO_NONE;
@@ -431,14 +429,13 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 
 	if (DEBUG_ON) {
 		/* Draw chunk lines */
-		Render_SetcolorRGBA(0, 127, 255, 64);
 		for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += 2) {
-			Render_Pixel(VIEWPORT_WIDTH, _j);
-			Render_Pixel(VSCREEN_TWO_THIRDS_WIDTH, _j);
+			Render_Pixel_RGBA(CHUNK_SIZE, _j, 0, 127, 255, 64);
+			Render_Pixel_RGBA(CHUNK_SIZE_M2, _j, 255, 127, 0, 64);
 		}
 		for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += 2) {
-			Render_Pixel(_i, VIEWPORT_HEIGHT);
-			Render_Pixel(_i, VSCREEN_TWO_THIRDS_HEIGHT);
+			Render_Pixel_RGBA(_i, CHUNK_SIZE, 0, 127, 255, 64);
+			Render_Pixel_RGBA(_i, CHUNK_SIZE_M2, 255, 127, 0, 64);
 		}
 
 		/* Draw test points */

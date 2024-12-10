@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Init SDL */
-	Render_init("Falling sand sandbox game", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+	Render_init("SandSaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
@@ -92,8 +92,8 @@ int main(int argc, char *argv[]) {
 		for (chunk_axis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
 			Chunk chunk = (Chunk){.x = i, .y = j};
 			generate_chunk(WORLD_SEED, chunk,
-						   (i - chunk_start_x) * VIEWPORT_WIDTH,
-						   (j - chunk_start_y) * VIEWPORT_HEIGHT);
+						   (i - chunk_start_x) * CHUNK_SIZE,
+						   (j - chunk_start_y) * CHUNK_SIZE);
 		}
 	}
 	ResetSubchunks;
@@ -101,8 +101,8 @@ int main(int argc, char *argv[]) {
 	player.flying = false;
 	player.width  = 16;
 	player.height = 24;
-	player.x	  = VIEWPORT_WIDTH + VIEWPORT_WIDTH_DIV_2;
-	player.y	  = VIEWPORT_HEIGHT + VIEWPORT_HEIGHT_DIV_2;
+	player.x	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
+	player.y	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
 
 	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
 					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
