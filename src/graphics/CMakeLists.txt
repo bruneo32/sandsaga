@@ -5,4 +5,7 @@ file(GLOB graphics_src
 	"font/font.h"
 	"font/font.c"
 	)
+
 add_library(graphics ${graphics_src})
+
+target_link_libraries(${PROJECT_NAME} graphics)

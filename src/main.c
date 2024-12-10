@@ -13,6 +13,8 @@
 #include "assets/res/player_body.png.h"
 #include "assets/res/player_head.png.h"
 
+#include "physics/physics.h"
+
 #include "assets/assets.h"
 #include "engine/engine.h"
 #include "engine/entities.h"
@@ -35,10 +37,9 @@ void sigkillHandler(int signum) { GAME_ON = false; }
 int main(int argc, char *argv[]) {
 	signal(SIGINT, sigkillHandler);
 
-
 	/* Set random seed */
-	srand(time(NULL));
-	// srand(0);
+	// srand(time(NULL));
+	srand(69);
 
 	/* =============================================================== */
 	/* Init SDL */
@@ -81,7 +82,7 @@ int main(int argc, char *argv[]) {
 	/* Initialize data */
 	WORLD_SEED = rand();
 	player.chunk_id =
-		(Chunk){.x = GEN_WATERSEA_OFFSET_X + 1, .y = GEN_SKY_Y + 1};
+		(Chunk){.x = GEN_WATERSEA_OFFSET_X + 1, .y = GEN_SKY_Y - 5};
 	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
 	/* Generate world first instance*/
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]) {
 	}
 	ResetSubchunks;
 
-	player.flying = true;
+	player.flying = false;
 	player.width  = 16;
 	player.height = 24;
 	player.x	  = VIEWPORT_WIDTH + VIEWPORT_WIDTH_DIV_2;
@@ -108,6 +109,16 @@ int main(int argc, char *argv[]) {
 
 	camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2, 0,
 					 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
+
+	b2_world = box2d_world_create(0, 9.8f);
+
+	player.body = box2d_body_create(b2_world, X_TO_U(player.x),
+									X_TO_U(player.y), b2_dynamicBody, true);
+
+	box2d_body_create_fixture(
+		player.body,
+		box2d_shape_box(X_TO_U(player.width / 4), X_TO_U(player.height / 2)),
+		5.0f, 2.0f);
 
 	/* =============================================================== */
 	/* Calculate ticks */
@@ -176,8 +187,15 @@ int main(int argc, char *argv[]) {
 					break;
 				case SDL_SCANCODE_F3:
 					DEBUG_ON = !DEBUG_ON;
+					box2d_debug_draw_active(DEBUG_ON);
 					if (!DEBUG_ON) /* Clear debug artifacts */
 						ResetSubchunks;
+					break;
+				case SDL_SCANCODE_SPACE:
+					player.flying = !player.flying;
+					box2d_body_change_type(player.body, !player.flying
+															? b2_dynamicBody
+															: b2_kinematicBody);
 					break;
 				case SDL_SCANCODE_LCTRL:
 					LCTRL = true;
@@ -204,9 +222,9 @@ int main(int argc, char *argv[]) {
 				}
 			} break;
 			case SDL_KEYUP: {
-				case SDL_SCANCODE_LCTRL:
-					LCTRL = false;
-					break;
+			case SDL_SCANCODE_LCTRL:
+				LCTRL = false;
+				break;
 			} break;
 
 			/* Handle SDL events */
@@ -275,8 +293,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* Update objects behaviour */
-		move_player(&player, &camera, SDL_GetKeyboardState(NULL));
 		update_gameboard();
+		move_player(&player, SDL_GetKeyboardState(NULL));
+		box2d_world_step(b2_world, FPS_DELTA, 10, 8);
+		move_camera(&player, &camera);
 
 		/* =============================================================== */
 		/* Draw game */
@@ -295,50 +315,19 @@ int main(int argc, char *argv[]) {
 						 player_screen_y - (player.height / 2), 16, 8, 0, NULL,
 						 player.fliph);
 
-		if (DEBUG_ON) {
-			const short player_height_2 = player.height / 2;
-			const short player_width_4	= player.width / 4;
-			const short player_screen_top =
-				player_screen_y - player_height_2 + 1;
-			const short player_screen_bottom =
-				player_screen_y + player_height_2 - 1;
-			const short player_screen_left =
-				player_screen_x - player_width_4 + 1;
-			const short player_screen_right =
-				player_screen_x + player_width_4 - 1;
-
-			const size_t forward = (!player.fliph) ? 1 : -1;
-
-			Render_Pixel_RGBA(player_screen_x, player_screen_y, 255, 0, 0, 255);
-
-			Render_Pixel_RGBA(player_screen_left, player_screen_top, 0, 255,
-							  255, 255);
-			Render_Pixel_RGBA(player_screen_right, player_screen_top, 0, 255,
-							  255, 255);
-
-			Render_Pixel_RGBA(player_screen_left, player_screen_bottom, 0, 255,
-							  0, 255);
-			Render_Pixel_RGBA(player_screen_right, player_screen_bottom, 0, 255,
-							  0, 255);
-
-			Render_Pixel_RGBA(player_screen_left, player_screen_bottom - 4, 255,
-							  255, 0, 255);
-			Render_Pixel_RGBA(player_screen_right, player_screen_bottom - 4,
-							  255, 255, 0, 255);
-
-			Render_Pixel_RGBA(player_screen_x +
-								  (forward * (player_width_4 - 1)),
-							  player_screen_y, 255, 0, 255, 255);
-		}
-
 		/* Draw gameboard */
 		SDL_SetRenderTarget(__renderer, vscreen_);
 		draw_gameboard_world(&camera);
 		SDL_SetRenderTarget(__renderer, NULL);
 
+		/* Draw gameboard on screen */
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
 		SDL_RenderCopy(__renderer, vscreen_, &camera, NULL);
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
+
+		if (DEBUG_ON) {
+			box2d_debug_draw(b2_world, (Rect *)&camera);
+		}
 
 		/* Draw mouse pointer */
 		Color color;
@@ -399,6 +388,12 @@ int main(int argc, char *argv[]) {
 
 	delete (player.sprite);
 	delete (player_head);
+
+	if (player.body)
+		box2d_body_destroy(player.body);
+
+	if (b2_world)
+		box2d_world_destroy(b2_world);
 
 	return 0;
 }

@@ -10,6 +10,7 @@
 #include "color.h"
 
 #define FPS			   60
+#define FPS_DELTA	   (1.0f / 60.0f)
 #define FRAME_DELAY_MS (1000 / FPS)
 #define CALCULATE_FPS(delta)                                                   \
 	(clamp(((int)(1.f / ((float)delta / 1000.f))), 0, FPS))

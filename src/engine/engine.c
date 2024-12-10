@@ -9,6 +9,8 @@ size_t WORLD_SEED = 0;
 
 byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
+b2World *b2_world = NULL;
+
 /**
  * The subchunk optimization is only for the drawing step,
  * as it is the most expensive step.
@@ -22,6 +24,8 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j) {
 	else
 		subchunkopt[j] = (subchunkopt[j] & ~BIT(i));
 }
+
+b2Body *soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
 void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 					const size_t vy) {
@@ -387,8 +391,8 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 	for (uint_fast8_t sj = SUBCHUNK_SIZE - 1;; --sj) {
 		size_t start_j = sj * SUBCHUNK_HEIGHT;
 		size_t end_j   = start_j + SUBCHUNK_HEIGHT;
-		if (end_j > VSCREEN_HEIGHT)
-			end_j = VSCREEN_HEIGHT;
+		if (end_j >= VSCREEN_HEIGHT)
+			end_j = VSCREEN_HEIGHT - 1;
 
 		if (subchunkopt[sj] == -1) {
 			/* The whole line of subchunks is active */
@@ -411,8 +415,8 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 
 			size_t start_i = si * SUBCHUNK_WIDTH;
 			size_t end_i   = start_i + SUBCHUNK_WIDTH;
-			if (end_i > VSCREEN_WIDTH)
-				end_i = VSCREEN_WIDTH;
+			if (end_i >= VSCREEN_WIDTH)
+				end_i = VSCREEN_WIDTH - 1;
 
 			set_subchunk(0, si, sj);
 			draw_subchunk_pos(start_i, end_i, start_j, end_j, camera);
@@ -443,5 +447,55 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 				Render_Pixel_Color(
 					_i, _j,
 					((!is_subchunk_active_world(_i, _j)) ? C_RED : C_GREEN));
+	}
+}
+
+bool F_IS_FLOOR(size_t y, size_t x) { return gameboard[y][x] >= GO_SAND; }
+
+void deactivate_soil(size_t si, size_t sj) {
+	if (!soil_body[sj][si])
+		return;
+
+	box2d_body_destroy(soil_body[sj][si]);
+	soil_body[sj][si] = NULL;
+}
+
+void activate_soil(size_t si, size_t sj, bool force) {
+	if (soil_body[sj][si] != NULL) {
+		if (!force)
+			return;
+		/* If force is true, recalculate */
+		deactivate_soil(si, sj);
+	}
+
+	const size_t start_i = clamp(si * SUBCHUNK_WIDTH, 0, VSCREEN_WIDTH);
+	const size_t end_i	 = clamp(start_i + SUBCHUNK_WIDTH, 0, VSCREEN_WIDTH);
+	const size_t start_j = clamp(sj * SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
+	const size_t end_j	 = clamp(start_j + SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
+
+	TriangleMesh *mesh =
+		triangulate(start_i, end_i, start_j, end_j, F_IS_FLOOR);
+
+	if (mesh != NULL && mesh->count > 0) {
+		double cx = SUBCHUNK_WIDTH / 2.0;
+		double cy = SUBCHUNK_HEIGHT / 2.0;
+		convert_shape_to_box2d_units(mesh, &cx, &cy);
+
+		b2Body *body = box2d_body_create(
+			b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
+			X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0), b2_staticBody, false);
+
+		for (size_t i = 0; i < mesh->count; ++i) {
+			b2PolygonShape *triangle =
+				box2d_triangle(mesh->triangles[i].p1, mesh->triangles[i].p2,
+							   mesh->triangles[i].p3);
+
+			box2d_body_create_fixture(body, (b2Shape *)triangle, 1.0f, 1.0f);
+		}
+
+		free(mesh->triangles);
+		free(mesh);
+
+		soil_body[sj][si] = body;
 	}
 }

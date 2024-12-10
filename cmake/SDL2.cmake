@@ -21,4 +21,4 @@ link_libraries(
 	${SDL2_IMAGE_LIBRARIES}
 	)
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE SDL_DISABLE_IMMINTRIN_H)
+# target_compile_definitions(${PROJECT_NAME} PRIVATE SDL_DISABLE_IMMINTRIN_H)

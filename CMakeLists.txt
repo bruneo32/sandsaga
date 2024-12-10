@@ -1,17 +1,20 @@
 cmake_minimum_required(VERSION 3.25)
+cmake_policy(SET CMP0079 NEW)
 
 set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_C_FLAGS_RELEASE "-O2 -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
 set(CMAKE_C_FLAGS_DEBUG "-Wall -Wno-switch -Wno-format-truncation -g -O0")
 
-cmake_policy(SET CMP0079 NEW)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(sandsaga
 	VERSION 0.1.0.0
 	DESCRIPTION "Sand falling simulator in C minigame"
 	HOMEPAGE_URL ""
-	LANGUAGES C
+	LANGUAGES C CXX
 	)
 
 link_libraries(
@@ -31,21 +34,15 @@ set_target_properties(
 
 # ===============================================================
 # Dependencies
-# Add SDL2 CMake modules
 include(cmake/SDL2.cmake)
+include(cmake/box2d.cmake)
 
 # ===============================================================
 # Other C Modules
-
+add_subdirectory( "src/physics" )
 add_subdirectory( "src/assets" )
 add_subdirectory( "src/graphics" )
 add_subdirectory( "src/engine" )
-
-target_link_libraries(${PROJECT_NAME}
-	graphics
-	engine
-	assets
-	)
 
 # ===============================================================
 # CPack Configuration

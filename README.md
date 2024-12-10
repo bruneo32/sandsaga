@@ -32,3 +32,6 @@ cp mingw_libs/SDL2*/x86_64-w64-mingw32/bin/*.dll build/win64-mingw32/release/
 - These fonts come from http://ftp.lanet.lv/ftp/mirror/x2ftp/msdos/programming/misc/fntcol16.zip
 - The package is (c) by Joseph Gil
 - The individual fonts are public domain
+### Third-party algorithms implemented
+- https://github.com/Lecanyu/RDPSimplify
+- https://github.com/mapbox/earcut.hpp/
