@@ -4,6 +4,14 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	player->prev_x = player->x;
 	player->prev_y = player->y;
 
+	float bx, by;
+	box2d_body_get_position(player->body, &bx, &by);
+	player->x = clamp(((short)U_TO_X(bx)), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
+	player->y = clamp(((short)U_TO_X(by)), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
+
+
 	const short player_width_div2  = player->width / 2;
 	const short player_height_div2 = player->height / 2;
 	const short player_bottom	   = (player->y + player_height_div2);
@@ -16,13 +24,6 @@ void move_player(Player *player, const Uint8 *keyboard) {
 			break;
 		}
 	}
-
-	float bx, by;
-	box2d_body_get_position(player->body, &bx, &by);
-	player->x = clamp(((short)U_TO_X(bx)), VIEWPORT_WIDTH_DIV_2 + 1,
-					  VSCREEN_WIDTH - VIEWPORT_WIDTH_DIV_2);
-	player->y = clamp(((short)U_TO_X(by)), VIEWPORT_HEIGHT_DIV_2 + 1,
-					  VSCREEN_HEIGHT - VIEWPORT_HEIGHT_DIV_2);
 
 	/* Move down / Jump */
 	if (keyboard[SDL_SCANCODE_W]) {
@@ -48,27 +49,27 @@ void move_player(Player *player, const Uint8 *keyboard) {
 		box2d_body_set_velocity_h(player->body, 0);
 	}
 
-	const size_t si = (player->x) / SUBCHUNK_WIDTH;
-	const size_t sj = (player->y) / SUBCHUNK_HEIGHT;
+	// const size_t si = (player->x) / SUBCHUNK_WIDTH;
+	// const size_t sj = (player->y) / SUBCHUNK_HEIGHT;
 
-	for (size_t j = sj - 2; j <= sj + 2; ++j) {
-		for (size_t i = si - 2; i <= si + 2; ++i) {
-			if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
-				activate_soil(i, j, false);
-			else
-				deactivate_soil(i, j);
-		}
-	}
+	// for (size_t j = sj - 2; j <= sj + 2; ++j) {
+	// 	for (size_t i = si - 2; i <= si + 2; ++i) {
+	// 		if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
+	// 			activate_soil(i, j, false);
+	// 		else
+	// 			deactivate_soil(i, j);
+	// 	}
+	// }
 }
 
 /** This is called after box2d_world_step */
 void move_camera(Player *player, SDL_Rect *camera) {
 	float bx, by;
 	box2d_body_get_position(player->body, &bx, &by);
-	player->x = clamp(((short)U_TO_X(bx)), VIEWPORT_WIDTH_DIV_2 + 1,
-					  VSCREEN_WIDTH - VIEWPORT_WIDTH_DIV_2);
-	player->y = clamp(((short)U_TO_X(by)), VIEWPORT_HEIGHT_DIV_2 + 1,
-					  VSCREEN_HEIGHT - VIEWPORT_HEIGHT_DIV_2);
+	player->x = clamp(((short)U_TO_X(bx)), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
+	player->y = clamp(((short)U_TO_X(by)), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
 
 	const short player_sx = player->x;
 	const short player_sy = player->y;
@@ -80,22 +81,21 @@ void move_camera(Player *player, SDL_Rect *camera) {
 		/* If went to top chunk.
 		 * Move world to bottom and generate new chunks in top
 		 */
-		if (player->chunk_id.y > 1 && player->y < VIEWPORT_HEIGHT) {
+		if (player->chunk_id.y > 1 && player->y < CHUNK_SIZE) {
 
-			player->y = VIEWPORT_HEIGHT * 2 - (VIEWPORT_HEIGHT - player->y);
-			player->prev_y =
-				VIEWPORT_HEIGHT * 2 - (VIEWPORT_HEIGHT - player->prev_y);
+			player->y	   = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->y);
+			player->prev_y = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_y);
 			--player->chunk_id.y;
 
 			/* Move world to bottom */
-			memmove(&gameboard[VIEWPORT_HEIGHT][0], &gameboard[0][0],
-					VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
+			memmove(&gameboard[CHUNK_SIZE][0], &gameboard[0][0],
+					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at top */
 			chunk_axis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
 				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y - 1};
-				generate_chunk(WORLD_SEED, chunk, i * VIEWPORT_WIDTH, 0);
+				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE, 0);
 			}
 			ResetSubchunks;
 		}
@@ -118,23 +118,22 @@ void move_camera(Player *player, SDL_Rect *camera) {
 		 * Move world to top and generate new chunks in bottom
 		 */
 		if (player->chunk_id.y < CHUNK_MAX_Y - 1 &&
-			player->y >= VIEWPORT_HEIGHT * 2) {
+			player->y >= CHUNK_SIZE_M2) {
 
-			player->y = VIEWPORT_HEIGHT + (player->y - VIEWPORT_HEIGHT * 2);
-			player->prev_y =
-				VIEWPORT_HEIGHT + (player->prev_y - VIEWPORT_HEIGHT * 2);
+			player->y	   = CHUNK_SIZE + (player->y - CHUNK_SIZE_M2);
+			player->prev_y = CHUNK_SIZE + (player->prev_y - CHUNK_SIZE_M2);
 			++player->chunk_id.y;
 
 			/* Move world to top */
-			memmove(&gameboard[0][0], &gameboard[VIEWPORT_HEIGHT][0],
-					VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
+			memmove(&gameboard[0][0], &gameboard[CHUNK_SIZE][0],
+					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at bottom */
 			chunk_axis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
 				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y + 1};
-				generate_chunk(WORLD_SEED, chunk, i * VIEWPORT_WIDTH,
-							   VIEWPORT_HEIGHT * 2);
+				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE,
+							   CHUNK_SIZE_M2);
 			}
 			ResetSubchunks;
 		}
@@ -157,26 +156,25 @@ void move_camera(Player *player, SDL_Rect *camera) {
 		/* If went to left chunk.
 		 * Move world to right and generate new chunks in left
 		 */
-		if (player->chunk_id.x > 1 && player->x < VIEWPORT_WIDTH) {
+		if (player->chunk_id.x > 1 && player->x < CHUNK_SIZE) {
 
-			player->x = VIEWPORT_WIDTH_M2 - (VIEWPORT_WIDTH - player->x);
-			player->prev_x =
-				VIEWPORT_WIDTH_M2 - (VIEWPORT_WIDTH - player->prev_x);
+			player->x	   = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->x);
+			player->prev_x = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_x);
 			--player->chunk_id.x;
 
 			/* Move world to right */
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
-				memmove(&gameboard[j][VIEWPORT_WIDTH_M2],
-						&gameboard[j][VIEWPORT_WIDTH], VIEWPORT_WIDTH);
-				memmove(&gameboard[j][VIEWPORT_WIDTH], &gameboard[j][0],
-						VIEWPORT_WIDTH);
+				memmove(&gameboard[j][CHUNK_SIZE_M2], &gameboard[j][CHUNK_SIZE],
+						CHUNK_SIZE);
+				memmove(&gameboard[j][CHUNK_SIZE], &gameboard[j][0],
+						CHUNK_SIZE);
 			}
 
 			/* Generate new world at left */
 			chunk_axis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
 				Chunk chunk = {.x = player->chunk_id.x - 1, .y = start_j + j};
-				generate_chunk(WORLD_SEED, chunk, 0, j * VIEWPORT_HEIGHT);
+				generate_chunk(WORLD_SEED, chunk, 0, j * CHUNK_SIZE);
 			}
 			ResetSubchunks;
 		}
@@ -192,34 +190,33 @@ void move_camera(Player *player, SDL_Rect *camera) {
 			for (uint_fast16_t j = camera->y; j < camera->y + camera->h; j++)
 				set_subchunk_world(1, i, j);
 
-	} else if (player->x > player->prev_y) {
+	} else if (player->x > player->prev_x) {
 		/* Apply verifications for moving RIGHT */
 
 		/* If went to right chunk.
 		 * Move world to left and generate new chunks in right
 		 */
 		if (player->chunk_id.x < CHUNK_MAX_X - 1 &&
-			player->x >= VIEWPORT_WIDTH_M2) {
+			player->x >= CHUNK_SIZE_M2) {
 
-			player->x = VIEWPORT_WIDTH + (player->x - VIEWPORT_WIDTH_M2);
-			player->prev_x =
-				VIEWPORT_WIDTH + (player->prev_x - VIEWPORT_WIDTH_M2);
+			player->x	   = CHUNK_SIZE + (player->x - CHUNK_SIZE_M2);
+			player->prev_x = CHUNK_SIZE + (player->prev_x - CHUNK_SIZE_M2);
 			++player->chunk_id.x;
 
 			/* Move world to left */
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
-				memmove(&gameboard[j][0], &gameboard[j][VIEWPORT_WIDTH],
-						VIEWPORT_WIDTH);
-				memmove(&gameboard[j][VIEWPORT_WIDTH],
-						&gameboard[j][VIEWPORT_WIDTH_M2], VIEWPORT_WIDTH);
+				memmove(&gameboard[j][0], &gameboard[j][CHUNK_SIZE],
+						CHUNK_SIZE);
+				memmove(&gameboard[j][CHUNK_SIZE], &gameboard[j][CHUNK_SIZE_M2],
+						CHUNK_SIZE);
 			}
 
 			/* Generate new world at right */
 			chunk_axis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
 				Chunk chunk = {.x = player->chunk_id.x + 1, .y = start_j + j};
-				generate_chunk(WORLD_SEED, chunk, VIEWPORT_WIDTH_M2,
-							   j * VIEWPORT_HEIGHT);
+				generate_chunk(WORLD_SEED, chunk, CHUNK_SIZE_M2,
+							   j * CHUNK_SIZE);
 			}
 			ResetSubchunks;
 		}
@@ -238,10 +235,10 @@ void move_camera(Player *player, SDL_Rect *camera) {
 
 	/* Reposition player->body */
 	if (player->y != player_sy || player->x != player_sx) {
-		player->x = clamp(player->x, VIEWPORT_WIDTH_DIV_2 + 1,
-						  VSCREEN_WIDTH - VIEWPORT_WIDTH_DIV_2);
-		player->y = clamp(player->y, VIEWPORT_HEIGHT_DIV_2 + 1,
-						  VSCREEN_HEIGHT - VIEWPORT_HEIGHT_DIV_2);
+		player->x = clamp(player->x, CHUNK_SIZE_DIV_2 + 1,
+						  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
+		player->y = clamp(player->y, CHUNK_SIZE_DIV_2 + 1,
+						  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
 		box2d_body_set_position(player->body, X_TO_U(player->x),
 								X_TO_U(player->y));
 	}
