@@ -11,7 +11,6 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	player->y = clamp(((short)U_TO_X(by)), CHUNK_SIZE_DIV_2 + 1,
 					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
 
-
 	const short player_width_div2  = player->width / 2;
 	const short player_height_div2 = player->height / 2;
 	const short player_bottom	   = (player->y + player_height_div2);
@@ -164,10 +163,8 @@ void move_camera(Player *player, SDL_Rect *camera) {
 
 			/* Move world to right */
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
-				memmove(&gameboard[j][CHUNK_SIZE_M2], &gameboard[j][CHUNK_SIZE],
-						CHUNK_SIZE);
 				memmove(&gameboard[j][CHUNK_SIZE], &gameboard[j][0],
-						CHUNK_SIZE);
+						CHUNK_SIZE_M2);
 			}
 
 			/* Generate new world at left */
@@ -206,9 +203,7 @@ void move_camera(Player *player, SDL_Rect *camera) {
 			/* Move world to left */
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 				memmove(&gameboard[j][0], &gameboard[j][CHUNK_SIZE],
-						CHUNK_SIZE);
-				memmove(&gameboard[j][CHUNK_SIZE], &gameboard[j][CHUNK_SIZE_M2],
-						CHUNK_SIZE);
+						CHUNK_SIZE_M2);
 			}
 
 			/* Generate new world at right */
