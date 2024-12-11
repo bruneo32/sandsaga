@@ -3,7 +3,6 @@
 
 #include "../graphics/color.h"
 
-
 enum GameObject_t /* : uint8_t */ {
 	GO_NONE = 0,
 
@@ -27,6 +26,7 @@ enum GameObject_t /* : uint8_t */ {
 
 #define GO_IS_FLUID(go) ((go) > GO_NONE && (go) <= GO_LAST_FLUID)
 #define GO_IS_SOLID(go) ((go) > GO_LAST_FLUID && (go) <= GO_LAST_SOLID)
+#define GO_IS_SOIL(go)	((go) >= GO_SAND)
 
 static const Color GO_COLORS[] = {
 	/* None (transparent) */

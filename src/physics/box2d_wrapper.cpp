@@ -71,6 +71,8 @@ class DebugDraw : public b2Draw {
 };
 DebugDraw debug_draw;
 
+std::vector<b2Body *> bodiesMarkedToDestroy;
+
 /* =============================================================== */
 /* Box2D World functions */
 b2World *box2d_world_create(float gravity_x, float gravity_y) {
@@ -82,6 +84,13 @@ b2World *box2d_world_create(float gravity_x, float gravity_y) {
 void box2d_world_step(b2World *world, float timeStep, int velocityIterations,
 					  int positionIterations) {
 	world->Step(timeStep, velocityIterations, positionIterations);
+
+	/* Remove marked bodies */
+	if (!world->IsLocked()) {
+		for (b2Body *body : bodiesMarkedToDestroy)
+			world->DestroyBody(body);
+		bodiesMarkedToDestroy.clear();
+	}
 }
 
 void box2d_world_destroy(b2World *world) { delete world; }
@@ -116,11 +125,14 @@ b2Body *box2d_body_get_next(b2Body *body) { return body->GetNext(); }
 /* =============================================================== */
 /* Box2D Body functions */
 b2Body *box2d_body_create(b2World *world, float u, float v, int body_type,
+						  bool allowSleep, bool discrete_collision,
 						  bool fixed_rotation) {
 	b2BodyDef bodyDef;
 	bodyDef.type = static_cast<b2BodyType>(body_type);
 	bodyDef.position.Set(u, v);
+	bodyDef.bullet		  = !discrete_collision;
 	bodyDef.fixedRotation = fixed_rotation;
+	bodyDef.allowSleep	  = allowSleep;
 	return world->CreateBody(&bodyDef);
 }
 
@@ -166,8 +178,17 @@ void box2d_body_get_position(b2Body *body, float *u, float *v) {
 void box2d_body_destroy(b2Body *body) {
 	if (!body)
 		return;
+
 	b2World *world = body->GetWorld();
-	world->DestroyBody(body);
+	/* If the world is locked, the body won't be destroyed */
+	if (world->IsLocked()) {
+		/* Get the address of the body, as the user should delete the
+		 * original pointer */
+		b2Body *body_ = &*body;
+		bodiesMarkedToDestroy.push_back(body_);
+	} else {
+		world->DestroyBody(body);
+	}
 }
 
 b2Shape *box2d_shape_box(float width, float height) {
@@ -188,6 +209,41 @@ b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3) {
 
 	b2PolygonShape *shape = new b2PolygonShape;
 	shape->Set(vertices, sizeof(vertices) / sizeof(*vertices));
+	return shape;
+}
+
+b2ChainShape *box2d_shape_loop(Point2D *points, int count) {
+	if (count < 3)
+		return NULL;
+
+	b2ChainShape *shape = new b2ChainShape;
+
+	constexpr float minDistanceSquared = b2_linearSlop * b2_linearSlop;
+
+	std::vector<b2Vec2> vertices;
+	vertices.emplace_back(points[0].x, points[0].y); /* Add the first vertex */
+
+	for (size_t i = 1; i < count; i++) {
+		b2Vec2 currentVertex(points[i].x, points[i].y);
+
+		if (b2DistanceSquared(vertices.back(), currentVertex) >
+			minDistanceSquared)
+			vertices.push_back(currentVertex); /* Add valid vertices */
+	}
+
+	// Close the loop by ensuring the last vertex connects to the first
+	if (b2DistanceSquared(vertices.back(), vertices.front()) <=
+		minDistanceSquared) {
+		// Remove the last vertex if it's too close to the first one
+		vertices.pop_back();
+	}
+
+	if (vertices.size() < 3) {
+		delete shape;
+		return NULL;
+	}
+
+	shape->CreateLoop(vertices.data(), vertices.size());
 	return shape;
 }
 

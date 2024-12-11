@@ -91,8 +91,7 @@ int main(int argc, char *argv[]) {
 	for (chunk_axis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
 		for (chunk_axis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
 			Chunk chunk = (Chunk){.x = i, .y = j};
-			generate_chunk(WORLD_SEED, chunk,
-						   (i - chunk_start_x) * CHUNK_SIZE,
+			generate_chunk(WORLD_SEED, chunk, (i - chunk_start_x) * CHUNK_SIZE,
 						   (j - chunk_start_y) * CHUNK_SIZE);
 		}
 	}
@@ -112,13 +111,14 @@ int main(int argc, char *argv[]) {
 
 	b2_world = box2d_world_create(0, 9.8f);
 
-	player.body = box2d_body_create(b2_world, X_TO_U(player.x),
-									X_TO_U(player.y), b2_dynamicBody, true);
+	player.body =
+		box2d_body_create(b2_world, X_TO_U(player.x), X_TO_U(player.y),
+						  b2_dynamicBody, false, false, true);
 
 	box2d_body_create_fixture(
 		player.body,
 		box2d_shape_box(X_TO_U(player.width / 4), X_TO_U(player.height / 2)),
-		5.0f, 2.0f);
+		8.0f, 1.0f);
 
 	/* =============================================================== */
 	/* Calculate ticks */
@@ -292,7 +292,7 @@ int main(int argc, char *argv[]) {
 			current_object = _object;
 		}
 
-		/* Update objects behaviour */
+		/* Update game */
 		update_gameboard();
 		move_player(&player, SDL_GetKeyboardState(NULL));
 		box2d_world_step(b2_world, FPS_DELTA, 10, 8);

@@ -48,17 +48,17 @@ void move_player(Player *player, const Uint8 *keyboard) {
 		box2d_body_set_velocity_h(player->body, 0);
 	}
 
-	// const size_t si = (player->x) / SUBCHUNK_WIDTH;
-	// const size_t sj = (player->y) / SUBCHUNK_HEIGHT;
+	const size_t si = (player->x) / SUBCHUNK_WIDTH;
+	const size_t sj = (player->y) / SUBCHUNK_HEIGHT;
 
-	// for (size_t j = sj - 2; j <= sj + 2; ++j) {
-	// 	for (size_t i = si - 2; i <= si + 2; ++i) {
-	// 		if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
-	// 			activate_soil(i, j, false);
-	// 		else
-	// 			deactivate_soil(i, j);
-	// 	}
-	// }
+	for (size_t j = sj - 2; j <= sj + 2; ++j) {
+		for (size_t i = si - 2; i <= si + 2; ++i) {
+			if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
+				activate_soil(i, j, false);
+			else
+				deactivate_soil(i, j);
+		}
+	}
 }
 
 /** This is called after box2d_world_step */
@@ -87,6 +87,7 @@ void move_camera(Player *player, SDL_Rect *camera) {
 			--player->chunk_id.y;
 
 			/* Move world to bottom */
+			deactivate_soil_all;
 			memmove(&gameboard[CHUNK_SIZE][0], &gameboard[0][0],
 					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
@@ -124,6 +125,7 @@ void move_camera(Player *player, SDL_Rect *camera) {
 			++player->chunk_id.y;
 
 			/* Move world to top */
+			deactivate_soil_all;
 			memmove(&gameboard[0][0], &gameboard[CHUNK_SIZE][0],
 					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
@@ -162,6 +164,7 @@ void move_camera(Player *player, SDL_Rect *camera) {
 			--player->chunk_id.x;
 
 			/* Move world to right */
+			deactivate_soil_all;
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 				memmove(&gameboard[j][CHUNK_SIZE], &gameboard[j][0],
 						CHUNK_SIZE_M2);
@@ -201,6 +204,7 @@ void move_camera(Player *player, SDL_Rect *camera) {
 			++player->chunk_id.x;
 
 			/* Move world to left */
+			deactivate_soil_all;
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 				memmove(&gameboard[j][0], &gameboard[j][CHUNK_SIZE],
 						CHUNK_SIZE_M2);

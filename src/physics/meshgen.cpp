@@ -396,8 +396,7 @@ rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
 			for (mbPoint point : path)
 				vIn.push_back(RDP::Point(point[0], point[1]));
 
-
-			RDP::RamerDouglasPeucker(vIn, M_PI_2, vOut);
+			RDP::RamerDouglasPeucker(vIn, M_PI, vOut);
 
 			if (vOut.size() == 0) {
 				continue;
@@ -475,8 +474,47 @@ TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 	return mesh;
 }
 
-void convert_shape_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
-								  double *centroid_y) {
+CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
+							  size_t end_j,
+							  bool (*is_valid)(size_t x, size_t y)) {
+
+	std::vector<PolyList> inputPoints =
+		rdp_simplify_from_contour(start_i, end_i, start_j, end_j, is_valid);
+
+	if (inputPoints.size() == 0)
+		return NULL;
+
+	CList *result = (CList *)malloc(sizeof(CList));
+	result->count = 0;
+	result->data  = (void **)malloc(inputPoints.size() * sizeof(void *));
+
+	for (PolyList plist : inputPoints) {
+		if (plist.polygon.empty() || plist.polygon[0].size() == 0)
+			continue;
+
+		/* Only take the first path, which is the main contour ignoring holes */
+		std::vector<mbPoint> firstPath = plist.polygon[0];
+		if (firstPath.size() == 0)
+			continue;
+
+		PointList *pointlist = (PointList *)malloc(sizeof(PointList));
+		pointlist->count	 = 0;
+		pointlist->points =
+			(Point2D *)malloc(firstPath.size() * sizeof(Point2D));
+
+		for (mbPoint point : firstPath) {
+			pointlist->points[pointlist->count].x	= point[0];
+			pointlist->points[pointlist->count++].y = point[1];
+		}
+
+		result->data[result->count++] = pointlist;
+	}
+
+	return result;
+}
+
+void convert_triangle_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
+									 double *centroid_y) {
 	if (!mesh || mesh->count == 0 || !mesh->triangles)
 		return;
 
@@ -507,5 +545,36 @@ void convert_shape_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
 		t->p2.y = X_TO_U(t->p2.y - c_y);
 		t->p3.x = X_TO_U(t->p3.x - c_x);
 		t->p3.y = X_TO_U(t->p3.y - c_y);
+	}
+}
+
+void convert_pointlist_to_box2d_units(PointList *mesh, double *centroid_x,
+									  double *centroid_y) {
+	if (!mesh || mesh->count == 0 || !mesh->points)
+		return;
+
+	/* Calculate centroid */
+	double c_x = 0;
+	double c_y = 0;
+	if (!centroid_x || !centroid_y) {
+		for (size_t i = 0; i < mesh->count; ++i) {
+			Point2D *p = &mesh->points[i];
+			c_x += p->x;
+			c_y += p->y;
+		}
+		c_x /= mesh->count;
+		c_y /= mesh->count;
+	} else {
+		c_x = *centroid_x;
+		c_y = *centroid_y;
+	}
+
+	/* Map triangle coordinates to centroid based coordinates, converted to
+	 * box2d units */
+	for (size_t i = 0; i < mesh->count; ++i) {
+		Point2D *t = &mesh->points[i];
+
+		t->x = X_TO_U(t->x - c_x);
+		t->y = X_TO_U(t->y - c_y);
 	}
 }
