@@ -71,11 +71,11 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx, const size_t vy);
 /* Box2D world */
 extern b2World *b2_world;
 
-void activate_soil(size_t si, size_t sj, bool force);
+void activate_soil(size_t si, size_t sj);
 void deactivate_soil(size_t si, size_t sj);
 
-#define activate_soil_world(_x, _y, _f)                                        \
-	activate_soil((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT, _f)
+#define activate_soil_world(_x, _y)                                            \
+	activate_soil((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
 #define deactivate_soil_world(_x, _y)                                          \
 	deactivate_soil((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
 #define deactivate_soil_all                                                    \
@@ -84,5 +84,12 @@ void deactivate_soil(size_t si, size_t sj);
 			deactivate_soil(__i, __j);                                         \
 		}                                                                      \
 	}
+#define recalculate_soil(_si, _sj)                                             \
+	if (soil_body[_sj][_si] != NULL) {                                         \
+		deactivate_soil(_si, _sj);                                             \
+		activate_soil(_si, _sj);                                               \
+	}
+#define recalculate_soil_world(_x, _y)                                         \
+	recalculate_soil((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT);
 
 #endif /* _ENGINE_H */

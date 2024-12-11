@@ -447,7 +447,9 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 	}
 }
 
-bool F_IS_FLOOR(size_t y, size_t x) { return GO_IS_SOIL(gameboard[y][x]); }
+bool F_IS_FLOOR(size_t y, size_t x) {
+	return GO_IS_SOIL(GOBJECT(gameboard[y][x]));
+}
 
 void deactivate_soil(size_t si, size_t sj) {
 	if (!soil_body[sj][si])
@@ -457,13 +459,9 @@ void deactivate_soil(size_t si, size_t sj) {
 	soil_body[sj][si] = NULL;
 }
 
-void activate_soil(size_t si, size_t sj, bool force) {
-	if (soil_body[sj][si] != NULL) {
-		if (!force)
-			return;
-		/* If force is true, recalculate */
-		deactivate_soil(si, sj);
-	}
+void activate_soil(size_t si, size_t sj) {
+	if (soil_body[sj][si] != NULL)
+		return;
 
 	const size_t start_i = clamp(si * SUBCHUNK_WIDTH, 0, VSCREEN_WIDTH);
 	const size_t end_i	 = clamp(start_i + SUBCHUNK_WIDTH, 0, VSCREEN_WIDTH);

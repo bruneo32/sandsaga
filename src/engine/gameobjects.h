@@ -3,6 +3,11 @@
 
 #include "../graphics/color.h"
 
+#define BITMASK_GO_UPDATED (0b10000000)
+#define GUPDATE(go)		   ((go) | BITMASK_GO_UPDATED)
+#define GOBJECT(go)		   ((go) & ~BITMASK_GO_UPDATED)
+#define IS_GUPDATED(go)	   (((go) & BITMASK_GO_UPDATED) != 0)
+
 enum GameObject_t /* : uint8_t */ {
 	GO_NONE = 0,
 
@@ -40,10 +45,5 @@ static const Color GO_COLORS[] = {
 	/* Stone */
 	{0x7F, 0x7F, 0x7F, 0xFF},
 };
-
-#define BITMASK_GO_UPDATED (0b10000000)
-#define GUPDATE(go)		   ((go) | BITMASK_GO_UPDATED)
-#define GOBJECT(go)		   ((go) & ~BITMASK_GO_UPDATED)
-#define IS_GUPDATED(go)	   (((go) & BITMASK_GO_UPDATED) != 0)
 
 #endif // _GAMEOBJECTS_H
