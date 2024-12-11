@@ -33,6 +33,7 @@
 				"CMAKE_BUILD_TYPE": "Debug",
 				"SDL2_PATH": "mingw_libs/SDL2-2.30.9/x86_64-w64-mingw32",
 				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.8.2/x86_64-w64-mingw32",
+				"BOX2D_PATH": "mingw_libs/box2d/install",
 				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake"
 			}
 		},
@@ -45,6 +46,7 @@
 				"CMAKE_BUILD_TYPE": "Release",
 				"SDL2_PATH": "mingw_libs/SDL2-2.30.9/x86_64-w64-mingw32",
 				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.8.2/x86_64-w64-mingw32",
+				"BOX2D_PATH": "mingw_libs/box2d/install",
 				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake",
 				"DIST_BUILDER": "windows"
 			}

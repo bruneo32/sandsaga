@@ -10,22 +10,35 @@ Sandfalling simulator in C
 2. Paste the following snippet to download the required libraries for mingw
 ```
 mkdir mingw_libs
-wget -P mingw_libs https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-devel-2.8.2-mingw.tar.gz
+```
+SDL2 libs *(prebuilt)*:
+```
+# SDL
 wget -P mingw_libs https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-devel-2.30.9-mingw.tar.gz
+# SDL_image
+wget -P mingw_libs https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-devel-2.8.2-mingw.tar.gz
+```
+Box2D libs *(sadly, not prebuilt)*:
+```
+# Clone the Box2D repository
+git clone -b 'v2.4.1' --single-branch --depth 1  https://github.com/erincatto/box2d mingw_libs/box2d
+mkdir mingw_libs/box2d/build_mingw
+cd mingw_libs/box2d/build_mingw
+cmake -DCMAKE_SYSTEM_NAME=Windows       -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DBUILD_SHARED_LIBS=ON -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=$(pwd)/../install ..
+make -j$(nproc)
+make install
+cd ../../..
 ```
 3. Extract the libraries in mingw_libs
 ```
 for a in mingw_libs/*.tar.gz; do tar zxvf $a -C mingw_libs; done
 rm mingw_libs/*.tar.gz
 ```
-4. NOTE: Don't forget to ship the DLLs with the executable: (After building the first time)
-```
-cp mingw_libs/SDL2*/x86_64-w64-mingw32/bin/*.dll build/win64-mingw32/debug/
-cp mingw_libs/SDL2*/x86_64-w64-mingw32/bin/*.dll build/win64-mingw32/release/
-```
+4. NOTE: In order to play it, you need to run CPack to gather all the DLLs and other resources.
 
 # Build and Run
 - Use vscode extension for CMake, select a preset and launch it with **CTRL+F5**
+- For windows, you can test with `wine ./game_sdl2`.
 
 # Some resources license or apreciation
 ### FNTCOL16
