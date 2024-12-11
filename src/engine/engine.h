@@ -13,7 +13,16 @@
 #include "gameobjects.h"
 
 extern size_t WORLD_SEED;
-extern bool	  DEBUG_ON;
+
+enum e_dbgl /* : int */ {
+	e_dbgl_none	   = 0x1,
+	e_dbgl_ui	   = 0x1 << 1,
+	e_dbgl_engine  = 0x1 << 2,
+	e_dbgl_physics = 0x1 << 3,
+};
+#define DBGL(dbgl) ((DEBUG_LEVEL & dbgl) != 0)
+
+extern int	  DEBUG_LEVEL;
 
 extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 

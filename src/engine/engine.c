@@ -1,9 +1,7 @@
 #include "engine.h"
 
 #include "noise.h"
-
-/* Prevent the release optimizations from removing DEBUG_ON */
-bool DEBUG_ON __attribute__((used)) = false;
+int DEBUG_LEVEL = e_dbgl_none;
 
 size_t WORLD_SEED = 0;
 
@@ -358,7 +356,7 @@ void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
 			if (!camera ||
 				((i >= camera->x - 1 && i <= camera->x + camera->w) &&
 				 (j >= camera->y - 1 && j <= camera->y + camera->h))) {
-				if (DEBUG_ON) {
+				if (DBGL(e_dbgl_engine)) {
 					Color CUSTOM_COL;
 					memcpy(&CUSTOM_COL, &GO_COLORS[gameboard[j][i]],
 						   sizeof(Color));
@@ -427,7 +425,7 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 			break;
 	}
 
-	if (DEBUG_ON) {
+	if (DBGL(e_dbgl_ui)) {
 		/* Draw chunk lines */
 		for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += 2) {
 			Render_Pixel_RGBA(CHUNK_SIZE, _j, 0, 127, 255, 64);
