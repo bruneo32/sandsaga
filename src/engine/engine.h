@@ -73,9 +73,16 @@ extern b2World *b2_world;
 
 void activate_soil(size_t si, size_t sj, bool force);
 void deactivate_soil(size_t si, size_t sj);
+
 #define activate_soil_world(_x, _y, _f)                                        \
 	activate_soil((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT, _f)
 #define deactivate_soil_world(_x, _y)                                          \
 	deactivate_soil((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
+#define deactivate_soil_all                                                    \
+	for (uint_fast8_t __j = 0; __j < SUBCHUNK_SIZE; ++__j) {                   \
+		for (uint_fast8_t __i = 0; __i < SUBCHUNK_SIZE; ++__i) {               \
+			deactivate_soil(__i, __j);                                         \
+		}                                                                      \
+	}
 
 #endif /* _ENGINE_H */

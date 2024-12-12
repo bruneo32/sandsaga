@@ -35,8 +35,8 @@
 #define fequals(f1, f2)				fequals_E(f1, f2, DBL_EPSILON)
 #define fequalsf(f1, f2)			fequalsf_E(f1, f2, FLT_EPSILON)
 
-#define radtodeg(rad) (rad * (180.0 / M_PI))
-#define degtorad(deg) (deg * (M_PI / 180.0))
+#define radtodeg(rad)			 (rad * (180.0 / M_PI))
+#define degtorad(deg)			 (deg * (M_PI / 180.0))
 #define clamp_high(x, high)		 ((x) > (high) ? (high) : (x))
 #define clamp_low(x, low)		 ((x) < (low) ? (low) : (x))
 #define lerp(a, b, t)			 ((1 - t) * a + t * b)
@@ -72,6 +72,10 @@
 
 typedef uint8_t byte;
 typedef int8_t	sbyte;
+typedef struct _CList {
+	size_t count;
+	void **data;
+} CList;
 
 #define GRIDALIGN(p, s) ((p / s) * s)
 

@@ -20,6 +20,7 @@ typedef struct b2World		  b2World;
 typedef struct b2Body		  b2Body;
 typedef struct b2Shape		  b2Shape;
 typedef struct b2Fixture	  b2Fixture;
+typedef struct b2ChainShape	  b2ChainShape;
 typedef struct b2PolygonShape b2PolygonShape;
 
 enum b2BodyType {
@@ -38,6 +39,8 @@ enum {
 
 #endif
 
+#include "../util.h"
+
 /** Box2D world pixels per unit */
 #define B2D_WORLD_SCALE 8
 
@@ -54,6 +57,11 @@ typedef struct _Point2D {
 	double x;
 	double y;
 } Point2D;
+
+typedef struct _PointList {
+	size_t	 count;
+	Point2D *points;
+} PointList;
 
 typedef struct _Triangle {
 	Point2D p1;
@@ -86,7 +94,7 @@ b2Body *box2d_body_get_next(b2Body *body);
 
 /* Box2D Body functions */
 b2Body *box2d_body_create(b2World *world, float u, float v, int body_type,
-						  bool fixed_rotation);
+						  bool allowSleep,  bool discrete_collision, bool fixed_rotation);
 void	box2d_body_set_position(b2Body *body, float u, float v);
 void	box2d_body_change_type(b2Body *body, int body_type);
 void box2d_body_set_velocity(b2Body *body, float velocity_x, float velocity_y);
@@ -98,6 +106,7 @@ void box2d_body_destroy(b2Body *body);
 
 b2Shape		   *box2d_shape_box(float width, float height);
 b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3);
+b2ChainShape   *box2d_shape_loop(Point2D *points, int count);
 void box2d_body_create_fixture(b2Body *body, b2Shape *shape, float density,
 							   float friction);
 
@@ -105,8 +114,14 @@ void box2d_body_create_fixture(b2Body *body, b2Shape *shape, float density,
 TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 						  size_t end_j, bool (*is_valid)(size_t x, size_t y));
 
-void convert_shape_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
-								  double *centroid_y);
+CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
+							  size_t end_j,
+							  bool (*is_valid)(size_t x, size_t y));
+
+void convert_triangle_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
+									 double *centroid_y);
+void convert_pointlist_to_box2d_units(PointList *mesh, double *centroid_x,
+									  double *centroid_y);
 
 #ifdef __cplusplus
 }

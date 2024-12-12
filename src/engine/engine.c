@@ -447,7 +447,7 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 	}
 }
 
-bool F_IS_FLOOR(size_t y, size_t x) { return gameboard[y][x] >= GO_SAND; }
+bool F_IS_FLOOR(size_t y, size_t x) { return GO_IS_SOIL(gameboard[y][x]); }
 
 void deactivate_soil(size_t si, size_t sj) {
 	if (!soil_body[sj][si])
@@ -470,28 +470,37 @@ void activate_soil(size_t si, size_t sj, bool force) {
 	const size_t start_j = clamp(sj * SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
 	const size_t end_j	 = clamp(start_j + SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
 
-	TriangleMesh *mesh =
-		triangulate(start_i, end_i, start_j, end_j, F_IS_FLOOR);
+	CList *chains =
+		loopchain_from_contour(start_i, end_i, start_j, end_j, F_IS_FLOOR);
 
-	if (mesh != NULL && mesh->count > 0) {
+	if (chains != NULL && chains->count > 0) {
 		double cx = SUBCHUNK_WIDTH / 2.0;
 		double cy = SUBCHUNK_HEIGHT / 2.0;
-		convert_shape_to_box2d_units(mesh, &cx, &cy);
 
-		b2Body *body = box2d_body_create(
-			b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
-			X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0), b2_staticBody, false);
+		b2Body *body =
+			box2d_body_create(b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
+							  X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0),
+							  b2_staticBody, true, true, false);
 
-		for (size_t i = 0; i < mesh->count; ++i) {
-			b2PolygonShape *triangle =
-				box2d_triangle(mesh->triangles[i].p1, mesh->triangles[i].p2,
-							   mesh->triangles[i].p3);
+		for (size_t i = 0; i < chains->count; ++i) {
+			PointList *mesh = (PointList *)chains->data[i];
+			if (!mesh || mesh->count == 0 || !mesh->points)
+				continue;
+			convert_pointlist_to_box2d_units(mesh, &cx, &cy);
 
-			box2d_body_create_fixture(body, (b2Shape *)triangle, 1.0f, 1.0f);
+			b2ChainShape *loopchain =
+				box2d_shape_loop(mesh->points, mesh->count);
+
+			if (loopchain)
+				box2d_body_create_fixture(body, (b2Shape *)loopchain, 7.0f,
+										  1.0f);
+
+			free(mesh->points);
+			free(mesh);
 		}
 
-		free(mesh->triangles);
-		free(mesh);
+		free(chains->data);
+		free(chains);
 
 		soil_body[sj][si] = body;
 	}
