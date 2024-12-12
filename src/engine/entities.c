@@ -54,7 +54,7 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	for (size_t j = sj - 2; j <= sj + 2; ++j) {
 		for (size_t i = si - 2; i <= si + 2; ++i) {
 			if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
-				activate_soil(i, j, false);
+				activate_soil(i, j);
 			else
 				deactivate_soil(i, j);
 		}

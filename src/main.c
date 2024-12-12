@@ -292,9 +292,17 @@ int main(int argc, char *argv[]) {
 			current_object = _object;
 		}
 
-		/* Update game */
+		/* Update gameboard, entities and physics*/
 		update_gameboard();
 		move_player(&player, SDL_GetKeyboardState(NULL));
+
+		/* Recalculate soil for active subchunks, not every frame since it is
+		 * expensive */
+		if (frame_cx % 4 == 0)
+			for (uint_fast8_t sj = 0; sj < SUBCHUNK_SIZE; ++sj)
+				for (uint_fast8_t si = 0; si < SUBCHUNK_SIZE; ++si)
+					recalculate_soil(si, sj);
+
 		box2d_world_step(b2_world, FPS_DELTA, 10, 8);
 		move_camera(&player, &camera);
 
