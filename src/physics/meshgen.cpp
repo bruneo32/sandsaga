@@ -407,7 +407,6 @@ rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
 				rOut.push_back(mbPoint{p.first, p.second});
 			}
 
-			rOut.push_back(mbPoint{vOut[0].first, vOut[0].second});
 			polyOut.push_back(rOut);
 		}
 

@@ -324,7 +324,8 @@ int main(int argc, char *argv[]) {
 		if (frame_cx % 4 == 0)
 			for (uint_fast8_t sj = 0; sj < SUBCHUNK_SIZE; ++sj)
 				for (uint_fast8_t si = 0; si < SUBCHUNK_SIZE; ++si)
-					recalculate_soil(si, sj);
+					if (is_subchunk_active(si, sj))
+						recalculate_soil(si, sj);
 
 		box2d_world_step(b2_world, FPS_DELTA, 10, 8);
 		move_camera(&player, &camera);

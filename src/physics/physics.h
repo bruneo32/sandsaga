@@ -22,6 +22,7 @@ typedef struct b2Shape		  b2Shape;
 typedef struct b2Fixture	  b2Fixture;
 typedef struct b2ChainShape	  b2ChainShape;
 typedef struct b2PolygonShape b2PolygonShape;
+typedef struct b2Fixture	  b2Fixture;
 
 enum b2BodyType {
 	b2_staticBody = 0,
@@ -52,6 +53,12 @@ enum {
 
 /* Convert float range (0.0-1.0) to byte range (0-255) */
 #define F2B(__f) ((uint8_t)((__f) * 255.0f))
+
+/* World definitions */
+#define B2_WORLD_WIDTH	X_TO_U(VSCREEN_WIDTH)
+#define B2_WORLD_HEIGHT X_TO_U(VSCREEN_HEIGHT)
+#define B2_IS_IN_BOUNDS(_u, _v)                                                \
+	((_u) >= 0 && (_v) >= 0 && (_u) < B2_WORLD_WIDTH && (_v) < B2_WORLD_HEIGHT)
 
 typedef struct _Point2D {
 	double x;
@@ -91,10 +98,12 @@ void box2d_debug_draw(b2World *world, Rect *camera);
 /* Box2D World/Body functions */
 b2Body *box2d_world_get_bodies(b2World *world, uint32_t *count);
 b2Body *box2d_body_get_next(b2Body *body);
+void	box2d_world_move_all_bodies(b2World *world, float u, float v);
 
 /* Box2D Body functions */
 b2Body *box2d_body_create(b2World *world, float u, float v, int body_type,
-						  bool allowSleep,  bool discrete_collision, bool fixed_rotation);
+						  bool allowSleep, bool discrete_collision,
+						  bool fixed_rotation);
 void	box2d_body_set_position(b2Body *body, float u, float v);
 void	box2d_body_change_type(b2Body *body, int body_type);
 void box2d_body_set_velocity(b2Body *body, float velocity_x, float velocity_y);
@@ -107,8 +116,8 @@ void box2d_body_destroy(b2Body *body);
 b2Shape		   *box2d_shape_box(float width, float height);
 b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3);
 b2ChainShape   *box2d_shape_loop(Point2D *points, int count);
-void box2d_body_create_fixture(b2Body *body, b2Shape *shape, float density,
-							   float friction);
+b2Fixture	   *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
+										  float density, float friction);
 
 /* Meshgen functions */
 TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
