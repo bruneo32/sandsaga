@@ -185,11 +185,34 @@ int main(int argc, char *argv[]) {
 					Render_TogleFullscreen;
 					ResetSubchunks; /* Redraw */
 					break;
-				case SDL_SCANCODE_F3:
-					DEBUG_ON = !DEBUG_ON;
-					box2d_debug_draw_active(DEBUG_ON);
-					if (!DEBUG_ON) /* Clear debug artifacts */
-						ResetSubchunks;
+				case SDL_SCANCODE_F9:
+					/* Toggle debug level UI */
+					if (DBGL(e_dbgl_ui)) {
+						DEBUG_LEVEL &= ~e_dbgl_ui;
+						ResetSubchunks; /* Clear debug artifacts */
+					} else {
+						DEBUG_LEVEL |= e_dbgl_ui;
+					}
+					break;
+				case SDL_SCANCODE_F10:
+					/* Toggle debug level Engine */
+					if (DBGL(e_dbgl_engine)) {
+						DEBUG_LEVEL &= ~e_dbgl_engine;
+						ResetSubchunks; /* Clear debug artifacts */
+					} else {
+						DEBUG_LEVEL |= e_dbgl_engine;
+					}
+					break;
+				case SDL_SCANCODE_F11:
+					/* Toggle debug level Engine */
+					if (DBGL(e_dbgl_physics)) {
+						DEBUG_LEVEL &= ~e_dbgl_physics;
+						box2d_debug_draw_active(false);
+						ResetSubchunks; /* Clear debug artifacts */
+					} else {
+						DEBUG_LEVEL |= e_dbgl_physics;
+						box2d_debug_draw_active(true);
+					}
 					break;
 				case SDL_SCANCODE_SPACE:
 					player.flying = !player.flying;
@@ -333,7 +356,7 @@ int main(int argc, char *argv[]) {
 		SDL_RenderCopy(__renderer, vscreen_, &camera, NULL);
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
 
-		if (DEBUG_ON) {
+		if (DBGL(e_dbgl_physics)) {
 			box2d_debug_draw(b2_world, (Rect *)&camera);
 		}
 
@@ -365,7 +388,7 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Draw UI */
-		if (DEBUG_ON) {
+		if (DBGL(e_dbgl_ui)) {
 			Render_Setcolor(C_WHITE);
 			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
 			draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
