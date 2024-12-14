@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 	SDL_FPoint window_scale;
 	size_t	   frame_cx = 0;
 	char	   fps_str[4];
-	snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+	snprintf(fps_str, sizeof(fps_str), "%2zu", fps_);
 	short block_size	 = 1 << 3;
 	bool  grid_mode		 = false;
 	byte  current_object = GO_STONE;
@@ -390,7 +390,7 @@ int main(int argc, char *argv[]) {
 		/* Draw UI */
 		if (DBGL(e_dbgl_ui)) {
 			Render_Setcolor(C_WHITE);
-			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+			snprintf(fps_str, sizeof(fps_str), "%2zu", fps_);
 			draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
 
 			char str_xy[14];

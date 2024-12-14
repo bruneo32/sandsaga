@@ -62,6 +62,9 @@ if (DIST_BUILDER STREQUAL "windows")
 	install(FILES
 		"${CMAKE_SOURCE_DIR}/mingw_libs/SDL2-2.30.9/x86_64-w64-mingw32/bin/SDL2.dll"
 		"${CMAKE_SOURCE_DIR}/mingw_libs/SDL2_image-2.8.2/x86_64-w64-mingw32/bin/SDL2_image.dll"
+		"${CMAKE_SOURCE_DIR}/mingw_libs/box2d/install/bin/libbox2d.dll"
+		"/usr/lib/gcc/x86_64-w64-mingw32/12-win32/libstdc++-6.dll"
+		"/usr/lib/gcc/x86_64-w64-mingw32/12-win32/libgcc_s_seh-1.dll"
 		DESTINATION sandsaga
 	)
 

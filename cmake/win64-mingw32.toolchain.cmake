@@ -23,8 +23,10 @@ link_libraries("-lmingw32")
 # Set library paths for mingw
 set(SDL2_INCLUDE_DIRS "${SDL2_PATH}/include/SDL2")
 set(SDL2_IMAGE_INCLUDE_DIRS "${SDL2_IMAGE_PATH}/include/SDL2")
+set(BOX2D_INCLUDE_DIRS "${BOX2D_PATH}/include")
 
 link_directories(
 	${SDL2_PATH}/lib
 	${SDL2_IMAGE_PATH}/lib
+	${BOX2D_PATH}/lib
 	)
