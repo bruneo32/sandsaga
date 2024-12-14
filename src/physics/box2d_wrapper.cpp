@@ -1,6 +1,7 @@
 #include "../graphics/graphics.h"
 #include "physics.h"
 #include <iostream>
+#include <unordered_set>
 #include <vector>
 
 /* =============================================================== */
@@ -71,7 +72,7 @@ class DebugDraw : public b2Draw {
 };
 DebugDraw debug_draw;
 
-std::vector<b2Body *> bodiesMarkedToDestroy;
+std::unordered_set<b2Body *> bodiesMarkedToDestroy;
 
 /* =============================================================== */
 /* Box2D World functions */
@@ -85,11 +86,19 @@ void box2d_world_step(b2World *world, float timeStep, int velocityIterations,
 					  int positionIterations) {
 	world->Step(timeStep, velocityIterations, positionIterations);
 
-	/* Remove marked bodies */
+	/* After stepping, you should clear any forces you have applied to your
+	 * bodies. This lets you take multiple sub-steps with the same force
+	 * field. */
+	world->ClearForces();
+
+	/* Remove bodies outside the law */
 	if (!world->IsLocked()) {
-		for (b2Body *body : bodiesMarkedToDestroy)
-			world->DestroyBody(body);
-		bodiesMarkedToDestroy.clear();
+		for (b2Body *body = world->GetBodyList(); body != NULL;
+			 body		  = body->GetNext()) {
+			b2Vec2 pos = body->GetPosition();
+			if (!B2_IS_IN_BOUNDS(pos.x, pos.y))
+				world->DestroyBody(body);
+		}
 	}
 }
 
@@ -102,8 +111,8 @@ void box2d_debug_draw_active(bool on) {
 	} else {
 		/* Set all flags */
 		debug_draw.SetFlags(
-			b2Draw::e_shapeBit | b2Draw::e_jointBit | b2Draw::e_pairBit
-			/* | b2Draw::e_centerOfMassBit | b2Draw::e_aabbBit*/);
+			b2Draw::e_shapeBit | b2Draw::e_jointBit
+			/* | b2Draw::e_pairBit | b2Draw::e_centerOfMassBit | b2Draw::e_aabbBit*/);
 	}
 }
 
@@ -121,6 +130,16 @@ b2Body *box2d_world_get_bodies(b2World *world, uint32_t *count) {
 }
 
 b2Body *box2d_body_get_next(b2Body *body) { return body->GetNext(); }
+
+void box2d_world_move_all_bodies(b2World *world, float u, float v) {
+	for (b2Body *body = world->GetBodyList(); body != NULL;
+		 body		  = body->GetNext()) {
+		b2Vec2 pos = body->GetPosition();
+		pos.x += u;
+		pos.y += v;
+		body->SetTransform(pos, body->GetAngle());
+	}
+}
 
 /* =============================================================== */
 /* Box2D Body functions */
@@ -180,15 +199,7 @@ void box2d_body_destroy(b2Body *body) {
 		return;
 
 	b2World *world = body->GetWorld();
-	/* If the world is locked, the body won't be destroyed */
-	if (world->IsLocked()) {
-		/* Get the address of the body, as the user should delete the
-		 * original pointer */
-		b2Body *body_ = &*body;
-		bodiesMarkedToDestroy.push_back(body_);
-	} else {
-		world->DestroyBody(body);
-	}
+	world->DestroyBody(body);
 }
 
 b2Shape *box2d_shape_box(float width, float height) {
@@ -247,11 +258,11 @@ b2ChainShape *box2d_shape_loop(Point2D *points, int count) {
 	return shape;
 }
 
-void box2d_body_create_fixture(b2Body *body, b2Shape *shape, float density,
-							   float friction) {
+b2Fixture *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
+									 float density, float friction) {
 	b2FixtureDef *fixture = new b2FixtureDef;
 	fixture->shape		  = shape;
 	fixture->density	  = density;
 	fixture->friction	  = friction;
-	body->CreateFixture(fixture);
+	return body->CreateFixture(fixture);
 }
