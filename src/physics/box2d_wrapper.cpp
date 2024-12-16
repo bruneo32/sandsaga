@@ -35,11 +35,19 @@ class DebugDraw : public b2Draw {
 	}
 
 	/// Draw a circle.
-	void DrawCircle(const b2Vec2 &center, float radius, const b2Color &color) {}
+	void DrawCircle(const b2Vec2 &center, float radius, const b2Color &color) {
+		Render_SetcolorRGBA(F2B(color.r), F2B(color.g), F2B(color.b),
+							F2B(color.a));
+		Render_Ellipse((int)U_TO_X(radius), (int)U_TO_X(radius),
+					   (int)U_TO_X(center.x) - renderCamera->x,
+					   (int)U_TO_X(center.y) - renderCamera->y);
+	}
 
 	/// Draw a solid circle.
 	void DrawSolidCircle(const b2Vec2 &center, float radius, const b2Vec2 &axis,
-						 const b2Color &color) {}
+						 const b2Color &color) {
+		DrawCircle(center, radius, color);
+	}
 
 	/// Draw a line segment.
 	void DrawSegment(const b2Vec2 &p1, const b2Vec2 &p2, const b2Color &color) {
@@ -144,14 +152,12 @@ void box2d_world_move_all_bodies(b2World *world, float u, float v) {
 /* =============================================================== */
 /* Box2D Body functions */
 b2Body *box2d_body_create(b2World *world, float u, float v, int body_type,
-						  bool allowSleep, bool discrete_collision,
-						  bool fixed_rotation) {
+						  bool allowSleep, bool discrete_collision) {
 	b2BodyDef bodyDef;
 	bodyDef.type = static_cast<b2BodyType>(body_type);
 	bodyDef.position.Set(u, v);
-	bodyDef.bullet		  = !discrete_collision;
-	bodyDef.fixedRotation = fixed_rotation;
-	bodyDef.allowSleep	  = allowSleep;
+	bodyDef.bullet	   = !discrete_collision;
+	bodyDef.allowSleep = allowSleep;
 	return world->CreateBody(&bodyDef);
 }
 
@@ -159,8 +165,23 @@ void box2d_body_change_type(b2Body *body, int body_type) {
 	body->SetType(static_cast<b2BodyType>(body_type));
 }
 
+bool box2d_body_get_fixed_rotation(b2Body *body) {
+	return body->IsFixedRotation();
+}
+
+void box2d_body_set_fixed_rotation(b2Body *body, bool fixed_rotation) {
+	body->SetFixedRotation(fixed_rotation);
+}
+
 void box2d_body_set_position(b2Body *body, float u, float v) {
 	body->SetTransform(b2Vec2(u, v), body->GetAngle());
+}
+
+float box2d_body_get_angle(b2Body *body) { return body->GetAngle(); }
+
+void box2d_body_set_angle(b2Body *body, float angle) {
+	b2Vec2 pos = body->GetPosition();
+	body->SetTransform(pos, angle);
 }
 
 void box2d_body_set_velocity(b2Body *body, float velocity_x, float velocity_y) {
@@ -202,9 +223,18 @@ void box2d_body_destroy(b2Body *body) {
 	world->DestroyBody(body);
 }
 
-b2Shape *box2d_shape_box(float width, float height) {
+b2Shape *box2d_shape_box(float width, float height, float x, float y) {
 	b2PolygonShape *shape = new b2PolygonShape;
-	shape->SetAsBox(width, height);
+	b2Vec2			centroid;
+	centroid.Set(x, y);
+	shape->SetAsBox(width, height, centroid, 0.0f);
+	return shape;
+}
+
+b2Shape *box2d_shape_circle(float radius, float x, float y) {
+	b2CircleShape *shape = new b2CircleShape;
+	shape->m_radius		 = radius;
+	shape->m_p.Set(x, y);
 	return shape;
 }
 
@@ -242,10 +272,10 @@ b2ChainShape *box2d_shape_loop(Point2D *points, int count) {
 			vertices.push_back(currentVertex); /* Add valid vertices */
 	}
 
-	// Close the loop by ensuring the last vertex connects to the first
+	/* Close the loop by ensuring the last vertex connects to the first */
 	if (b2DistanceSquared(vertices.back(), vertices.front()) <=
 		minDistanceSquared) {
-		// Remove the last vertex if it's too close to the first one
+		/* Remove the last vertex if it's too close to the first one */
 		vertices.pop_back();
 	}
 
@@ -265,4 +295,115 @@ b2Fixture *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
 	fixture->density	  = density;
 	fixture->friction	  = friction;
 	return body->CreateFixture(fixture);
+}
+
+/* =============================================================== */
+/* Box2D Raycasts */
+class RaycastCallback : public b2RayCastCallback {
+  public:
+	RaycastData data;
+	b2Body	   *owner;
+
+	RaycastCallback() {
+		data.closestFraction = 1.0f;
+		data.hit			 = false;
+	}
+
+	/* Called for each fixture the ray intersects */
+	float ReportFixture(b2Fixture *fixture, const b2Vec2 &point,
+						const b2Vec2 &normal, float fraction) override {
+		if (fixture->GetBody() == owner)
+			return -1.0f; /* Skip this fixture */
+
+		/* Store the closest hit */
+		if (fraction < data.closestFraction) {
+			data.closestFraction = fraction;
+			data.point_x		 = point.x;
+			data.point_y		 = point.y;
+			data.normal_x		 = normal.x;
+			data.normal_y		 = normal.y;
+			data.hit			 = true;
+			data.other			 = fixture;
+		}
+
+		/* Continue raycasting (return fraction to find closest) */
+		return fraction;
+	}
+};
+
+void box2d_raycast(b2World *world, RaycastData *output, float u1, float v1,
+				   float u2, float v2, b2Body *owner) {
+	if (!output)
+		return;
+
+	/* Define the ray's start and end points */
+	b2Vec2 rayStart = b2Vec2(u1, v1);
+	b2Vec2 rayEnd	= b2Vec2(u2, v2);
+
+	/* Perform the raycast */
+	RaycastCallback raycast;
+	raycast.owner = owner;
+	world->RayCast(&raycast, rayStart, rayEnd);
+
+	/* Store the results */
+	output->closestFraction = raycast.data.closestFraction;
+	output->point_x			= raycast.data.point_x;
+	output->point_y			= raycast.data.point_y;
+	output->normal_x		= raycast.data.normal_x;
+	output->normal_y		= raycast.data.normal_y;
+	output->hit				= raycast.data.hit;
+	output->other			= raycast.data.other;
+}
+
+void box2d_body_raycast(b2Body *body, RaycastData *output, float u, float v) {
+	b2World *world = body->GetWorld();
+
+	float u1 = body->GetPosition().x;
+	float v1 = body->GetPosition().y;
+	float u2 = u1 + u;
+	float v2 = v1 + v;
+
+	box2d_raycast(world, output, u1, v1, u2, v2, body);
+}
+
+void box2d_sweep_raycast(b2Body *body, RaycastData *output, int numRays,
+						 float sweepLength, float rayDirX, float rayDirY,
+						 bool horizontalSweep) {
+	b2World *world	  = body->GetWorld();
+	b2Vec2	 position = body->GetPosition();
+
+	/* Initialize the output to store the closest hit among all rays */
+	output->closestFraction = 1.0f;
+	output->hit				= false;
+
+	float halfSweep = sweepLength / 2.0f;
+	float delta = sweepLength / (float)(numRays - 1); /* Spacing between rays */
+
+	for (int i = 0; i < numRays; i++) {
+		float  offset = -halfSweep + i * delta; /* Offset for the current ray */
+		b2Vec2 rayStart, rayEnd;
+
+		if (horizontalSweep) {
+			/* Horizontal sweeping: rays along the X-axis */
+			rayStart = position + b2Vec2(offset, 0);
+		} else {
+			/* Vertical sweeping: rays along the Y-axis */
+			rayStart = position + b2Vec2(0, offset);
+		}
+
+		/* Ray direction (defined by rayDirX, rayDirY) */
+		b2Vec2 rayDelta = b2Vec2(rayDirX, rayDirY);
+		rayEnd			= rayStart + rayDelta;
+
+		/* Perform raycast for this ray */
+		RaycastCallback raycast;
+		raycast.owner = body;
+		world->RayCast(&raycast, rayStart, rayEnd);
+
+		/* Update the overall result with the closest hit */
+		if (raycast.data.hit &&
+			raycast.data.closestFraction < output->closestFraction) {
+			*output = raycast.data; /* Copy the closest hit data */
+		}
+	}
 }

@@ -11,7 +11,6 @@
 
 #include "assets/res/VGA-ROM.F08.h"
 #include "assets/res/player_body.png.h"
-#include "assets/res/player_head.png.h"
 
 #include "physics/physics.h"
 
@@ -28,8 +27,7 @@
 static size_t		 fps_	 = FPS;
 static volatile bool GAME_ON = true;
 
-static Player  player;
-static Sprite *player_head;
+static Player player;
 
 /** Handle `CTRL + C` to quit the game */
 void sigkillHandler(int signum) { GAME_ON = false; }
@@ -61,8 +59,6 @@ int main(int argc, char *argv[]) {
 
 	player.sprite = loadIMG_from_mem(
 		res_player_body_png, res_player_body_png_len, __window, __renderer);
-	player_head = loadIMG_from_mem(res_player_head_png, res_player_head_png_len,
-								   __window, __renderer);
 
 	/* =============================================================== */
 	/* Init gameloop variables */
@@ -113,12 +109,29 @@ int main(int argc, char *argv[]) {
 
 	player.body =
 		box2d_body_create(b2_world, X_TO_U(player.x), X_TO_U(player.y),
-						  b2_dynamicBody, false, false, true);
+						  b2_dynamicBody, false, false);
+	box2d_body_set_fixed_rotation(player.body, true);
+
+	const float player_width_div4_u = X_TO_U(player.width / 4);
+	const float player_hd2_m_wd4m1_u =
+		X_TO_U(player.height / 2 - player.width / 4 - 1);
+	const float player_mhd2_p_wd4m1_u =
+		X_TO_U(-player.height / 2 + player.width / 4 + 1);
 
 	box2d_body_create_fixture(
 		player.body,
-		box2d_shape_box(X_TO_U(player.width / 4), X_TO_U(player.height / 2)),
-		8.0f, 1.0f);
+		box2d_shape_box(player_width_div4_u, player_hd2_m_wd4m1_u, 0, 0), 1.0f,
+		0.8f);
+
+	box2d_body_create_fixture(
+		player.body,
+		box2d_shape_circle(player_width_div4_u, 0, player_hd2_m_wd4m1_u), 1.0f,
+		0.8f);
+
+	box2d_body_create_fixture(
+		player.body,
+		box2d_shape_circle(player_width_div4_u, 0, player_mhd2_p_wd4m1_u), 1.0f,
+		0.8f);
 
 	/* =============================================================== */
 	/* Calculate ticks */
@@ -225,6 +238,14 @@ int main(int argc, char *argv[]) {
 					break;
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
+					break;
+				case SDL_SCANCODE_Q:
+					const bool fx = box2d_body_get_fixed_rotation(player.body);
+
+					if (!fx)
+						box2d_body_set_angle(player.body, 0);
+
+					box2d_body_set_fixed_rotation(player.body, !fx);
 					break;
 				case SDL_SCANCODE_KP_MINUS:
 					if (block_size > 1)
@@ -338,14 +359,13 @@ int main(int argc, char *argv[]) {
 		const uint_fast16_t player_screen_x = player.x - camera.x;
 		const uint_fast16_t player_screen_y = player.y - camera.y;
 
+		const float player_angle	 = box2d_body_get_angle(player.body);
+		const float player_angle_deg = radtodeg(player_angle);
+
 		Render_image_ext(player.sprite->texture,
 						 player_screen_x - (player.width / 2),
 						 player_screen_y - (player.height / 2), player.width,
-						 player.height, 0, NULL, player.fliph);
-		Render_image_ext(player_head->texture,
-						 player_screen_x - (player.width / 2),
-						 player_screen_y - (player.height / 2), 16, 8, 0, NULL,
-						 player.fliph);
+						 player.height, player_angle_deg, NULL, player.fliph);
 
 		/* Draw gameboard */
 		SDL_SetRenderTarget(__renderer, vscreen_);
@@ -419,7 +439,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	delete (player.sprite);
-	delete (player_head);
 
 	if (player.body)
 		box2d_body_destroy(player.body);

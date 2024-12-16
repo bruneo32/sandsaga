@@ -1,5 +1,7 @@
 #include "entities.h"
 
+#define SLOPE 4
+
 void move_player(Player *player, const Uint8 *keyboard) {
 	player->prev_x = player->x;
 	player->prev_y = player->y;
@@ -11,38 +13,45 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	player->y = clamp(((short)U_TO_X(by)), CHUNK_SIZE_DIV_2 + 1,
 					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
 
-	const short player_width_div2  = player->width / 2;
-	const short player_height_div2 = player->height / 2;
-	const short player_bottom	   = (player->y + player_height_div2);
+	short facing = player->fliph ? -1 : 1;
 
-	bool player_is_on_floor = false;
-	for (short ix = player->x - player_width_div2;
-		 ix < player->x + player_width_div2; ++ix) {
-		if (gameboard[player_bottom][ix] != GO_NONE) {
-			player_is_on_floor = true;
-			break;
-		}
-	}
+	RaycastData ray_bottom;
+	RaycastData ray_forward;
+
+	box2d_sweep_raycast(player->body, &ray_bottom, 4,
+						X_TO_U(player->width / 2 - 2), 0,
+						X_TO_U(player->height / 2), true);
+	box2d_sweep_raycast(player->body, &ray_forward, 8,
+						X_TO_U(player->height - SLOPE * 2),
+						X_TO_U(facing * (player->width / 4 + 1)), 0, false);
+
+	bool player_is_on_floor = ray_bottom.hit;
+	bool player_is_on_wall	= ray_forward.hit;
 
 	/* Move down / Jump */
-	if (keyboard[SDL_SCANCODE_W]) {
+	if (keyboard[SDL_SCANCODE_W] && (player->flying || player_is_on_floor)) {
 		/* Jump */
 		box2d_body_set_velocity_v(player->body, player->flying
 													? -PLAYER_FLYING_SPEED
 													: PLAYER_VSPEED_JUMP);
-	} else if (keyboard[SDL_SCANCODE_S]) {
+	} else if (keyboard[SDL_SCANCODE_S] && player->flying) {
 		box2d_body_set_velocity_v(
 			player->body, player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED);
 	} else if (player->flying) {
 		box2d_body_set_velocity_v(player->body, 0);
 	}
 
-	short hspeed = keyboard[SDL_SCANCODE_D] - keyboard[SDL_SCANCODE_A];
-
 	/* Move left/right */
+	short hspeed = keyboard[SDL_SCANCODE_D] - keyboard[SDL_SCANCODE_A];
 	if (hspeed != 0) {
 		player->fliph = (hspeed < 0) ? true : false;
 		hspeed *= player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED;
+		if (player_is_on_wall && SIGN(hspeed) == SIGN(facing)) {
+			hspeed *= (float)facing * fabsf(ray_forward.normal_y);
+			box2d_body_add_velocity(player->body, 0, ray_forward.normal_x);
+		} else if (player_is_on_floor) {
+			box2d_body_add_velocity(player->body, 0, 0.8f);
+		}
 		box2d_body_set_velocity_h(player->body, hspeed);
 	} else if (player->flying || player_is_on_floor) {
 		box2d_body_set_velocity_h(player->body, 0);

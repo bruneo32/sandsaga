@@ -9,7 +9,7 @@
 #include "engine.h"
 
 #define PLAYER_FLYING_SPEED 16
-#define PLAYER_SPEED		9
+#define PLAYER_SPEED		6
 #define PLAYER_VSPEED_JUMP	-9
 #define PLAYER_VSPEED_MAX	48
 
