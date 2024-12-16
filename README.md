@@ -14,17 +14,17 @@ mkdir mingw_libs
 SDL2 libs *(prebuilt)*:
 ```
 # SDL
-wget -P mingw_libs https://github.com/libsdl-org/SDL/releases/download/release-2.30.9/SDL2-devel-2.30.9-mingw.tar.gz
+wget -P mingw_libs https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-mingw.tar.gz
 # SDL_image
-wget -P mingw_libs https://github.com/libsdl-org/SDL_image/releases/download/release-2.8.2/SDL2_image-devel-2.8.2-mingw.tar.gz
+wget -P mingw_libs https://github.com/libsdl-org/SDL_image/releases/download/release-2.6.3/SDL2_image-devel-2.6.3-mingw.tar.gz
 ```
 Box2D libs *(sadly, not prebuilt)*:
 ```
 # Clone the Box2D repository
-git clone -b 'v2.4.1' --single-branch --depth 1  https://github.com/erincatto/box2d mingw_libs/box2d
+git clone -b 'v2.4.1' --single-branch --depth 1 https://github.com/erincatto/box2d mingw_libs/box2d
 mkdir mingw_libs/box2d/build_mingw
 cd mingw_libs/box2d/build_mingw
-cmake -DCMAKE_SYSTEM_NAME=Windows       -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DBUILD_SHARED_LIBS=ON -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=$(pwd)/../install ..
+cmake -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DBUILD_SHARED_LIBS=ON -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=$(pwd)/../install ..
 make -j$(nproc)
 make install
 cd ../../..
