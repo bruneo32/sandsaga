@@ -87,6 +87,7 @@ typedef struct Rect {
 	int w, h;
 } Rect;
 
+/* =============================================================== */
 /* Box2D World functions */
 b2World *box2d_world_create(float gravity_x, float gravity_y);
 void box2d_world_step(b2World *world, float timeStep, int velocityIterations,
@@ -102,10 +103,13 @@ void	box2d_world_move_all_bodies(b2World *world, float u, float v);
 
 /* Box2D Body functions */
 b2Body *box2d_body_create(b2World *world, float u, float v, int body_type,
-						  bool allowSleep, bool discrete_collision,
-						  bool fixed_rotation);
-void	box2d_body_set_position(b2Body *body, float u, float v);
+						  bool allowSleep, bool discrete_collision);
 void	box2d_body_change_type(b2Body *body, int body_type);
+bool	box2d_body_get_fixed_rotation(b2Body *body);
+void	box2d_body_set_fixed_rotation(b2Body *body, bool fixed_rotation);
+void	box2d_body_set_position(b2Body *body, float u, float v);
+float	box2d_body_get_angle(b2Body *body);
+void	box2d_body_set_angle(b2Body *body, float angle);
 void box2d_body_set_velocity(b2Body *body, float velocity_x, float velocity_y);
 void box2d_body_set_velocity_v(b2Body *body, float vspeed);
 void box2d_body_set_velocity_h(b2Body *body, float hspeed);
@@ -113,12 +117,29 @@ void box2d_body_add_velocity(b2Body *body, float velocity_x, float velocity_y);
 void box2d_body_get_position(b2Body *body, float *u, float *v);
 void box2d_body_destroy(b2Body *body);
 
-b2Shape		   *box2d_shape_box(float width, float height);
+b2Shape		   *box2d_shape_box(float width, float height, float x, float y);
+b2Shape		   *box2d_shape_circle(float radius, float x, float y);
 b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3);
 b2ChainShape   *box2d_shape_loop(Point2D *points, int count);
 b2Fixture	   *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
 										  float density, float friction);
 
+/* Box2D Raycasts */
+typedef struct _RaycastData {
+	float	   closestFraction;	   /* Closest hit fraction */
+	float	   point_x, point_y;   /* Point of intersection */
+	float	   normal_x, normal_y; /* Normal at the intersection */
+	bool	   hit;
+	b2Fixture *other;
+} RaycastData;
+void box2d_raycast(b2World *world, RaycastData *output, float u1, float v1,
+				   float u2, float v2, b2Body *owner);
+void box2d_body_raycast(b2Body *body, RaycastData *output, float u, float v);
+void box2d_sweep_raycast(b2Body *body, RaycastData *output, int numRays,
+						 float sweepLength, float rayDirX, float rayDirY,
+						 bool horizontalSweep);
+
+/* =============================================================== */
 /* Meshgen functions */
 TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 						  size_t end_j, bool (*is_valid)(size_t x, size_t y));

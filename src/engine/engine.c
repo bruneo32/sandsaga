@@ -476,7 +476,7 @@ void activate_soil(size_t si, size_t sj) {
 		b2Body *body =
 			box2d_body_create(b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
 							  X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0),
-							  b2_staticBody, true, true, false);
+							  b2_staticBody, true, true);
 
 		for (size_t i = 0; i < chains->count; ++i) {
 			PointList *mesh = (PointList *)chains->data[i];
@@ -488,7 +488,7 @@ void activate_soil(size_t si, size_t sj) {
 				box2d_shape_loop(mesh->points, mesh->count);
 
 			if (loopchain)
-				box2d_body_create_fixture(body, (b2Shape *)loopchain, 7.0f,
+				box2d_body_create_fixture(body, (b2Shape *)loopchain, 1.0f,
 										  1.0f);
 
 			free(mesh->points);

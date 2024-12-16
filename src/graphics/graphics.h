@@ -1,12 +1,15 @@
 #ifndef _GRAPHICS_H
 #define _GRAPHICS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <SDL.h>
 #include <math.h>
 #include <stdbool.h>
-#include <stdio.h>
 
-#include "../assets/assets.h"
+#include "../util.h"
 #include "color.h"
 
 #define FPS			   60
@@ -98,6 +101,27 @@ void Render_ResizeWindow(int newWidth, int newHeight, bool keepAspectRatio);
 #define Render_Line_Color(x1, y1, x2, y2, c)                                   \
 	Render_Line_RGBA(x1, y1, x2, y2, c.r, c.g, c.b, c.a)
 
+/**
+ * Draw an ellipse.
+ * @param rx horizontal radius
+ * @param ry vertical radius
+ * @param xc x center
+ * @param yc y center
+ */
+void Render_Ellipse(int rx, int ry, int xc, int yc);
+#define Render_Ellipse_RGBA(rx, ry, xc, yc, r, g, b, a)                        \
+	{                                                                          \
+		Render_SetcolorRGBA(r, g, b, a);                                       \
+		Render_Ellipse(rx, ry, xc, yc);                                        \
+	}
+#define Render_Ellipse_Color(rx, ry, xc, yc, c)                                \
+	Render_Ellipse_RGBA(rx, ry, xc, yc, c.r, c.g, c.b, c.a)
+
+#define Render_Circle(r, x, y) Render_Ellipse(r, r, x, y)
+#define Render_Circle_RGBA(r, x, y, red, g, b, a)                              \
+	Render_Ellipse_RGBA(r, r, x, y, red, g, b, a)
+#define Render_Circle_Color(r, x, y, c) Render_Ellipse_Color(r, r, x, y, c)
+
 #define Render_image_ext(texture, x, y, w, h, angle, center, flip)             \
 	SDL_RenderCopyEx(__renderer, texture, NULL, &(SDL_Rect){x, y, w, h},       \
 					 angle, center, flip)
@@ -109,5 +133,9 @@ void Render_subimage_ext(SDL_Texture *texture, int image_x, int image_y, int w,
 #define Render_subimage(texture, image_x, image_y, w, h, renderX, renderY)     \
 	Render_subimage_ext(texture, image_x, image_y, w, h, renderX, renderY, 0,  \
 						NULL, SDL_FLIP_NONE)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _GRAPHICS_H

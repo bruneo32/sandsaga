@@ -23,17 +23,15 @@
 	}
 #define clamp(x, low, high)                                                    \
 	((x) < (low) ? (low) : ((x) > (high) ? (high) : (x)))
+#define SIGN(x) (((x) > 0) - ((x) < 0))
 #endif
 
 /* =============================================================== */
 /* Mathematics */
 #ifndef M_PI
-#define M_E		2.7182818284590452354	/* e */
-#define M_PI	3.14159265358979323846	/* pi */
-#define M_PI_2	1.57079632679489661923	/* pi/2 */
-#define M_Ef	2.7182818284590452354f	/* e */
-#define M_PIf	3.14159265358979323846f /* pi */
-#define M_PI_2f 1.57079632679489661923	/* pi/2 */
+#define M_E	   2.7182818284590452354  /* e */
+#define M_PI   3.14159265358979323846 /* pi */
+#define M_PI_2 1.57079632679489661923 /* pi/2 */
 #endif
 #define M_2PI			   6.28318530717958647688
 #define M_TWO_THIRDS_PLUS1 1.666666
