@@ -8,9 +8,9 @@ void move_player(Player *player, const Uint8 *keyboard) {
 
 	float bx, by;
 	box2d_body_get_position(player->body, &bx, &by);
-	player->x = clamp(((short)U_TO_X(bx)), CHUNK_SIZE_DIV_2 + 1,
+	player->x = clamp(U_TO_X(bx), CHUNK_SIZE_DIV_2 + 1,
 					  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
-	player->y = clamp(((short)U_TO_X(by)), CHUNK_SIZE_DIV_2 + 1,
+	player->y = clamp(U_TO_X(by), CHUNK_SIZE_DIV_2 + 1,
 					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
 
 	short facing = player->fliph ? -1 : 1;
@@ -42,13 +42,15 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	}
 
 	/* Move left/right */
-	short hspeed = keyboard[SDL_SCANCODE_D] - keyboard[SDL_SCANCODE_A];
+	float hspeed = keyboard[SDL_SCANCODE_D] - keyboard[SDL_SCANCODE_A];
 	if (hspeed != 0) {
 		player->fliph = (hspeed < 0) ? true : false;
 		hspeed *= player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED;
 		if (player_is_on_wall && SIGN(hspeed) == SIGN(facing)) {
 			hspeed *= (float)facing * fabsf(ray_forward.normal_y);
-			box2d_body_add_velocity(player->body, 0, ray_forward.normal_x);
+			if (player_is_on_floor)
+				box2d_body_add_velocity(player->body, 0,
+										-fabsf(ray_forward.normal_x));
 		} else if (player_is_on_floor) {
 			box2d_body_add_velocity(player->body, 0, 0.8f);
 		}
@@ -57,8 +59,8 @@ void move_player(Player *player, const Uint8 *keyboard) {
 		box2d_body_set_velocity_h(player->body, 0);
 	}
 
-	const size_t si = (player->x) / SUBCHUNK_WIDTH;
-	const size_t sj = (player->y) / SUBCHUNK_HEIGHT;
+	const size_t si = (size_t)(player->x) / SUBCHUNK_WIDTH;
+	const size_t sj = (size_t)(player->y) / SUBCHUNK_HEIGHT;
 
 	for (size_t j = sj - 2; j <= sj + 2; ++j) {
 		for (size_t i = si - 2; i <= si + 2; ++i) {
@@ -74,13 +76,19 @@ void move_player(Player *player, const Uint8 *keyboard) {
 void move_camera(Player *player, SDL_Rect *camera) {
 	float bx, by;
 	box2d_body_get_position(player->body, &bx, &by);
-	player->x = clamp(((short)U_TO_X(bx)), CHUNK_SIZE_DIV_2 + 1,
-					  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
-	player->y = clamp(((short)U_TO_X(by)), CHUNK_SIZE_DIV_2 + 1,
-					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
 
-	const short player_sx = player->x;
-	const short player_sy = player->y;
+	/* Set player position after world_step */
+	player->x = clamp(U_TO_X(bx), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
+	player->y = clamp(U_TO_X(by), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
+	if (player->y != by || player->x != bx)
+		/* Reposition player->body */
+		box2d_body_set_position(player->body, X_TO_U(player->x),
+								X_TO_U(player->y));
+
+	const float player_sx = player->x;
+	const float player_sy = player->y;
 
 	/* Generate new chunks and move camera */
 	if (player->y < player->prev_y) {
@@ -91,8 +99,9 @@ void move_camera(Player *player, SDL_Rect *camera) {
 		 */
 		if (player->chunk_id.y > 1 && player->y < CHUNK_SIZE) {
 
-			player->y	   = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->y);
-			player->prev_y = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_y);
+			player->y = (float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->y);
+			player->prev_y =
+				(float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_y);
 			--player->chunk_id.y;
 
 			/* Move world to bottom */
@@ -130,8 +139,9 @@ void move_camera(Player *player, SDL_Rect *camera) {
 		if (player->chunk_id.y < CHUNK_MAX_Y - 1 &&
 			player->y >= CHUNK_SIZE_M2) {
 
-			player->y	   = CHUNK_SIZE + (player->y - CHUNK_SIZE_M2);
-			player->prev_y = CHUNK_SIZE + (player->prev_y - CHUNK_SIZE_M2);
+			player->y = (float)CHUNK_SIZE + (player->y - CHUNK_SIZE_M2);
+			player->prev_y =
+				(float)CHUNK_SIZE + (player->prev_y - CHUNK_SIZE_M2);
 			++player->chunk_id.y;
 
 			/* Move world to top */
@@ -170,8 +180,9 @@ void move_camera(Player *player, SDL_Rect *camera) {
 		 */
 		if (player->chunk_id.x > 1 && player->x < CHUNK_SIZE) {
 
-			player->x	   = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->x);
-			player->prev_x = CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_x);
+			player->x = (float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->x);
+			player->prev_x =
+				(float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_x);
 			--player->chunk_id.x;
 
 			/* Move world to right */
@@ -211,8 +222,9 @@ void move_camera(Player *player, SDL_Rect *camera) {
 		if (player->chunk_id.x < CHUNK_MAX_X - 1 &&
 			player->x >= CHUNK_SIZE_M2) {
 
-			player->x	   = CHUNK_SIZE + (player->x - CHUNK_SIZE_M2);
-			player->prev_x = CHUNK_SIZE + (player->prev_x - CHUNK_SIZE_M2);
+			player->x = (float)CHUNK_SIZE + (player->x - CHUNK_SIZE_M2);
+			player->prev_x =
+				(float)CHUNK_SIZE + (player->prev_x - CHUNK_SIZE_M2);
 			++player->chunk_id.x;
 
 			/* Move world to left */

@@ -125,6 +125,9 @@ void Render_Ellipse(int rx, int ry, int xc, int yc);
 #define Render_image_ext(texture, x, y, w, h, angle, center, flip)             \
 	SDL_RenderCopyEx(__renderer, texture, NULL, &(SDL_Rect){x, y, w, h},       \
 					 angle, center, flip)
+#define Render_image_extF(texture, x, y, w, h, angle, center, flip)            \
+	SDL_RenderCopyExF(__renderer, texture, NULL, &(SDL_FRect){x, y, w, h},     \
+					  angle, center, flip)
 
 void Render_subimage_ext(SDL_Texture *texture, int image_x, int image_y, int w,
 						 int h, int renderX, int renderY, const double angle,

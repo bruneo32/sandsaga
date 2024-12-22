@@ -526,12 +526,10 @@ rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
 			for (mbPoint point : path)
 				vIn.push_back(RDP::Point(point[0], point[1]));
 
-			/* More than 1 oftens produces some gaps in b2ChainShape */
-			RDP::RamerDouglasPeucker(vIn, 1.0, vOut);
+			RDP::RamerDouglasPeucker(vIn, M_PI_2, vOut);
 
-			if (vOut.empty()) {
+			if (vOut.empty())
 				continue;
-			}
 
 			std::vector<mbPoint> rOut;
 			for (RDP::Point p : vOut) {
