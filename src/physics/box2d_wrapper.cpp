@@ -14,7 +14,7 @@ class DebugDraw : public b2Draw {
 	void DrawPolygon(const b2Vec2 *vertices, int32 vertexCount,
 					 const b2Color &color) {
 		Render_SetcolorRGBA(F2B(color.r), F2B(color.g), F2B(color.b),
-							F2B(color.a));
+							F2B(color.a * 0.5f));
 
 		/* Start previous vertex with last vertex */
 		b2Vec2 *pvex = (b2Vec2 *)&vertices[vertexCount - 1];
@@ -37,7 +37,7 @@ class DebugDraw : public b2Draw {
 	/// Draw a circle.
 	void DrawCircle(const b2Vec2 &center, float radius, const b2Color &color) {
 		Render_SetcolorRGBA(F2B(color.r), F2B(color.g), F2B(color.b),
-							F2B(color.a));
+							F2B(color.a * 0.5f));
 		Render_Ellipse((int)U_TO_X(radius), (int)U_TO_X(radius),
 					   (int)U_TO_X(center.x) - renderCamera->x,
 					   (int)U_TO_X(center.y) - renderCamera->y);
@@ -52,7 +52,7 @@ class DebugDraw : public b2Draw {
 	/// Draw a line segment.
 	void DrawSegment(const b2Vec2 &p1, const b2Vec2 &p2, const b2Color &color) {
 		Render_SetcolorRGBA(F2B(color.r), F2B(color.g), F2B(color.b),
-							F2B(color.a));
+							F2B(color.a * 0.5f));
 		Render_Line(
 			U_TO_X(p1.x) - renderCamera->x, U_TO_X(p1.y) - renderCamera->y,
 			U_TO_X(p2.x) - renderCamera->x, U_TO_X(p2.y) - renderCamera->y);
@@ -74,7 +74,7 @@ class DebugDraw : public b2Draw {
 	/// Draw a point.
 	void DrawPoint(const b2Vec2 &p, float size, const b2Color &color) {
 		Render_SetcolorRGBA(F2B(color.r), F2B(color.g), F2B(color.b),
-							F2B(color.a));
+							F2B(color.a * 0.5f));
 		Render_Pixel((int)U_TO_X(p.x), (int)U_TO_X(p.y));
 	}
 };

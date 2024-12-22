@@ -14,10 +14,11 @@ using mbPoint = std::array<double, 2>;
 using mbPolygon = std::vector<std::vector<mbPoint>>;
 
 typedef struct _PolyList {
-	size_t	  index;
+	uint8_t	  index;
 	mbPolygon polygon;
 } PolyList;
 
+#define Get_plist(plist_, i_, j_)  (plist_[(j_) * list_width + (i_)])
 #define INVALID_VERTEX			   ((uint8_t)(-1))
 #define VERTEX_IS_IN_BOUNDS_H(__x) (((__x) >= 0) && ((__x) < list_width))
 #define VERTEX_IS_IN_BOUNDS_V(__y) (((__y) >= 0) && ((__y) < list_height))
@@ -25,8 +26,8 @@ typedef struct _PolyList {
 	(VERTEX_IS_IN_BOUNDS_H(__x) && VERTEX_IS_IN_BOUNDS_V(__y))
 
 typedef struct _CloudPoint {
-	ssize_t j;
 	ssize_t i;
+	ssize_t j;
 	size_t	order;
 } CloudPoint;
 
@@ -50,6 +51,27 @@ const uint8_t LUT_MSQ_VALID_VERTEX[] = {
 	0b11111011,
 	0b11111110,
 };
+const uint8_t LUT_MSQR_VALID[] = {
+	/* 90deg corners */
+	0b01010000,
+	0b01001000,
+	0b00010010,
+	0b00001010,
+	/* Semi-corners */
+	0b11001000,
+	0b01110000,
+	0b00001110,
+	0b00010011,
+	0b10010010,
+	0b00101010,
+	0b01010100,
+	0b01001001,
+	/* Tiny outlets */
+	0b01011000,
+	0b00011010,
+	0b01001010,
+	0b01010010,
+};
 
 std::vector<mbPoint> traverse_contour(uint8_t *plist, const size_t list_width,
 									  const size_t list_height,
@@ -57,81 +79,90 @@ std::vector<mbPoint> traverse_contour(uint8_t *plist, const size_t list_width,
 									  const size_t start_i,
 									  uint8_t	   polygon_index) {
 
-	std::vector<mbPoint> result = std::vector<mbPoint>();
+	std::vector<mbPoint>	result = std::vector<mbPoint>();
+	std::vector<CloudPoint> revisit_stack;
+
+	/* Define directions clockwise */
+	enum e_cwdir {
+		cw_first		 = 1,
+		cw_startfrom_top = 1,
+		cw_startfrom_right,
+		cw_startfrom_bottom,
+		cw_startfrom_left,
+		/* If it does not encounter a valid "+" vertex,
+		 * go try for "x" vertex. */
+		cw_first_x			 = 10,
+		cw_startfrom_topleft = 10,
+		cw_startfrom_topright,
+		cw_startfrom_botright,
+		cw_startfrom_botleft,
+	};
 
 	ssize_t j = start_j;
 	ssize_t i = start_i;
 
-	std::vector<CloudPoint> revisit_stack;
-
-	/* Define directions clockwise */
-	constexpr size_t cw_start				  = 1;
-	constexpr size_t cw_startfrom_topleft	  = cw_start;
-	constexpr size_t cw_startfrom_top		  = 2;
-	constexpr size_t cw_startfrom_topright	  = 3;
-	constexpr size_t cw_startfrom_right		  = 4;
-	constexpr size_t cw_startfrom_bottomright = 5;
-	constexpr size_t cw_startfrom_bottom	  = 6;
-	constexpr size_t cw_startfrom_bottomleft  = 7;
-	constexpr size_t cw_startfrom_left		  = 8;
-
 	/* First iter comes from right, so start searching clockwise from
 	 * top-left */
-	size_t order		  = cw_startfrom_topleft;
+	size_t order		  = cw_startfrom_top;
 	bool   already_passed = false;
-	do {
-		plist[j * list_width + i] = polygon_index;
-		result.push_back((mbPoint){
-			static_cast<double>(i),
-			static_cast<double>(j),
-		});
+	bool   first_time	  = true;
+	while (!(!first_time && i == start_i && j == start_j)) {
+		/* Closing polygon, break */
 
-		/* Save checkpoint if there is a crosspath */
-		size_t n_neighbours = 0;
-		for (ssize_t dj = -1; dj <= 1; ++dj) {
-			for (ssize_t di = -1; di <= 1; ++di) {
-				/* Skip the center cell */
-				if (dj == 0 && di == 0)
-					continue;
+		/* Save point (do not add double points when not needed) */
+		if (!already_passed) {
+			if (!first_time)
+				plist[j * list_width + i] = polygon_index;
 
-				ssize_t nj = j + dj, ni = i + di;
+			/* Do not unset the first vertex, because we have to detect it at
+			 * the end */
+			result.push_back((mbPoint){
+				static_cast<double>(i),
+				static_cast<double>(j),
+			});
 
-				if (VERTEX_IS_IN_BOUNDS(ni, nj)) {
-					if (plist[nj * list_width + ni] == INVALID_VERTEX)
-						n_neighbours++;
+			if (!first_time) {
+				/* Save checkpoint if there is a crosspath */
+				uint8_t plus_neighbours = 0, x_neighbours = 0;
+
+				/* Define "+" and "x" direction offsets */
+				const ssize_t plus_offsets[4][2] = {
+					{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+				const ssize_t cross_offsets[4][2] = {
+					{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+				/* Check "+" neighbors */
+				for (const auto &offset : plus_offsets) {
+					ssize_t ni = i + offset[1], nj = j + offset[0];
+					if (VERTEX_IS_IN_BOUNDS(ni, nj) &&
+						Get_plist(plist, ni, nj) == INVALID_VERTEX) {
+						plus_neighbours++;
+					}
 				}
-			}
-		}
+				/* Check "x" neighbors */
+				for (const auto &offset : cross_offsets) {
+					ssize_t ni = i + offset[1], nj = j + offset[0];
+					if (VERTEX_IS_IN_BOUNDS(ni, nj) &&
+						Get_plist(plist, ni, nj) == INVALID_VERTEX) {
+						x_neighbours++;
+					}
+				}
 
-		if (n_neighbours > 1)
-			revisit_stack.push_back((CloudPoint){j, i, order});
+				/* Validate crosspath, it should not save a point that has two
+				 * neighbours but one on each side, the neighbour count should
+				 * be on each side independently */
+				if (plus_neighbours > 1 || x_neighbours > 1)
+					revisit_stack.push_back((CloudPoint){i, j, order});
+			}
+
+			first_time = false;
+		}
 
 		/* Iter neighbours in order */
 		switch (order) {
-		case cw_startfrom_topleft:
-			/* Check top-left */
-			if (VERTEX_IS_IN_BOUNDS(i - 1, j - 1) &&
-				plist[(j - 1) * list_width + (i - 1)] == INVALID_VERTEX) {
-				i--;
-				j--;
-				order		   = cw_startfrom_bottom;
-				already_passed = false;
-				continue;
-			}
 		case cw_startfrom_top:
 			/* Check top */
 			if (VERTEX_IS_IN_BOUNDS_V(j - 1) &&
-				plist[(j - 1) * list_width + i] == INVALID_VERTEX) {
-				j--;
-				order		   = cw_startfrom_bottomleft;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_topright:
-			/* Check top-right */
-			if (VERTEX_IS_IN_BOUNDS(i + 1, j - 1) &&
-				plist[(j - 1) * list_width + (i + 1)] == INVALID_VERTEX) {
-				i++;
+				Get_plist(plist, i, j - 1) == INVALID_VERTEX) {
 				j--;
 				order		   = cw_startfrom_left;
 				already_passed = false;
@@ -140,18 +171,8 @@ std::vector<mbPoint> traverse_contour(uint8_t *plist, const size_t list_width,
 		case cw_startfrom_right:
 			/* Check right */
 			if (VERTEX_IS_IN_BOUNDS_H(i + 1) &&
-				plist[j * list_width + (i + 1)] == INVALID_VERTEX) {
+				Get_plist(plist, i + 1, j) == INVALID_VERTEX) {
 				i++;
-				order		   = cw_startfrom_topleft;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_bottomright:
-			/* Check bottom-right */
-			if (VERTEX_IS_IN_BOUNDS(i + 1, j + 1) &&
-				plist[(j + 1) * list_width + (i + 1)] == INVALID_VERTEX) {
-				i++;
-				j++;
 				order		   = cw_startfrom_top;
 				already_passed = false;
 				continue;
@@ -159,85 +180,101 @@ std::vector<mbPoint> traverse_contour(uint8_t *plist, const size_t list_width,
 		case cw_startfrom_bottom:
 			/* Check bottom */
 			if (VERTEX_IS_IN_BOUNDS_V(j + 1) &&
-				plist[(j + 1) * list_width + i] == INVALID_VERTEX) {
-				j++;
-				order		   = cw_startfrom_topright;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_bottomleft:
-			/* Check bottom-left */
-			if (VERTEX_IS_IN_BOUNDS(i - 1, j + 1) &&
-				plist[(j + 1) * list_width + (i - 1)] == INVALID_VERTEX) {
-				i--;
+				Get_plist(plist, i, j + 1) == INVALID_VERTEX) {
 				j++;
 				order		   = cw_startfrom_right;
 				already_passed = false;
 				continue;
 			}
 		case cw_startfrom_left:
-			if (VERTEX_IS_IN_BOUNDS_H(i - 1)) {
+			if (VERTEX_IS_IN_BOUNDS_H(i - 1) &&
+				Get_plist(plist, i - 1, j) == INVALID_VERTEX) {
 				/* Check left */
-				if (plist[j * list_width + (i - 1)] == INVALID_VERTEX) {
-					i--;
-					order		   = cw_startfrom_bottomright;
-					already_passed = false;
-					continue;
-				}
-			} else if (VERTEX_IS_IN_BOUNDS_V(j + 1) &&
-					   plist[(j + 1) * list_width + i] == INVALID_VERTEX) {
-				/* Check bottom */
-				j++;
-				order = cw_startfrom_top; /* Since all lefts are out,
-											 start top */
+				i--;
+				order		   = cw_startfrom_bottom;
 				already_passed = false;
 				continue;
-			} else if (VERTEX_IS_IN_BOUNDS_V(j - 1) &&
-					   plist[(j - 1) * list_width + i] == INVALID_VERTEX) {
-				/* Check top */
+			}
+
+			/* Check if cross is already visited */
+			if (!already_passed) {
+				already_passed = true;
+				order		   = cw_first;
+				continue;
+			}
+
+			/* Turn for the X shape */
+		case cw_startfrom_topleft:
+			if (VERTEX_IS_IN_BOUNDS(i - 1, j - 1) &&
+				Get_plist(plist, i - 1, j - 1) == INVALID_VERTEX) {
+				/* Check top-left */
+				i--;
 				j--;
-				order = cw_startfrom_top; /* Since all lefts are out,
-											 start top */
+				order		   = cw_startfrom_bottom;
+				already_passed = false;
+				continue;
+			}
+		case cw_startfrom_topright:
+			if (VERTEX_IS_IN_BOUNDS(i + 1, j - 1) &&
+				Get_plist(plist, i + 1, j - 1) == INVALID_VERTEX) {
+				/* Check top-right */
+				i++;
+				j--;
+				order		   = cw_startfrom_left;
+				already_passed = false;
+				continue;
+			}
+		case cw_startfrom_botright:
+			if (VERTEX_IS_IN_BOUNDS(i + 1, j + 1) &&
+				Get_plist(plist, i + 1, j + 1) == INVALID_VERTEX) {
+				/* Check bottom-right */
+				i++;
+				j++;
+				order		   = cw_startfrom_top;
+				already_passed = false;
+				continue;
+			}
+		case cw_startfrom_botleft:
+			if (VERTEX_IS_IN_BOUNDS(i - 1, j + 1) &&
+				Get_plist(plist, i - 1, j + 1) == INVALID_VERTEX) {
+				/* Check bottom-left */
+				i--;
+				j++;
+				order		   = cw_startfrom_right;
 				already_passed = false;
 				continue;
 			}
 		default:
-			if (!already_passed)
-				order = cw_start;
-			else if (revisit_stack.size() > 0) {
-				/* Pop stack to revisit the last crosspath */
-				CloudPoint revisit_point = revisit_stack.back();
-				revisit_stack.pop_back();
-				i			   = revisit_point.i;
-				j			   = revisit_point.j;
-				order		   = revisit_point.order;
+			/* If no shape was able to find a valid vertex, then go for a
+			 * revisit, or shut it down */
+			if (!revisit_stack.empty()) {
+				CloudPoint revisit = revisit_stack.back();
+
+				i	  = revisit.i;
+				j	  = revisit.j;
+				order = revisit.order;
+
 				already_passed = false;
+				revisit_stack.pop_back();
 				continue;
-			} else {
-				/* Polygon not closed */
-				order = 0;
 			}
 
-			already_passed = true;
+			/* So, polygon not closed, kill */
+			i = start_i;
+			j = start_j;
 			break;
 		}
-
-		if (order == 0) {
-			/* Polygon not closed */
-			j = start_j;
-			i = start_i;
-		}
-	} while (start_i != i || start_j != j);
+	}
 
 	revisit_stack.clear();
+	result.shrink_to_fit();
 
 	return result;
 }
 
-std::vector<PolyList>
-create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
-							  size_t end_j,
-							  bool (*is_valid)(size_t y, size_t x)) {
+std::vector<PolyList> create_pointlist_from_contour(
+	size_t start_i, size_t end_i, size_t start_j, size_t end_j,
+	bool (*is_valid)(size_t y, size_t x), uint8_t **contour_output) {
 
 	const size_t list_width	 = end_i - start_i;
 	const size_t list_height = end_j - start_j;
@@ -309,15 +346,15 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 
 	std::vector<PolyList> result;
 
-	size_t prev			= 0;
-	size_t curr_idx		= 0;
-	size_t outside_poly = 0;
+	size_t	prev		 = 0;
+	uint8_t curr_idx	 = 0;
+	uint8_t outside_poly = 0;
 	for (ssize_t j = 0; j < list_height; ++j) {
 		/* Ray as line from 0 to i */
 		size_t h_vertex_count = 0;
 
 		for (ssize_t i = 0; i < list_width; ++i) {
-			uint8_t current = plist[j * list_width + i];
+			uint8_t current = Get_plist(plist, i, j);
 
 			if (current == 0) {
 				prev = current;
@@ -332,8 +369,8 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 			}
 
 			/* Vertices inside polygon are vertices of that polygon */
-			/* Given a ray in any direction towards the border, if the count of
-			 * intersections is odd, it is inside another polygon */
+			/* Given a ray in any direction towards the border, if the count
+			 * of intersections is odd, it is inside another polygon */
 			if (h_vertex_count % 2 != 0) {
 				/* Append new list to polylist with index outside_poly */
 				for (PolyList pl : result) {
@@ -358,8 +395,8 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 			std::vector<mbPoint> mainContour = traverse_contour(
 				plist, list_width, list_height, j, i, curr_idx);
 
-			/* The first array of a polygon it's the contour, and the following
-			 * are holes */
+			/* The first array of a polygon it's the contour, and the
+			 * following are holes */
 			result.push_back((PolyList){
 				curr_idx,
 				mbPolygon{mainContour},
@@ -370,17 +407,110 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 		}
 	}
 
-	free(plist);
+	/* Select important vertices */
+	for (PolyList &poly : result)
+		for (std::vector<mbPoint> &path : poly.polygon) {
+			for (auto it = path.begin(); it != path.end();) {
+				const size_t i = static_cast<size_t>(it->at(0));
+				const size_t j = static_cast<size_t>(it->at(1));
+
+				/* Don't erase subchunk edges */
+				if (i == 0 || j == 0 || i == list_width - 1 ||
+					j == list_height - 1) {
+					++it;
+					continue;
+				}
+
+				const size_t top	= j - 1;
+				const size_t bottom = j + 1;
+				const size_t left	= i - 1;
+				const size_t right	= i + 1;
+
+				uint8_t checksum =
+					(VERTEX_IS_IN_BOUNDS(left, top)
+						 ? (Get_plist(plist, left, top) == poly.index) << 7
+						 : 0) |
+					(VERTEX_IS_IN_BOUNDS(i, top)
+						 ? (Get_plist(plist, i, top) == poly.index) << 6
+						 : 0) |
+					(VERTEX_IS_IN_BOUNDS(right, top)
+						 ? (Get_plist(plist, right, top) == poly.index) << 5
+						 : 0) |
+					(VERTEX_IS_IN_BOUNDS(left, j)
+						 ? (Get_plist(plist, left, j) == poly.index) << 4
+						 : 0) |
+					(VERTEX_IS_IN_BOUNDS(right, j)
+						 ? (Get_plist(plist, right, j) == poly.index) << 3
+						 : 0) |
+					(VERTEX_IS_IN_BOUNDS(left, bottom)
+						 ? (Get_plist(plist, left, bottom) == poly.index) << 2
+						 : 0) |
+					(VERTEX_IS_IN_BOUNDS(i, bottom)
+						 ? (Get_plist(plist, i, bottom) == poly.index) << 1
+						 : 0) |
+					(VERTEX_IS_IN_BOUNDS(right, bottom)
+						 ? (Get_plist(plist, right, bottom) == poly.index)
+						 : 0);
+
+				size_t sumup = 0;
+				for (size_t bi = 0; bi < sizeof(checksum) * 8; bi++) {
+					if (checksum & BIT(bi))
+						sumup++;
+				}
+
+				if (sumup < 2 || sumup > 4) {
+					/* All narrow lines, or a lot of intersections are valid */
+					++it;
+					continue;
+				}
+
+				/* Verify corner */
+				bool valid_corner = false;
+				for (uint8 lut : LUT_MSQR_VALID) {
+					if (checksum == lut) {
+						valid_corner = true;
+						break;
+					}
+				}
+
+				if (valid_corner) {
+					++it;
+					continue;
+				}
+
+				/* Invalid, destroy */
+				it = path.erase(it);
+			}
+		}
+
+	/* Draw */
+	memset(plist, 0, list_width * list_height);
+
+	for (PolyList &polygon : result)
+		for (std::vector<mbPoint> &path : polygon.polygon) {
+			for (mbPoint &point : path) {
+				const size_t i = static_cast<size_t>(point.at(0));
+				const size_t j = static_cast<size_t>(point.at(1));
+
+				plist[j * list_width + i] = polygon.index;
+			}
+		}
+
+	if (!contour_output)
+		free(plist);
+	else
+		*contour_output = plist;
 
 	return result;
 }
 
 std::vector<PolyList>
 rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
-						  size_t end_j, bool (*is_valid)(size_t x, size_t y)) {
+						  size_t	end_j, bool (*is_valid)(size_t x, size_t y),
+						  uint8_t **contour_output) {
 
-	std::vector<PolyList> inputPoints =
-		create_pointlist_from_contour(start_i, end_i, start_j, end_j, is_valid);
+	std::vector<PolyList> inputPoints = create_pointlist_from_contour(
+		start_i, end_i, start_j, end_j, is_valid, contour_output);
 
 	std::vector<PolyList> result;
 
@@ -399,7 +529,7 @@ rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
 			/* More than 1 oftens produces some gaps in b2ChainShape */
 			RDP::RamerDouglasPeucker(vIn, 1.0, vOut);
 
-			if (vOut.size() == 0) {
+			if (vOut.empty()) {
 				continue;
 			}
 
@@ -420,10 +550,10 @@ rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
 TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 						  size_t end_j, bool (*is_valid)(size_t x, size_t y)) {
 
-	std::vector<PolyList> polylist =
-		rdp_simplify_from_contour(start_i, end_i, start_j, end_j, is_valid);
+	std::vector<PolyList> polylist = rdp_simplify_from_contour(
+		start_i, end_i, start_j, end_j, is_valid, NULL);
 
-	if (polylist.size() == 0)
+	if (polylist.empty())
 		return NULL;
 
 	TriangleMesh *mesh = (TriangleMesh *)malloc(sizeof(TriangleMesh));
@@ -476,12 +606,13 @@ TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 
 CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
 							  size_t end_j,
-							  bool (*is_valid)(size_t x, size_t y)) {
+							  bool (*is_valid)(size_t x, size_t y),
+							  uint8_t **contour_output) {
 
-	std::vector<PolyList> inputPoints =
-		rdp_simplify_from_contour(start_i, end_i, start_j, end_j, is_valid);
+	std::vector<PolyList> inputPoints = rdp_simplify_from_contour(
+		start_i, end_i, start_j, end_j, is_valid, contour_output);
 
-	if (inputPoints.size() == 0)
+	if (inputPoints.empty())
 		return NULL;
 
 	CList *result = (CList *)malloc(sizeof(CList));
@@ -489,12 +620,13 @@ CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
 	result->data  = (void **)malloc(inputPoints.size() * sizeof(void *));
 
 	for (PolyList plist : inputPoints) {
-		if (plist.polygon.empty() || plist.polygon[0].size() == 0)
+		if (plist.polygon.empty() || plist.polygon[0].empty())
 			continue;
 
-		/* Only take the first path, which is the main contour ignoring holes */
+		/* Only take the first path, which is the main contour ignoring
+		 * holes */
 		std::vector<mbPoint> firstPath = plist.polygon[0];
-		if (firstPath.size() == 0)
+		if (firstPath.empty())
 			continue;
 
 		PointList *pointlist = (PointList *)malloc(sizeof(PointList));
