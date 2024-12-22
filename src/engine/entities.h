@@ -15,10 +15,10 @@
 
 typedef struct _Player {
 	b2Body *body;
-	short	x;
-	short	y;
-	short	prev_x;
-	short	prev_y;
+	float	x;
+	float	y;
+	float	prev_x;
+	float	prev_y;
 	Chunk	chunk_id;
 	bool	fliph;
 	bool	flying;
