@@ -22,7 +22,7 @@ enum e_dbgl /* : int */ {
 };
 #define DBGL(dbgl) ((DEBUG_LEVEL & dbgl) != 0)
 
-extern int	  DEBUG_LEVEL;
+extern int DEBUG_LEVEL;
 
 extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
@@ -34,7 +34,12 @@ typedef uint16_t subchunk_t;
 #define SUBCHUNK_WIDTH	(VSCREEN_WIDTH / SUBCHUNK_SIZE)
 
 extern subchunk_t subchunkopt[SUBCHUNK_SIZE];
-extern b2Body	 *soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
+
+typedef struct _SoilData {
+	b2Body	*body;
+	uint8_t *contour;
+} SoilData;
+extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
 void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
 
@@ -42,7 +47,7 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
 	for (uint_fast8_t __j = 0; __j < SUBCHUNK_SIZE; ++__j) {                   \
 		subchunkopt[__j] = -1;                                                 \
 		for (uint_fast8_t __i = 0; __i < SUBCHUNK_SIZE; ++__i)                 \
-			soil_body[__j][__i] = NULL;                                        \
+			soil_body[__j][__i].body = NULL;                                   \
 	}
 #define set_subchunk_world(_on, _x, _y)                                        \
 	set_subchunk(_on, (_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
@@ -94,7 +99,7 @@ void deactivate_soil(size_t si, size_t sj);
 		}                                                                      \
 	}
 #define recalculate_soil(_si, _sj)                                             \
-	if (soil_body[_sj][_si] != NULL) {                                         \
+	if (soil_body[_sj][_si].body != NULL) {                                    \
 		deactivate_soil(_si, _sj);                                             \
 		activate_soil(_si, _sj);                                               \
 	}
