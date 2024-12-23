@@ -27,8 +27,9 @@ SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
 void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 					const size_t vy) {
+	/* Check world borders */
 	if (CHUNK.y < GEN_SKY_Y ||
-		(CHUNK.y == GEN_SKY_Y &&
+		(CHUNK.y <= GEN_TOP_LAYER_Y &&
 		 (CHUNK.x < GEN_WATERSEA_OFFSET_X ||
 		  CHUNK.x > CHUNK_MAX_X - GEN_WATERSEA_OFFSET_X))) {
 		/* Empty sky */
@@ -54,6 +55,59 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 	const uint_fast64_t world_x0 = CHUNK.x * CHUNK_SIZE;
 	const uint_fast64_t world_y0 = CHUNK.y * CHUNK_SIZE;
 
+	/* Generate shore */
+	const bool is_right_shore =
+		CHUNK.x >= CHUNK_MAX_X - GEN_WATERSEA_OFFSET_X - 2;
+	if (CHUNK.y <= GEN_TOP_LAYER_Y &&
+		(CHUNK.x <= GEN_WATERSEA_OFFSET_X + 2 || is_right_shore)) {
+		const uint_fast16_t chunk_x0_to_water =
+			is_right_shore ? CHUNK_MAX_X - GEN_WATERSEA_OFFSET_X - CHUNK.x
+						   : CHUNK.x - GEN_WATERSEA_OFFSET_X;
+		const uint_fast16_t chunk_y0_to_water = GEN_TOP_LAYER_Y - CHUNK.y;
+
+		const uint_fast16_t alternate = (chunk_x0_to_water % 2 != 0);
+
+		const uint_fast16_t chunk_vvalid =
+			alternate ? chunk_y0_to_water == (chunk_x0_to_water - 1) / 2
+					  : chunk_y0_to_water == chunk_x0_to_water / 2;
+		const uint_fast16_t chunk_full_sand =
+			alternate ? chunk_y0_to_water < (chunk_x0_to_water - 1) / 2
+					  : chunk_y0_to_water < chunk_x0_to_water / 2;
+
+		if (chunk_full_sand) {
+			/* Fill with sand */
+			for (uint_fast16_t y = vy; y < vy_max; ++y)
+				memset(&gameboard[y][vx], GO_SAND, CHUNK_SIZE);
+			return;
+		}
+
+		/* Empty base or sky */
+		for (uint_fast16_t y = vy; y < vy_max; ++y)
+			memset(&gameboard[y][vx], GO_NONE, CHUNK_SIZE);
+
+		if (!chunk_vvalid)
+			/* Not a shore, it's the sky, exit */
+			return;
+
+		uint_fast16_t y0 = alternate ? 0 : CHUNK_SIZE_DIV_2;
+		uint_fast16_t cx = is_right_shore ? 0 : CHUNK_SIZE_DIV_2;
+		for (uint_fast16_t x = 0; x < CHUNK_SIZE; ++x) {
+			if (x % 2 == 0)
+				if (is_right_shore)
+					++cx;
+				else
+					--cx;
+
+			const uint_fast16_t gbx = vx + x;
+
+			for (uint_fast16_t y = y0 + cx; y < CHUNK_SIZE; ++y) {
+				const uint_fast16_t gby = vy + y;
+				gameboard[gby][gbx]		= GO_SAND;
+			}
+		}
+		return;
+	}
+
 	/* Rock base */
 	for (uint_fast16_t y = vy; y < vy_max; ++y)
 		memset(&gameboard[y][vx], GO_STONE, CHUNK_SIZE);
@@ -65,8 +119,8 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 
 		const uint_fast64_t ground_height =
 			(CHUNK.y < GEN_TOP_LAYER_Y)
-				? fabs(perlin2d(SEED, world_x, 0, 0.001, 2) *
-					   (GEN_TOP_LAYER_Y - GEN_SKY_Y))
+				? fabs(perlin2d(SEED, world_x, 0, 0.0005, 2)) *
+					  ((GEN_TOP_LAYER_Y - GEN_SKY_Y) * CHUNK_SIZE)
 				: 0;
 
 		for (uint_fast16_t y = 0; y < CHUNK_SIZE; ++y) {
@@ -160,8 +214,8 @@ bool update_object(const size_t x, const size_t y) {
 		}
 
 		if (IS_IN_BOUNDS_H(right_x)) {
-			/* If there is a blocking fluid try to move it when its density is
-			 * lower, this makes the water look more fluent */
+			/* If there is a blocking fluid try to move it when its density
+			 * is lower, this makes the water look more fluent */
 			if (IS_IN_BOUNDS_H(right_x2) && *right == OBJECT &&
 				gameboard[y][right_x2] < OBJECT) {
 				if (update_object(right_x2, y))
@@ -178,8 +232,8 @@ bool update_object(const size_t x, const size_t y) {
 		}
 
 		if (IS_IN_BOUNDS_H(left_x)) {
-			/* If there is a blocking fluid try to move it when its density is
-			 * lower, this makes the water look more fluent */
+			/* If there is a blocking fluid try to move it when its density
+			 * is lower, this makes the water look more fluent */
 			if (IS_IN_BOUNDS_H(left_x2) && *left == OBJECT &&
 				gameboard[y][left_x2] < OBJECT) {
 				if (update_object(left_x2, y))
@@ -229,8 +283,8 @@ bool update_object(const size_t x, const size_t y) {
 		}
 
 		if (IS_IN_BOUNDS_H(right_x)) {
-			/* If there is a blocking fluid try to move it when its density is
-			 * lower, this makes the water look more fluent */
+			/* If there is a blocking fluid try to move it when its density
+			 * is lower, this makes the water look more fluent */
 			if (IS_IN_BOUNDS_H(right_x2) && *right == OBJECT &&
 				gameboard[y][right_x2] < OBJECT) {
 				if (update_object(right_x2, y))
@@ -248,8 +302,9 @@ bool update_object(const size_t x, const size_t y) {
 
 		if (IS_IN_BOUNDS_H(left_x)) {
 			if (*left == GO_NONE) {
-				/* If there is a blocking fluid try to move it when its density
-				 * is lower, this makes the water look more fluent */
+				/* If there is a blocking fluid try to move it when its
+				 * density is lower, this makes the water look more fluent
+				 */
 				if (IS_IN_BOUNDS_H(left_x2) && *left == OBJECT &&
 					gameboard[y][left_x2] < OBJECT) {
 					if (update_object(left_x2, y))
