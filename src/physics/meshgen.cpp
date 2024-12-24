@@ -272,9 +272,10 @@ std::vector<mbPoint> traverse_contour(uint8_t *plist, const size_t list_width,
 	return result;
 }
 
-std::vector<PolyList> create_pointlist_from_contour(
-	size_t start_i, size_t end_i, size_t start_j, size_t end_j,
-	bool (*is_valid)(size_t y, size_t x), uint8_t **contour_output) {
+std::vector<PolyList>
+create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
+							  size_t end_j,
+							  bool (*is_valid)(size_t y, size_t x)) {
 
 	const size_t list_width	 = end_i - start_i;
 	const size_t list_height = end_j - start_j;
@@ -496,21 +497,17 @@ std::vector<PolyList> create_pointlist_from_contour(
 			}
 		}
 
-	if (!contour_output)
-		free(plist);
-	else
-		*contour_output = plist;
+	free(plist);
 
 	return result;
 }
 
 std::vector<PolyList>
 rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
-						  size_t	end_j, bool (*is_valid)(size_t x, size_t y),
-						  uint8_t **contour_output) {
+						  size_t end_j, bool (*is_valid)(size_t x, size_t y)) {
 
-	std::vector<PolyList> inputPoints = create_pointlist_from_contour(
-		start_i, end_i, start_j, end_j, is_valid, contour_output);
+	std::vector<PolyList> inputPoints =
+		create_pointlist_from_contour(start_i, end_i, start_j, end_j, is_valid);
 
 	std::vector<PolyList> result;
 
@@ -549,7 +546,7 @@ TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 						  size_t end_j, bool (*is_valid)(size_t x, size_t y)) {
 
 	std::vector<PolyList> polylist = rdp_simplify_from_contour(
-		start_i, end_i, start_j, end_j, is_valid, NULL);
+		start_i, end_i, start_j, end_j, is_valid);
 
 	if (polylist.empty())
 		return NULL;
@@ -604,11 +601,10 @@ TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 
 CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
 							  size_t end_j,
-							  bool (*is_valid)(size_t x, size_t y),
-							  uint8_t **contour_output) {
+							  bool (*is_valid)(size_t x, size_t y)) {
 
-	std::vector<PolyList> inputPoints = rdp_simplify_from_contour(
-		start_i, end_i, start_j, end_j, is_valid, contour_output);
+	std::vector<PolyList> inputPoints =
+		rdp_simplify_from_contour(start_i, end_i, start_j, end_j, is_valid);
 
 	if (inputPoints.empty())
 		return NULL;
