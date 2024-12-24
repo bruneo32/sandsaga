@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
 	signal(SIGINT, sigkillHandler);
 
 	/* Set random seed */
-	// srand(time(NULL));
-	srand(69);
+	srand(time(NULL));
+	// srand(69);
 
 	/* =============================================================== */
 	/* Init SDL */
@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
 	/* Initialize data */
 	WORLD_SEED		= rand();
 	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = GEN_SKY_Y - 1};
-	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
 	/* Generate world first instance*/
 	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
@@ -98,8 +97,9 @@ int main(int argc, char *argv[]) {
 	player.x	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
 	player.y	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
 
-	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
-					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
+	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
+	camera.x		= clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
+							VSCREEN_WIDTH - VIEWPORT_WIDTH);
 
 	camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2, 0,
 					 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);

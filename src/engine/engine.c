@@ -472,24 +472,6 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 			set_subchunk(0, si, sj);
 			draw_subchunk_pos(start_i, end_i, start_j, end_j, camera);
 
-			if (DBGL(e_dbgl_engine)) {
-				/* Draw subchunk contour */
-				const uint8_t *contour = soil_body[sj][si].contour;
-				if (contour != NULL) {
-					Render_SetcolorRGBA(0, 0, 255, 127);
-
-					for (size_t j = 0; j < SUBCHUNK_HEIGHT; ++j) {
-						for (size_t i = 0; i < SUBCHUNK_WIDTH; ++i) {
-							if (contour[j * SUBCHUNK_WIDTH + i] != 0)
-								Render_Pixel(start_i + i, start_j + j);
-						}
-					}
-
-					free(soil_body[sj][si].contour);
-					soil_body[sj][si].contour = NULL;
-				}
-			}
-
 			if (si == 0)
 				break;
 		}
@@ -539,8 +521,8 @@ void activate_soil(size_t si, size_t sj) {
 	const size_t start_j = clamp(sj * SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
 	const size_t end_j	 = clamp(start_j + SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
 
-	CList *chains = loopchain_from_contour(
-		start_i, end_i, start_j, end_j, F_IS_FLOOR, &soil_body[sj][si].contour);
+	CList *chains =
+		loopchain_from_contour(start_i, end_i, start_j, end_j, F_IS_FLOOR);
 
 	if (chains != NULL && chains->count > 0) {
 		double cx = SUBCHUNK_WIDTH / 2.0;

@@ -146,8 +146,7 @@ TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 
 CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
 							  size_t end_j,
-							  bool (*is_valid)(size_t x, size_t y),
-							  uint8_t **contour_output);
+							  bool (*is_valid)(size_t x, size_t y));
 
 void convert_triangle_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
 									 double *centroid_y);

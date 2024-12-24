@@ -37,7 +37,6 @@ extern subchunk_t subchunkopt[SUBCHUNK_SIZE];
 
 typedef struct _SoilData {
 	b2Body	*body;
-	uint8_t *contour;
 } SoilData;
 extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
