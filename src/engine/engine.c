@@ -92,11 +92,12 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 		uint_fast16_t y0 = alternate ? 0 : CHUNK_SIZE_DIV_2;
 		uint_fast16_t cx = is_right_shore ? 0 : CHUNK_SIZE_DIV_2;
 		for (uint_fast16_t x = 0; x < CHUNK_SIZE; ++x) {
-			if (x % 2 == 0)
+			if (x % 2 == 0) {
 				if (is_right_shore)
 					++cx;
 				else
 					--cx;
+			}
 
 			const uint_fast16_t gbx = vx + x;
 
@@ -445,7 +446,7 @@ void draw_gameboard_world(const SDL_Rect *camera) {
 		if (end_j >= VSCREEN_HEIGHT)
 			end_j = VSCREEN_HEIGHT - 1;
 
-		if (subchunkopt[sj] == -1) {
+		if (subchunkopt[sj] == SUBCHUNK_ROW_COMPLETE) {
 			/* The whole line of subchunks is active */
 			subchunkopt[sj] = 0;
 			draw_subchunk_pos(0, VSCREEN_WIDTH_M1, start_j, end_j, camera);
