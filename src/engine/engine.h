@@ -34,6 +34,7 @@ typedef uint16_t subchunk_t;
 #define SUBCHUNK_WIDTH	(VSCREEN_WIDTH / SUBCHUNK_SIZE)
 
 extern subchunk_t subchunkopt[SUBCHUNK_SIZE];
+#define SUBCHUNK_ROW_COMPLETE ((subchunk_t) - 1)
 
 typedef struct _SoilData {
 	b2Body	*body;
@@ -44,7 +45,7 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
 
 #define ResetSubchunks                                                         \
 	for (uint_fast8_t __j = 0; __j < SUBCHUNK_SIZE; ++__j) {                   \
-		subchunkopt[__j] = -1;                                                 \
+		subchunkopt[__j] = SUBCHUNK_ROW_COMPLETE;                              \
 		for (uint_fast8_t __i = 0; __i < SUBCHUNK_SIZE; ++__i)                 \
 			soil_body[__j][__i].body = NULL;                                   \
 	}
