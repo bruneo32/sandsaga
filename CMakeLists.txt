@@ -3,8 +3,11 @@ cmake_policy(SET CMP0079 NEW)
 
 set(CMAKE_C_STANDARD 99)
 
+# Box2D somehow does not work with less than -O2 level
 set(CMAKE_C_FLAGS_RELEASE "-O2 -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
-set(CMAKE_C_FLAGS_DEBUG "-Wall -Wno-switch -Wno-format-truncation -g -O0")
+set(CMAKE_C_FLAGS_DEBUG "-O2 -Wall -Wno-switch -Wno-format-truncation -g")
+set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
+set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
