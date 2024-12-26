@@ -99,8 +99,14 @@ void box2d_world_step(b2World *world, float timeStep, int velocityIterations,
 	 * field. */
 	world->ClearForces();
 
-	/* Remove bodies outside the law */
 	if (!world->IsLocked()) {
+		/* Remove marked bodies */
+		for (b2Body *body : bodiesMarkedToDestroy) {
+			world->DestroyBody(body);
+			bodiesMarkedToDestroy.extract(body);
+		}
+
+		/* Remove bodies outside the law */
 		for (b2Body *body = world->GetBodyList(); body != NULL;
 			 body		  = body->GetNext()) {
 			b2Vec2 pos = body->GetPosition();
@@ -220,7 +226,14 @@ void box2d_body_destroy(b2Body *body) {
 		return;
 
 	b2World *world = body->GetWorld();
-	world->DestroyBody(body);
+	if (!world)
+		return;
+
+	if (!world->IsLocked()) {
+		world->DestroyBody(body);
+	} else {
+		bodiesMarkedToDestroy.insert(body);
+	}
 }
 
 b2Shape *box2d_shape_box(float width, float height, float x, float y) {
@@ -253,7 +266,7 @@ b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3) {
 	return shape;
 }
 
-b2ChainShape *box2d_shape_loop(Point2D *points, int count) {
+b2ChainShape *box2d_shape_loop(Point2D *points, unsigned int count) {
 	if (count < 3)
 		return NULL;
 

@@ -120,7 +120,7 @@ void box2d_body_destroy(b2Body *body);
 b2Shape		   *box2d_shape_box(float width, float height, float x, float y);
 b2Shape		   *box2d_shape_circle(float radius, float x, float y);
 b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3);
-b2ChainShape   *box2d_shape_loop(Point2D *points, int count);
+b2ChainShape   *box2d_shape_loop(Point2D *points, unsigned int count);
 b2Fixture	   *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
 										  float density, float friction);
 
