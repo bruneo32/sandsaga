@@ -92,10 +92,8 @@ typedef struct _CList {
 		(a) ^= (b);                                                            \
 	}
 
-#define UNIQUE_NAME(counter) __tmp_##counter##__
-#define repeat(n)                                                              \
-	for (size_t UNIQUE_NAME(__COUNTER__) = 0; UNIQUE_NAME(__COUNTER__) < n;    \
-		 ++UNIQUE_NAME(__COUNTER__))
+#define __repeat_body(n, v) for (size_t(v) = 0; (v) < (n); ++(v))
+#define repeat(n) __repeat_body(n, _tmp##__COUNTER__##_)
 
 /** Enable attribute packing in tcc compiler */
 #if defined(__TINYC__)
