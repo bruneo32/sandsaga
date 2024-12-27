@@ -21,7 +21,8 @@
 			"description": "native",
 			"binaryDir": "${sourceDir}/build/linux/release",
 			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Release"
+				"CMAKE_BUILD_TYPE": "Release",
+				"DIST_BUILDER": "debian"
 			}
 		},
 		{
@@ -53,6 +54,12 @@
 		}
 	],
 	"packagePresets": [
+		{
+			"name": "Debian",
+			"description": "Package the Linux Release build into a DEB",
+			"displayName": "Debian Package",
+			"configurePreset": "linux-release"
+		},
 		{
 			"name": "Windows",
 			"description": "Package the Windows Release build into a ZIP",
