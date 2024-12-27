@@ -46,14 +46,15 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	if (hspeed != 0) {
 		player->fliph = (hspeed < 0) ? true : false;
 		hspeed *= player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED;
-		if (player_is_on_wall && SIGN(hspeed) == SIGN(facing)) {
-			hspeed *= (float)facing * fabsf(ray_forward.normal_y);
-			if (player_is_on_floor)
-				box2d_body_add_velocity(player->body, 0,
-										-fabsf(ray_forward.normal_x));
-		} else if (player_is_on_floor) {
-			box2d_body_add_velocity(player->body, 0, 0.8f);
-		}
+		if (!player->flying)
+			if (player_is_on_wall && SIGN(hspeed) == SIGN(facing)) {
+				hspeed *= (float)facing * fabsf(ray_forward.normal_y);
+				if (player_is_on_floor)
+					box2d_body_add_velocity(player->body, 0,
+											-fabsf(ray_forward.normal_x));
+			} else if (player_is_on_floor) {
+				box2d_body_add_velocity(player->body, 0, 0.8f);
+			}
 		box2d_body_set_velocity_h(player->body, hspeed);
 	} else if (player->flying || player_is_on_floor) {
 		box2d_body_set_velocity_h(player->body, 0);
