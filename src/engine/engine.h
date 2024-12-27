@@ -34,7 +34,7 @@ typedef uint16_t subchunk_t;
 #define SUBCHUNK_WIDTH	(VSCREEN_WIDTH / SUBCHUNK_SIZE)
 
 extern subchunk_t subchunkopt[SUBCHUNK_SIZE];
-#define SUBCHUNK_ROW_COMPLETE ((subchunk_t) - 1)
+#define SUBCHUNK_ROW_COMPLETE ((subchunk_t)~0)
 
 typedef struct _SoilData {
 	b2Body	*body;
@@ -56,7 +56,6 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
 	is_subchunk_active((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
 
 /** Returns true if any object was updated, false otherwise */
-bool update_object(const size_t x, const size_t y);
 void update_gameboard();
 void draw_gameboard_world(const SDL_Rect *camera);
 

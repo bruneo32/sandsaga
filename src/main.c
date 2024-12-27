@@ -335,10 +335,8 @@ int main(int argc, char *argv[]) {
 			current_object = _object;
 		}
 
-		/* Update gameboard, entities and physics*/
-		update_gameboard();
+		/* Move player before world_step */
 		move_player(&player, SDL_GetKeyboardState(NULL));
-
 		/* Recalculate soil for active subchunks, not every frame since it is
 		 * expensive */
 		if (frame_cx % 4 == 0)
@@ -348,7 +346,10 @@ int main(int argc, char *argv[]) {
 						recalculate_soil(si, sj);
 
 		box2d_world_step(b2_world, FPS_DELTA, 10, 8);
-		move_camera(&player, &camera);
+		move_camera(&player, &camera); /* After world_step */
+
+		/* Update gameboard, entities and physics after all */
+		update_gameboard();
 
 		/* =============================================================== */
 		/* Draw game */
