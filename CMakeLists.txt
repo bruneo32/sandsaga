@@ -20,6 +20,8 @@ project(sandsaga
 	LANGUAGES C CXX
 	)
 
+set(PROJECT_MAINTAINER "Bruno Castro <bruneo32b@gmail.com>")
+
 link_libraries(
 	m # Link lib-math
 	)
@@ -32,7 +34,7 @@ add_executable(${PROJECT_NAME} ${MAIN_SRC})
 set_target_properties(
 	${PROJECT_NAME}
 	PROPERTIES
-		OUTPUT_NAME game_sdl2
+		OUTPUT_NAME sandsaga
 )
 
 # ===============================================================
@@ -53,26 +55,8 @@ set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_VENDOR "Bruno Castro Garcia")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
-set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}")
+set(CPACK_PACKAGE_CONTACT ${PROJECT_MAINTAINER})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 
-if (DIST_BUILDER STREQUAL "windows")
-	set(CPACK_PACKAGE_DIRECTORY "${CMAKE_SOURCE_DIR}/dist/windows")
-	set(CPACK_PACKAGE_GENERATOR "ZIP")
-	set(CPACK_GENERATOR "ZIP")
-	set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
-	install(TARGETS ${PROJECT_NAME} DESTINATION sandsaga)
-	install(FILES
-		"${CMAKE_SOURCE_DIR}/mingw_libs/SDL2-2.26.5/x86_64-w64-mingw32/bin/SDL2.dll"
-		"${CMAKE_SOURCE_DIR}/mingw_libs/SDL2_image-2.6.3/x86_64-w64-mingw32/bin/SDL2_image.dll"
-		"${CMAKE_SOURCE_DIR}/mingw_libs/box2d/install/bin/libbox2d.dll"
-		"/usr/lib/gcc/x86_64-w64-mingw32/12-win32/libstdc++-6.dll"
-		"/usr/lib/gcc/x86_64-w64-mingw32/12-win32/libgcc_s_seh-1.dll"
-		DESTINATION sandsaga
-	)
-
-	# Include CPack after all settings
-	include(CPack)
-endif()
-
-# DO NOT include CPack is DIST_BUILDER is invalid
+include("cmake/cpack/cpack_debian.cmake")
+include("cmake/cpack/cpack_windows.cmake")

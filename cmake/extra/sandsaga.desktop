@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=0.1
+Type=Application
+Name=SandSaga
+Comment=Sand falling simulator in C minigame
+Exec=/usr/games/sandsaga
+Icon=/usr/share/games/sandsaga/icon.png
+Terminal=false
+Categories=Game;
+Keywords=Game;Physics;Simulation;Sandbox;Procedural;Destruction;Creative;
+StartupNotify=false
