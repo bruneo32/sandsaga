@@ -150,12 +150,11 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 	}
 }
 
-bool update_object(const size_t x, const size_t y) {
-	byte *boardxy = &gameboard[y][x];
-	byte  type	  = *boardxy;
+bool update_object(const size_t x, const size_t y, const bool ltr) {
+	byte	  *boardxy = &gameboard[y][x];
+	const byte type	   = *boardxy;
 
-	/* Update object behaviour */
-	size_t left_or_right = (((rand() % 2) == 0) ? 1 : -1);
+	size_t left_or_right = (ltr ? 1 : -1);
 
 	size_t up_y		= y - 1;
 	size_t down_y	= y + 1;
@@ -181,18 +180,18 @@ bool update_object(const size_t x, const size_t y) {
 				return true;
 			}
 
-			if (IS_IN_BOUNDS_H(right_x) && *bottomright == GO_NONE) {
-				*boardxy	 = GO_NONE;
-				*bottomright = GUPDATE(OBJECT);
-				set_subchunk_world(1, right_x, down_y);
-				set_subchunk_world(1, x, y);
-				return true;
-			}
-
 			if (IS_IN_BOUNDS_H(left_x) && *bottomleft == GO_NONE) {
 				*boardxy	= GO_NONE;
 				*bottomleft = GUPDATE(OBJECT);
 				set_subchunk_world(1, left_x, down_y);
+				set_subchunk_world(1, x, y);
+				return true;
+			}
+
+			if (IS_IN_BOUNDS_H(right_x) && *bottomright == GO_NONE) {
+				*boardxy	 = GO_NONE;
+				*bottomright = GUPDATE(OBJECT);
+				set_subchunk_world(1, right_x, down_y);
 				set_subchunk_world(1, x, y);
 				return true;
 			}
@@ -214,31 +213,13 @@ bool update_object(const size_t x, const size_t y) {
 			return true;
 		}
 
-		if (IS_IN_BOUNDS_H(right_x)) {
-			/* If there is a blocking fluid try to move it when its density
-			 * is lower, this makes the water look more fluent */
-			if (IS_IN_BOUNDS_H(right_x2) && *right == OBJECT &&
-				gameboard[y][right_x2] < OBJECT) {
-				if (update_object(right_x2, y))
-					update_object(right_x, y);
-			}
-
-			if (*right == GO_NONE) {
-				*boardxy = GO_NONE;
-				*right	 = GUPDATE(OBJECT);
-				set_subchunk_world(1, right_x, y);
-				set_subchunk_world(1, x, y);
-				return true;
-			}
-		}
-
 		if (IS_IN_BOUNDS_H(left_x)) {
 			/* If there is a blocking fluid try to move it when its density
 			 * is lower, this makes the water look more fluent */
 			if (IS_IN_BOUNDS_H(left_x2) && *left == OBJECT &&
 				gameboard[y][left_x2] < OBJECT) {
-				if (update_object(left_x2, y))
-					update_object(left_x, y);
+				if (update_object(left_x2, y, ltr))
+					update_object(left_x, y, ltr);
 			}
 
 			if (*left == GO_NONE) {
@@ -250,18 +231,36 @@ bool update_object(const size_t x, const size_t y) {
 			}
 		}
 
-		if (IS_IN_BOUNDS(right_x, down_y) && *bottomright == GO_NONE) {
-			*boardxy	 = GO_NONE;
-			*bottomright = GUPDATE(OBJECT);
-			set_subchunk_world(1, right_x, down_y);
-			set_subchunk_world(1, x, y);
-			return true;
+		if (IS_IN_BOUNDS_H(right_x)) {
+			/* If there is a blocking fluid try to move it when its density
+			 * is lower, this makes the water look more fluent */
+			if (IS_IN_BOUNDS_H(right_x2) && *right == OBJECT &&
+				gameboard[y][right_x2] < OBJECT) {
+				if (update_object(right_x2, y, ltr))
+					update_object(right_x, y, ltr);
+			}
+
+			if (*right == GO_NONE) {
+				*boardxy = GO_NONE;
+				*right	 = GUPDATE(OBJECT);
+				set_subchunk_world(1, right_x, y);
+				set_subchunk_world(1, x, y);
+				return true;
+			}
 		}
 
 		if (IS_IN_BOUNDS(left_x, down_y) && *bottomleft == GO_NONE) {
 			*boardxy	= GO_NONE;
 			*bottomleft = GUPDATE(OBJECT);
 			set_subchunk_world(1, left_x, down_y);
+			set_subchunk_world(1, x, y);
+			return true;
+		}
+
+		if (IS_IN_BOUNDS(right_x, down_y) && *bottomright == GO_NONE) {
+			*boardxy	 = GO_NONE;
+			*bottomright = GUPDATE(OBJECT);
+			set_subchunk_world(1, right_x, down_y);
 			set_subchunk_world(1, x, y);
 			return true;
 		}
@@ -283,13 +282,32 @@ bool update_object(const size_t x, const size_t y) {
 			return true;
 		}
 
+		if (IS_IN_BOUNDS_H(left_x)) {
+			if (*left == GO_NONE) {
+				/* If there is a blocking fluid try to move it when its
+				 * density is lower, this makes the water look more fluent
+				 */
+				if (IS_IN_BOUNDS_H(left_x2) && *left == OBJECT &&
+					gameboard[y][left_x2] < OBJECT) {
+					if (update_object(left_x2, y, ltr))
+						update_object(left_x, y, ltr);
+				}
+
+				*boardxy = GO_NONE;
+				*left	 = GUPDATE(OBJECT);
+				set_subchunk_world(1, left_x, y);
+				set_subchunk_world(1, x, y);
+				return true;
+			}
+		}
+
 		if (IS_IN_BOUNDS_H(right_x)) {
 			/* If there is a blocking fluid try to move it when its density
 			 * is lower, this makes the water look more fluent */
 			if (IS_IN_BOUNDS_H(right_x2) && *right == OBJECT &&
 				gameboard[y][right_x2] < OBJECT) {
-				if (update_object(right_x2, y))
-					update_object(right_x, y);
+				if (update_object(right_x2, y, ltr))
+					update_object(right_x, y, ltr);
 			}
 
 			if (*right == GO_NONE) {
@@ -301,37 +319,18 @@ bool update_object(const size_t x, const size_t y) {
 			}
 		}
 
-		if (IS_IN_BOUNDS_H(left_x)) {
-			if (*left == GO_NONE) {
-				/* If there is a blocking fluid try to move it when its
-				 * density is lower, this makes the water look more fluent
-				 */
-				if (IS_IN_BOUNDS_H(left_x2) && *left == OBJECT &&
-					gameboard[y][left_x2] < OBJECT) {
-					if (update_object(left_x2, y))
-						update_object(left_x, y);
-				}
-
-				*boardxy = GO_NONE;
-				*left	 = GUPDATE(OBJECT);
-				set_subchunk_world(1, left_x, y);
-				set_subchunk_world(1, x, y);
-				return true;
-			}
+		if (IS_IN_BOUNDS(left_x, up_y) && *upleft == GO_NONE) {
+			*boardxy = GO_NONE;
+			*upleft	 = GUPDATE(OBJECT);
+			set_subchunk_world(1, left_x, up_y);
+			set_subchunk_world(1, x, y);
+			return true;
 		}
 
 		if (IS_IN_BOUNDS(right_x, up_y) && *upright == GO_NONE) {
 			*boardxy = GO_NONE;
 			*upright = GUPDATE(OBJECT);
 			set_subchunk_world(1, right_x, up_y);
-			set_subchunk_world(1, x, y);
-			return true;
-		}
-
-		if (IS_IN_BOUNDS(left_x, up_y) && *upleft == GO_NONE) {
-			*boardxy = GO_NONE;
-			*upleft	 = GUPDATE(OBJECT);
-			set_subchunk_world(1, left_x, up_y);
 			set_subchunk_world(1, x, y);
 			return true;
 		}
@@ -353,43 +352,98 @@ bool update_object(const size_t x, const size_t y) {
 	return false;
 }
 
+/* ==== Update gameboard subchunked ==== */
+
+#define inline_update_object_body(__j, __i, __ltr, __p)                        \
+	const byte pixel__ = gameboard[(__j)][(__i)];                              \
+	if (pixel__ != GO_NONE && !IS_GUPDATED(pixel__))                           \
+		if (update_object((__i), (__j), (__ltr)))                              \
+			__p = true;
+
 void update_gameboard() {
 	static bool left_to_right = false;
 
-	for (size_t j = VSCREEN_HEIGHT_M1;; --j) {
-		if (left_to_right) {
-			/* Horizontal loop has to be first odds and then
-			 * evens, in order to save some bugs with fluids */
-			for (size_t i = 0;; i += 2) {
-				const byte pixel_ = gameboard[j][i];
-				if (pixel_ != GO_NONE && !IS_GUPDATED(pixel_)) {
-					update_object(i, j);
-				}
+	ssize_t start_si = (left_to_right) ? 0 : SUBCHUNK_SIZE - 1;
 
-				/* Next: even numbers */
-				if (i == VSCREEN_WIDTH)
-					i = -1;
-				else if (i == VSCREEN_WIDTH_M1)
-					break;
-			}
-		} else {
-			/* Horizontal loop has to be first odds and then
-			 * evens, in order to save some bugs with fluids */
-			for (size_t i = VSCREEN_WIDTH_M1;; i -= 2) {
-				const byte pixel_ = gameboard[j][i];
-				if (pixel_ != GO_NONE && !IS_GUPDATED(pixel_)) {
-					update_object(i, j);
+	for (ssize_t sj = SUBCHUNK_SIZE - 1; sj >= 0; --sj) {
+		ssize_t start_j = sj * SUBCHUNK_HEIGHT;
+		ssize_t end_j	= start_j + SUBCHUNK_HEIGHT;
+		end_j			= clamp_high(end_j, VSCREEN_HEIGHT);
+
+		bool odds = sj % 2 != 0;
+
+		/* Optimization, process whole line, since the whole line of subchunks
+		 * is active  */
+		if (subchunkopt[sj] == SUBCHUNK_ROW_COMPLETE) {
+			/* dummy ===> */ bool p; /* <=== dummy */
+			repeat(2) {
+				for (ssize_t j = end_j - 1; j >= start_j; --j) {
+					bool ltr = rand() & 1;
+					if (left_to_right)
+						for (ssize_t i = odds; i < VSCREEN_WIDTH; i += 2) {
+							inline_update_object_body(j, i, ltr, p);
+						}
+					else
+						for (ssize_t i = VSCREEN_WIDTH_M1 - odds; i >= 0;
+							 i -= 2) {
+							inline_update_object_body(j, i, ltr, p);
+						}
 				}
-				/* Next: even numbers */
-				if (i == -1)
-					i = VSCREEN_WIDTH;
-				else if (i == 0)
-					break;
+				odds = !odds;
 			}
+			continue;
 		}
 
-		if (j == 0)
-			break;
+		/* First active subchunk i */
+		ssize_t fsi = -1;
+
+		/* Process subchunks, but like they were a whole block. In effect, when
+		 * reaching the edge of a j loop, don't go back to the same subchunk, go
+		 * to the next and this will be revisited. This is weird to say but
+		 * important to make fluids like water to flow consistently. */
+		for (ssize_t j = end_j - 1; j >= start_j; --j) {
+			/* First odds, then evens (or viceversa) */
+			repeat(2) {
+				bool ltr = rand() & 1;
+
+				for (ssize_t si = (fsi == -1) ? start_si : fsi;
+					 (left_to_right) ? (si < SUBCHUNK_SIZE) : (si >= 0);
+					 (left_to_right) ? (++si) : (--si)) {
+
+					/* Skip inactive subchunks */
+					if (!is_subchunk_active(si, sj))
+						continue;
+
+					if (fsi == -1)
+						fsi = si;
+
+					ssize_t start_i = si * SUBCHUNK_WIDTH;
+					ssize_t end_i	= start_i + SUBCHUNK_WIDTH;
+					end_i			= clamp_high(end_i, VSCREEN_WIDTH);
+
+					bool p = false;
+
+					/* Update subchunk */
+					if (left_to_right)
+						for (ssize_t i = start_i + odds; i < end_i; i += 2) {
+							inline_update_object_body(j, i, ltr, p);
+						}
+					else
+						for (ssize_t i = end_i - 1 - odds; i >= start_i;
+							 i -= 2) {
+							inline_update_object_body(j, i, ltr, p);
+						}
+
+					/* Activate top subchunk for gravity purposes */
+					if (p)
+						set_subchunk(1, si, sj - 1);
+				}
+
+				/* Alternate odds and evens, no worries since the repeat loop is
+				 * even, odd will result in the same state it started. */
+				odds = !odds;
+			}
+		}
 	}
 
 	left_to_right = !left_to_right;
@@ -401,11 +455,12 @@ void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
 	/* Draw block */
 	for (size_t j = end_j - 1;; --j) {
 		for (size_t i = end_i - 1;; --i) {
-			/* Reset BITMASK_GO_UPDATED and track P */
+			/* Keep subchunk alive for the next frame if it was GUPDATED */
 			const bool u = IS_GUPDATED(gameboard[j][i]);
 			if (u) {
 				set_subchunk_world(1, i, j);
-				gameboard[j][i] = GOBJECT(gameboard[j][i]);
+				/* Remove BITMASK_GO_UPDATED */
+				gameboard[j][i] &= ~(BITMASK_GO_UPDATED);
 			}
 
 			/* If is in camera bounds, draw it */
