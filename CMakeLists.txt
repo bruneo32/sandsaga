@@ -14,13 +14,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(sandsaga
-	VERSION 0.1.0.0
-	DESCRIPTION "Sand falling simulator in C minigame"
-	HOMEPAGE_URL ""
+	VERSION 0.0.1.0
 	LANGUAGES C CXX
+	DESCRIPTION "Sand falling simulator in C minigame"
+	HOMEPAGE_URL "https://github.com/bruneo32/sandsaga"
 	)
-
-set(PROJECT_MAINTAINER "Bruno Castro <bruneo32b@gmail.com>")
 
 link_libraries(
 	m # Link lib-math
@@ -53,9 +51,10 @@ add_subdirectory( "src/engine" )
 # CPack Configuration
 set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_VENDOR "Bruno Castro Garcia")
+set(CPACK_PACKAGE_DESCRIPTION ${PROJECT_DESCRIPTION})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
-set(CPACK_PACKAGE_CONTACT ${PROJECT_MAINTAINER})
+set(CPACK_PACKAGE_VENDOR "Bruno Castro Garcia <bruneo32b@gmail.com>")
+set(CPACK_PACKAGE_CONTACT ${CPACK_PACKAGE_VENDOR})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 
 include("cmake/cpack/cpack_linux.cmake")
