@@ -370,13 +370,13 @@ int main(int argc, char *argv[]) {
 
 		/* Draw gameboard */
 		SDL_SetRenderTarget(__renderer, vscreen_);
+		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
 		draw_gameboard_world(&camera);
-		SDL_SetRenderTarget(__renderer, NULL);
 
 		/* Draw gameboard on screen */
+		SDL_SetRenderTarget(__renderer, NULL);
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
 		SDL_RenderCopy(__renderer, vscreen_, &camera, NULL);
-		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
 
 		if (DBGL(e_dbgl_physics)) {
 			box2d_debug_draw(b2_world, (Rect *)&camera);
