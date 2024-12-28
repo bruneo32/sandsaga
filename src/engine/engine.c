@@ -382,7 +382,7 @@ void update_gameboard() {
 			/* dummy ===> */ bool p; /* <=== dummy */
 			repeat(2) {
 				for (ssize_t j = end_j - 1; j >= start_j; --j) {
-					bool ltr = rand() & 1;
+					bool ltr = fast_rand() & 1;
 					if (left_to_right)
 						for (ssize_t i = odds; i < VSCREEN_WIDTH; i += 2) {
 							inline_update_object_body(j, i, ltr, p);
@@ -408,7 +408,7 @@ void update_gameboard() {
 		for (ssize_t j = end_j - 1; j >= start_j; --j) {
 			/* First odds, then evens (or viceversa) */
 			repeat(2) {
-				bool ltr = rand() & 1;
+				bool ltr = fast_rand() & 1;
 
 				for (ssize_t si = (fsi == -1) ? start_si : fsi;
 					 (left_to_right) ? (si < SUBCHUNK_SIZE) : (si >= 0);
@@ -438,9 +438,12 @@ void update_gameboard() {
 							inline_update_object_body(j, i, ltr, p);
 						}
 
-					/* Activate top subchunk for gravity purposes */
-					if (p)
+					/* Activate adjacent subchunk for gravity and fluids */
+					if (p) {
 						set_subchunk(1, si, sj - 1);
+						set_subchunk(1, si - 1, sj);
+						set_subchunk(1, si + 1, sj);
+					}
 				}
 
 				/* Alternate odds and evens, no worries since the repeat loop is

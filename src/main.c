@@ -35,9 +35,10 @@ void sigkillHandler(int signum) { GAME_ON = false; }
 int main(int argc, char *argv[]) {
 	signal(SIGINT, sigkillHandler);
 
-	/* Set random seed */
-	srand(time(NULL));
-	// srand(69);
+	/* Set random seeds */
+	const time_t _st = time(NULL);
+	srand(_st);
+	sfrand(_st);
 
 	/* =============================================================== */
 	/* Init SDL */
