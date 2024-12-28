@@ -1,5 +1,111 @@
 #include "noise.h"
 
+/* ========================================================================= */
+/* Fast Random */
+
+static size_t _fseed_ = SIZE_MAX;
+
+void   sfrand(size_t seed) { _fseed_ = seed; }
+size_t fast_rand() {
+#if __SIZE_WIDTH__ == 64
+	_fseed_ ^= _fseed_ << 7;
+	_fseed_ ^= _fseed_ >> 9;
+#else
+	_fseed_ ^= _fseed_ << 13;
+	_fseed_ ^= _fseed_ >> 17;
+	_fseed_ ^= _fseed_ << 5;
+#endif
+	return _fseed_;
+}
+
+/* ========================================================================= */
+/* Mersenne Twister Random */
+
+#define MT_N 312
+#define MT_M 156
+
+#define MT_LOWER_MASK (SIZE_MAX / 2) /* least significant r bits */
+#define MT_UPPER_MASK                                                          \
+	(SIZE_MAX & ~MT_LOWER_MASK) /* most significant w-r                        \
+								   bits*/
+
+/* It is a 64-bit hexadecimal constant, often referred to as matrix A in
+Mersenne Twister (MT19937-64). This constant is crucial for the mixing steps
+in the random number generation process. Its binary form is
+1011010100000001101111100101101010101001100110000110011110011110, which has
+been empirically chosen to improve the quality of randomness. */
+#define MT_MATRIX_A (0xB5026F5AA96619E9ULL) /* constant vector a */
+
+/* The value has been carefully chosen to distribute seed values evenly
+ * throughout the internal state space, reducing correlations between
+ successive states. */
+#define SEED_DISTRIBUTOR (6364136223846793005ULL)
+
+/* The default seed value 5489ULL is commonly used in the Mersenne Twister
+ * implementation because it is a well-tested, pre-selected seed that has
+ been
+ * chosen for its statistical properties and consistent results. */
+#define SEED_DEFAULT (5489ULL)
+
+static size_t mt[MT_N]; /* the array for the state vector */
+static size_t mt_index =
+	MT_N + 1; /* mt_index == MT_N+1 indicates uninitialized */
+
+void mt_seed(size_t seed) {
+	mt[0] = seed;
+	for (mt_index = 1; mt_index < MT_N; mt_index++) {
+		mt[mt_index] =
+			(SEED_DISTRIBUTOR * (mt[mt_index - 1] ^ (mt[mt_index - 1] >> 62)) +
+			 mt_index);
+	}
+}
+
+size_t mt_rand() {
+	size_t y;
+
+	static const size_t mag[2] = {0, MT_MATRIX_A};
+
+	if (mt_index >= MT_N) { /* Generate MT_N words at a time */
+		size_t i;
+
+		if (mt_index == MT_N + 1)  /* Seed not initialized */
+			mt_seed(SEED_DEFAULT); /* Default seed */
+
+		for (i = 0; i < MT_N - MT_M; i++) {
+			y	  = (mt[i] & MT_UPPER_MASK) | (mt[i + 1] & MT_LOWER_MASK);
+			mt[i] = mt[i + MT_M] ^ (y >> 1) ^ mag[y & 1];
+		}
+		for (; i < MT_N - 1; i++) {
+			y	  = (mt[i] & MT_UPPER_MASK) | (mt[i + 1] & MT_LOWER_MASK);
+			mt[i] = mt[i + (MT_M - MT_N)] ^ (y >> 1) ^ mag[y & 1];
+		}
+		y			 = (mt[MT_N - 1] & MT_UPPER_MASK) | (mt[0] & MT_LOWER_MASK);
+		mt[MT_N - 1] = mt[MT_M - 1] ^ (y >> 1) ^ mag[y & 1];
+
+		mt_index = 0;
+	}
+
+	y = mt[mt_index++];
+
+	/* The "magic numbers" in the tempering step of the Mersenne Twister
+	 * algorithm are specifically chosen bitwise constants that help to further
+	 * scramble the raw random values produced by the state transition,
+	 * improving the randomness and statistical properties of the generated
+	 * numbers. The purpose of tempering is to reduce any biases that might have
+	 * been introduced during the state transitions and make the random number
+	 * output more uniform and unpredictable. */
+
+	/* Tempering */
+	y ^= (y >> 29) & ((size_t)0x5555555555555555);
+	y ^= (y << 17) & ((size_t)0x71D67FFFEDA60000);
+	y ^= (y << 37) & ((size_t)0xFFF7EEE000000000);
+	y ^= (y >> 43);
+
+	return y;
+}
+
+/* ========================================================================= */
+/* Perlin Noise */
 static const unsigned char HASH[] = {
 	208, 34,  231, 213, 32,	 248, 233, 56,	161, 78,  24,  140, 71,	 48,  140,
 	254, 245, 255, 247, 247, 40,  185, 248, 251, 245, 28,  124, 204, 204, 76,
