@@ -21,6 +21,7 @@ if (DIST_BUILDER STREQUAL "debian")
 		DESTINATION /usr/share/applications
 	)
 	install(FILES
+		"${CMAKE_SOURCE_DIR}/LICENSE"
 		"${CMAKE_SOURCE_DIR}/cmake/extra/icon.png"
 		DESTINATION /usr/share/games/sandsaga
 	)
