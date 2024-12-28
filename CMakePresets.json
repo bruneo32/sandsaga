@@ -22,7 +22,7 @@
 			"binaryDir": "${sourceDir}/build/linux/release",
 			"cacheVariables": {
 				"CMAKE_BUILD_TYPE": "Release",
-				"DIST_BUILDER": "debian"
+				"DIST_BUILDER": "linux"
 			}
 		},
 		{
@@ -55,9 +55,9 @@
 	],
 	"packagePresets": [
 		{
-			"name": "Debian",
-			"description": "Package the Linux Release build into a DEB",
-			"displayName": "Debian Package",
+			"name": "Linux",
+			"description": "Package the Linux Release build into some installers like DEB and TGZ",
+			"displayName": "Linux Package",
 			"configurePreset": "linux-release"
 		},
 		{
