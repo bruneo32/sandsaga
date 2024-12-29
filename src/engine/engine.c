@@ -366,6 +366,10 @@ void update_gameboard() {
 	ssize_t start_si = (left_to_right) ? 0 : SUBCHUNK_SIZE - 1;
 
 	for (ssize_t sj = SUBCHUNK_SIZE - 1; sj >= 0; --sj) {
+		/* If the whole line of subchunks is inactive, there's nothing to do */
+		if (subchunkopt[sj] == 0)
+			continue;
+
 		ssize_t start_j = sj * SUBCHUNK_HEIGHT;
 		ssize_t end_j	= start_j + SUBCHUNK_HEIGHT;
 		end_j			= clamp_high(end_j, VSCREEN_HEIGHT);
