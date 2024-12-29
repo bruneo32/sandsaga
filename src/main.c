@@ -46,6 +46,12 @@ int main(int argc, char *argv[]) {
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
+#ifdef _WIN32
+	/* In windows, opengl could be suboptimal, d3d11 is the best balance
+	 * between performance and compatibility */
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+#endif
+
 	SDL_RenderSetLogicalSize(__renderer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetWindowSize(__window, VIEWPORT_WIDTH_M2, VIEWPORT_HEIGHT_M2);
 	SDL_SetWindowPosition(__window, SDL_WINDOWPOS_CENTERED,

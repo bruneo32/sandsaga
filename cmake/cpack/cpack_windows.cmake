@@ -1,6 +1,6 @@
 if (DIST_BUILDER STREQUAL "windows")
 	set(CPACK_PACKAGE_DIRECTORY "${CMAKE_SOURCE_DIR}/dist/windows")
-	set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_x86_64")
+	set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_Windows_x86_64")
 	set(CPACK_PACKAGE_GENERATOR "ZIP")
 	set(CPACK_GENERATOR "ZIP")
 	set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF)
@@ -15,6 +15,17 @@ if (DIST_BUILDER STREQUAL "windows")
 		"/usr/lib/gcc/x86_64-w64-mingw32/12-win32/libgcc_s_seh-1.dll"
 		DESTINATION sandsaga
 	)
+
+	# Windows resource file (icon, metadata, etc)
+	set(WINRES_RC ${CMAKE_BINARY_DIR}/windows.rc)
+	configure_file(
+		${CMAKE_SOURCE_DIR}/cmake/extra/windows.rc.in
+		${WINRES_RC}
+		@ONLY
+	)
+
+    # Add the .rc file as a source
+    target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/windows.rc)
 
 	# Include CPack after all settings
 	include(CPack)
