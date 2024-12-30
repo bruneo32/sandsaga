@@ -58,5 +58,5 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
 set(CPACK_PACKAGE_CONTACT ${PROJECT_MAINTAINER})
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 
-include("cmake/cpack/cpack_debian.cmake")
+include("cmake/cpack/cpack_linux.cmake")
 include("cmake/cpack/cpack_windows.cmake")
