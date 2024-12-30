@@ -580,9 +580,12 @@ void activate_soil(size_t si, size_t sj) {
 		return;
 
 	const size_t start_i = clamp(si * SUBCHUNK_WIDTH, 0, VSCREEN_WIDTH);
-	const size_t end_i	 = clamp(start_i + SUBCHUNK_WIDTH, 0, VSCREEN_WIDTH);
 	const size_t start_j = clamp(sj * SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
-	const size_t end_j	 = clamp(start_j + SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
+	/* +1 to overlap the next subchunk edge, this prevents most of the ghost
+	 * collision with the player. */
+	const size_t end_i = clamp(start_i + SUBCHUNK_WIDTH + 1, 0, VSCREEN_WIDTH);
+	const size_t end_j =
+		clamp(start_j + SUBCHUNK_HEIGHT + 1, 0, VSCREEN_HEIGHT);
 
 	CList *chains =
 		loopchain_from_contour(start_i, end_i, start_j, end_j, F_IS_FLOOR);
@@ -605,8 +608,8 @@ void activate_soil(size_t si, size_t sj) {
 				box2d_shape_loop(mesh->points, mesh->count);
 
 			if (loopchain)
-				box2d_body_create_fixture(body, (b2Shape *)loopchain, 1.0f,
-										  1.0f);
+				box2d_body_create_fixture(body, (b2Shape *)loopchain, 5.0f,
+										  0.8f, 0.0f);
 
 			free(mesh->points);
 			free(mesh);
