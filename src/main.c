@@ -112,32 +112,7 @@ int main(int argc, char *argv[]) {
 					 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 
 	b2_world = box2d_world_create(0, 9.8f);
-
-	player.body =
-		box2d_body_create(b2_world, X_TO_U(player.x), X_TO_U(player.y),
-						  b2_dynamicBody, false, false);
-	box2d_body_set_fixed_rotation(player.body, true);
-
-	const float player_width_div4_u = X_TO_U(player.width / 4);
-	const float player_hd2_m_wd4m1_u =
-		X_TO_U(player.height / 2 - player.width / 4 - 1);
-	const float player_mhd2_p_wd4m1_u =
-		X_TO_U(-player.height / 2 + player.width / 4 + 1);
-
-	box2d_body_create_fixture(
-		player.body,
-		box2d_shape_box(player_width_div4_u, player_hd2_m_wd4m1_u, 0, 0), 1.0f,
-		0.8f);
-
-	box2d_body_create_fixture(
-		player.body,
-		box2d_shape_circle(player_width_div4_u, 0, player_hd2_m_wd4m1_u), 1.0f,
-		0.8f);
-
-	box2d_body_create_fixture(
-		player.body,
-		box2d_shape_circle(player_width_div4_u, 0, player_mhd2_p_wd4m1_u), 1.0f,
-		0.8f);
+	create_player_body(&player);
 
 	/* =============================================================== */
 	/* Calculate ticks */

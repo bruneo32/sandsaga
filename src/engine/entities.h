@@ -10,8 +10,10 @@
 
 #define PLAYER_FLYING_SPEED 16
 #define PLAYER_SPEED		6
-#define PLAYER_VSPEED_JUMP	-9
-#define PLAYER_VSPEED_MAX	48
+#define PLAYER_VSPEED_JUMP	-7
+
+#define PLAYER_DENSITY	8.0f
+#define PLAYER_FRICTION 0.8f
 
 typedef struct _Player {
 	b2Body *body;
@@ -27,6 +29,7 @@ typedef struct _Player {
 	Sprite *sprite;
 } Player;
 
+void create_player_body(Player *player);
 void move_player(Player *player, const Uint8 *keyboard);
 void move_camera(Player *player, SDL_Rect *camera);
 
