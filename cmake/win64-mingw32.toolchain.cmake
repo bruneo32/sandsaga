@@ -2,6 +2,7 @@
 
 set(CMAKE_SYSTEM_NAME Windows)
 set(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--subsystem,windows")
 
 # Set the path to the cross-compiler
 set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)
@@ -16,3 +17,16 @@ set(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX})
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+link_libraries("-lmingw32")
+
+# Set library paths for mingw
+set(SDL2_INCLUDE_DIRS "${SDL2_PATH}/include/SDL2")
+set(SDL2_IMAGE_INCLUDE_DIRS "${SDL2_IMAGE_PATH}/include/SDL2")
+set(BOX2D_INCLUDE_DIRS "${BOX2D_PATH}/include")
+
+link_directories(
+	${SDL2_PATH}/lib
+	${SDL2_IMAGE_PATH}/lib
+	${BOX2D_PATH}/lib
+	)

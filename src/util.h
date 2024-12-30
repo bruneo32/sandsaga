@@ -1,26 +1,38 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 
+#ifdef __cplusplus
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <stddef.h>
+#else
 #include <float.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-
 /* =============================================================== */
-/* MEMORY */
-/* `calloc` allocates all elements initialized to 0 ,
- * required for NULL callbacks
- */
+/* The following definitions create errors in C++ */
 #define new(C) ((C *)calloc(sizeof(C), 1))
 #define delete(O)                                                              \
-	if (O) {                                                                   \
-		free(O);                                                               \
-		O = NULL;                                                              \
+	if ((O) != NULL) {                                                         \
+		free((void *)(O));                                                     \
+		(O) = NULL;                                                            \
 	}
+#define clamp(x, low, high)                                                    \
+	((x) < (low) ? (low) : ((x) > (high) ? (high) : (x)))
+#define SIGN(x) (((x) > 0) - ((x) < 0))
+#endif
 
 /* =============================================================== */
 /* Mathematics */
+#ifndef M_PI
+#define M_E	   2.7182818284590452354  /* e */
+#define M_PI   3.14159265358979323846 /* pi */
+#define M_PI_2 1.57079632679489661923 /* pi/2 */
+#endif
 #define M_2PI			   6.28318530717958647688
 #define M_TWO_THIRDS_PLUS1 1.666666
 
@@ -29,10 +41,8 @@
 #define fequals(f1, f2)				fequals_E(f1, f2, DBL_EPSILON)
 #define fequalsf(f1, f2)			fequalsf_E(f1, f2, FLT_EPSILON)
 
-#define radtodeg(rad) (rad * (180.0 / M_PI))
-#define degtorad(deg) (deg * (M_PI / 180.0))
-#define clamp(x, low, high)                                                    \
-	((x) < (low) ? (low) : ((x) > (high) ? (high) : (x)))
+#define radtodeg(rad)			 (rad * (180.0 / M_PI))
+#define degtorad(deg)			 (deg * (M_PI / 180.0))
 #define clamp_high(x, high)		 ((x) > (high) ? (high) : (x))
 #define clamp_low(x, low)		 ((x) < (low) ? (low) : (x))
 #define lerp(a, b, t)			 ((1 - t) * a + t * b)
@@ -44,7 +54,6 @@
 #define LERP_SPEED_MEDIUM	  0.1
 #define LERP_SPEED_QUICK	  0.4
 #define LERP_SPEED_VERY_QUICK 0.7
-
 
 /* =============================================================== */
 /* MISC */
@@ -65,10 +74,14 @@
 #define BIT(_i) (1 << (_i))
 
 /** Little Endian single bitmask */
-#define BITL(_bits, _i) (1 << ((_bits - 1) - (_i)))
+#define BITL(_bits, _i) (1 << (((_bits) - 1) - (_i)))
 
 typedef uint8_t byte;
 typedef int8_t	sbyte;
+typedef struct _CList {
+	size_t count;
+	void **data;
+} CList;
 
 #define GRIDALIGN(p, s) ((p / s) * s)
 
@@ -79,8 +92,8 @@ typedef int8_t	sbyte;
 		(a) ^= (b);                                                            \
 	}
 
-#define UNIQUE_NAME(counter) __tmp_##counter##__
-#define repeat(n) for (size_t UNIQUE_NAME(__COUNTER__) = 0; UNIQUE_NAME(__COUNTER__) < n; ++UNIQUE_NAME(__COUNTER__))
+#define __repeat_body(n, v) for (size_t(v) = 0; (v) < (n); ++(v))
+#define repeat(n) __repeat_body(n, _tmp##__COUNTER__##_)
 
 /** Enable attribute packing in tcc compiler */
 #if defined(__TINYC__)
