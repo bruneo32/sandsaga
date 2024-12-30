@@ -1,0 +1,41 @@
+#include <winver.h>
+
+/* 0x3fL (0b00111111) is a bitmask that specifies which bits in th
+ * FILEFLAGS field are valid. It enables the use of the first 6 bits.
+ * This ensures that the version resource is compliant with the
+ * Windows specification for versioning and flags, and it allows for
+ * proper behavior when reading the file version in Windows Explorer
+ * or other tools. */
+#define W_FILEFLAGSMASK	0x3fL
+
+IDI_ICON1 ICON "@CMAKE_SOURCE_DIR@/cmake/extra/icon.ico"
+
+VS_VERSION_INFO	VERSIONINFO
+FILEVERSION		@PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION	@PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+FILEFLAGSMASK	W_FILEFLAGSMASK
+FILEFLAGS		(VS_FF_PRIVATEBUILD|VS_FF_PRERELEASE)
+FILEOS			VOS_NT_WINDOWS32	// Windows NT/64-bit
+FILETYPE		VFT_APP				// Application type
+FILESUBTYPE		VFT2_UNKNOWN		// Standard file subtype
+
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK LANGUAGE_CODEPAGE
+		BEGIN
+			VALUE "CompanyName", "@CPACK_PACKAGE_VENDOR@\0"
+			VALUE "FileDescription", "@PROJECT_DESCRIPTION@\0"
+			VALUE "FileVersion", "@PROJECT_VERSION@\0"
+			VALUE "InternalName", "@PROJECT_NAME@\0"
+			VALUE "LegalCopyright", "Licensed under GPLv3+\0"
+			VALUE "OriginalFilename", "@PROJECT_NAME@.exe\0"
+			VALUE "ProductName", "@PROJECT_NAME@\0"
+			VALUE "ProductVersion", "@PROJECT_VERSION@\0"
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x0409, 1200	// English (US) - Unicode
+	END
+END

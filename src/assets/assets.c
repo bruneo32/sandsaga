@@ -1,13 +1,9 @@
 #include "assets.h"
 
 SDL_Surface *optimize_surface(SDL_Surface *surface, SDL_Window *window) {
-	/* We need the format of the window surface */
-	SDL_Surface *wsurf = SDL_GetWindowSurface(window);
-	if (!wsurf)
-		return surface;
-
 	/* Convert the given surface to the format of the window surface */
-	SDL_Surface *optimized = SDL_ConvertSurface(surface, wsurf->format, 0);
+	SDL_Surface *optimized =
+		SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA8888, 0);
 
 	/* If the conversion failed, return the original surface */
 	return (!optimized ? surface : optimized);

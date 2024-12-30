@@ -1,132 +1,149 @@
 #include "entities.h"
 
-void move_player(Player *player, SDL_Rect *camera, const Uint8 *keyboard) {
+#define SLOPE 4
 
-	const short player_sx = player->x;
-	const short player_sy = player->y;
+void create_player_body(Player *player) {
+	player->body =
+		box2d_body_create(b2_world, X_TO_U(player->x), X_TO_U(player->y),
+						  b2_dynamicBody, false, false);
+	box2d_body_set_fixed_rotation(player->body, true);
 
-	const short player_height_2 = player->height / 2;
-	const short player_width_4	= player->width / 4;
+	const float player_width_div4_u = X_TO_U(player->width / 4);
+	const float player_hd2_m_wd4m1_u =
+		X_TO_U(player->height / 2 - player->width / 4 - 1);
+	const float player_mhd2_p_wd4m1_u =
+		X_TO_U(-player->height / 2 + player->width / 4 + 1);
 
-#define player_top	  (player->y - player_height_2 + 1)
-#define player_bottom (player->y + player_height_2 - 1)
-#define player_left	  (player->x - player_width_4 + 1)
-#define player_right  (player->x + player_width_4 - 1)
+	box2d_body_create_fixture(
+		player->body,
+		box2d_shape_box(player_width_div4_u, player_hd2_m_wd4m1_u, 0, 0),
+		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f);
 
-	/* Add gravity */
-	if (!player->flying) {
-		if (player->vspeed < PLAYER_VSPEED_MAX)
-			player->vspeed += GRAVITY;
+	box2d_body_create_fixture(
+		player->body,
+		box2d_shape_circle(player_width_div4_u, 0, player_hd2_m_wd4m1_u),
+		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f);
 
-		const size_t vspeed_sign = player->vspeed > 0 ? 1 : -1;
-		const size_t vspeed_abs	 = abs(player->vspeed);
+	box2d_body_create_fixture(
+		player->body,
+		box2d_shape_circle(player_width_div4_u, 0, player_mhd2_p_wd4m1_u),
+		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f);
+}
 
-		const size_t forward = (!player->fliph) ? 1 : -1;
+void move_player(Player *player, const Uint8 *keyboard) {
+	player->prev_x = player->x;
+	player->prev_y = player->y;
 
-		for (size_t i = 0; i < vspeed_abs; ++i) {
-			/* This is player_bottom based on vspeed_sign */
-			if (gameboard[(player->y + (vspeed_sign * player_height_2))]
-						 [player->x + (-forward * (player_width_4 - 1))] !=
-				GO_NONE)
-				break;
-			player->y += vspeed_sign;
-		}
+	float bx, by;
+	box2d_body_get_position(player->body, &bx, &by);
+	player->x = clamp(U_TO_X(bx), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
+	player->y = clamp(U_TO_X(by), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
 
-		player->y = clamp(player->y, 0, VSCREEN_HEIGHT);
+	short facing = player->fliph ? -1 : 1;
+
+	RaycastData ray_bottom;
+	RaycastData ray_forward;
+
+	box2d_sweep_raycast(player->body, &ray_bottom, 4,
+						X_TO_U(player->width / 2 - 2), 0,
+						X_TO_U(player->height / 2), true);
+	box2d_sweep_raycast(player->body, &ray_forward, 8,
+						X_TO_U(player->height - SLOPE * 2),
+						X_TO_U(facing * (player->width / 4 + 1)), 0, false);
+
+	bool player_is_on_floor = ray_bottom.hit;
+	bool player_is_on_wall	= ray_forward.hit;
+
+	/* Move down / Jump */
+	if (keyboard[SDL_SCANCODE_W] && (player->flying || player_is_on_floor)) {
+		/* Jump */
+		box2d_body_set_velocity_v(player->body, player->flying
+													? -PLAYER_FLYING_SPEED
+													: PLAYER_VSPEED_JUMP);
+	} else if (keyboard[SDL_SCANCODE_S] && player->flying) {
+		box2d_body_set_velocity_v(
+			player->body, player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED);
+	} else if (player->flying) {
+		box2d_body_set_velocity_v(player->body, 0);
 	}
 
-	if (keyboard[SDL_SCANCODE_SPACE]) {
-		player->flying = !player->flying;
-	}
-
-	if (keyboard[SDL_SCANCODE_W]) {
-		if (player->flying)
-			player->y =
-				clamp(player->y - PLAYER_SPEED_FLYING, 0, VSCREEN_HEIGHT);
-		else if (gameboard[player_bottom + 1][player->x] != GO_NONE)
-			player->vspeed = -PLAYER_VSPEED_JUMP;
-	} else if (keyboard[SDL_SCANCODE_S]) {
-		if (player->flying)
-			player->y =
-				clamp(player->y + PLAYER_SPEED_FLYING, 0, VSCREEN_HEIGHT);
-	}
-
-	if (keyboard[SDL_SCANCODE_A]) {
-		player->fliph = true;
-		if (player->flying)
-			player->x -= PLAYER_SPEED_FLYING;
-		else
-			for (size_t i = 0; i < PLAYER_SPEED; ++i) {
-				if (gameboard[player_bottom][player_left - 1] != GO_NONE) {
-					/* Climb slope */
-					bool climbed = false;
-					for (size_t j = 0; j < player->height / 4; ++j) {
-						if (gameboard[player_bottom - j][player_left - 1] ==
-							GO_NONE) {
-							player->y -= j;
-							climbed = true;
-							break;
-						}
-					}
-					if (!climbed)
-						break;
-				}
-				--player->x;
+	/* Move left/right */
+	float hspeed = keyboard[SDL_SCANCODE_D] - keyboard[SDL_SCANCODE_A];
+	if (hspeed != 0) {
+		player->fliph = (hspeed < 0) ? true : false;
+		hspeed *= player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED;
+		if (!player->flying)
+			if (player_is_on_wall && SIGN(hspeed) == SIGN(facing)) {
+				hspeed *= (float)facing * fabsf(ray_forward.normal_y);
+				if (player_is_on_floor)
+					box2d_body_add_velocity(player->body, 0,
+											-fabsf(ray_forward.normal_x));
+			} else if (player_is_on_floor) {
+				box2d_body_add_velocity(player->body, 0, 0.8f);
 			}
-		player->x = clamp(player->x, 0, VSCREEN_WIDTH);
-	} else if (keyboard[SDL_SCANCODE_D]) {
-		player->fliph = false;
-		if (player->flying)
-			player->x += PLAYER_SPEED_FLYING;
-		else {
-			for (size_t i = 0; i < PLAYER_SPEED; ++i) {
-				if (gameboard[player_bottom][player_right + 1] != GO_NONE) {
-					/* Climb slope */
-					bool climbed = false;
-					for (size_t j = 0; j < player->height / 4; ++j) {
-						if (gameboard[player_bottom - j][player_right + 1] ==
-							GO_NONE) {
-							player->y -= j;
-							climbed = true;
-							break;
-						}
-					}
-					if (!climbed)
-						break;
-				}
-				++player->x;
-			}
-		}
-		player->x = clamp(player->x, 0, VSCREEN_WIDTH);
+		box2d_body_set_velocity_h(player->body, hspeed);
+	} else if (player->flying || player_is_on_floor) {
+		box2d_body_set_velocity_h(player->body, 0);
 	}
 
-	player->x = clamp(player->x, VIEWPORT_WIDTH_DIV_2 + 1,
-					  (VSCREEN_WIDTH - VIEWPORT_WIDTH_DIV_2));
+	const size_t si = (size_t)(player->x) / SUBCHUNK_WIDTH;
+	const size_t sj = (size_t)(player->y) / SUBCHUNK_HEIGHT;
 
-	player->y = clamp(player->y, VIEWPORT_HEIGHT_DIV_2 + 1,
-					  (VSCREEN_HEIGHT - VIEWPORT_HEIGHT_DIV_2));
+	for (size_t j = sj - 2; j <= sj + 2; ++j) {
+		for (size_t i = si - 2; i <= si + 2; ++i) {
+			if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
+				activate_soil(i, j);
+			else
+				deactivate_soil(i, j);
+		}
+	}
+}
+
+/** This is called after box2d_world_step */
+void move_camera(Player *player, SDL_Rect *camera) {
+	float bx, by;
+	box2d_body_get_position(player->body, &bx, &by);
+
+	/* Set player position after world_step */
+	player->x = clamp(U_TO_X(bx), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
+	player->y = clamp(U_TO_X(by), CHUNK_SIZE_DIV_2 + 1,
+					  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
+	if (player->y != by || player->x != bx)
+		/* Reposition player->body */
+		box2d_body_set_position(player->body, X_TO_U(player->x),
+								X_TO_U(player->y));
+
+	const float player_sx = player->x;
+	const float player_sy = player->y;
 
 	/* Generate new chunks and move camera */
-
-	if (player->y < player_sy) {
+	if (player->y < player->prev_y) {
 		/* Apply verifications for moving UP */
 
 		/* If went to top chunk.
 		 * Move world to bottom and generate new chunks in top
 		 */
-		if (player->chunk_id.y > 1 && player->y < VIEWPORT_HEIGHT) {
-			player->y = VIEWPORT_HEIGHT * 2 - (VIEWPORT_HEIGHT - player->y);
+		if (player->chunk_id.y > 1 && player->y < CHUNK_SIZE) {
+
+			player->y = (float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->y);
+			player->prev_y =
+				(float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_y);
 			--player->chunk_id.y;
 
 			/* Move world to bottom */
-			memmove(&gameboard[VIEWPORT_HEIGHT][0], &gameboard[0][0],
-					VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
+			deactivate_soil_all;
+			box2d_world_move_all_bodies(b2_world, 0, X_TO_U(CHUNK_SIZE));
+			memmove(&gameboard[CHUNK_SIZE][0], &gameboard[0][0],
+					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at top */
 			chunk_axis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
 				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y - 1};
-				generate_chunk(WORLD_SEED, chunk, i * VIEWPORT_WIDTH, 0);
+				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE, 0);
 			}
 			ResetSubchunks;
 		}
@@ -142,27 +159,32 @@ void move_player(Player *player, SDL_Rect *camera, const Uint8 *keyboard) {
 			for (uint_fast16_t i = camera->x; i < camera->x + camera->w; i++)
 				set_subchunk_world(1, i, j);
 
-	} else if (player->y > player_sy) {
+	} else if (player->y > player->prev_y) {
 		/* Apply verifications for moving DOWN */
 
 		/* If went to bottom chunk.
 		 * Move world to top and generate new chunks in bottom
 		 */
 		if (player->chunk_id.y < CHUNK_MAX_Y - 1 &&
-			player->y >= VIEWPORT_HEIGHT * 2) {
-			player->y = VIEWPORT_HEIGHT + (player->y - VIEWPORT_HEIGHT * 2);
+			player->y >= CHUNK_SIZE_M2) {
+
+			player->y = (float)CHUNK_SIZE + (player->y - CHUNK_SIZE_M2);
+			player->prev_y =
+				(float)CHUNK_SIZE + (player->prev_y - CHUNK_SIZE_M2);
 			++player->chunk_id.y;
 
 			/* Move world to top */
-			memmove(&gameboard[0][0], &gameboard[VIEWPORT_HEIGHT][0],
-					VIEWPORT_HEIGHT * 2 * VSCREEN_WIDTH);
+			deactivate_soil_all;
+			box2d_world_move_all_bodies(b2_world, 0, -X_TO_U(CHUNK_SIZE));
+			memmove(&gameboard[0][0], &gameboard[CHUNK_SIZE][0],
+					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at bottom */
 			chunk_axis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
 				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y + 1};
-				generate_chunk(WORLD_SEED, chunk, i * VIEWPORT_WIDTH,
-							   VIEWPORT_HEIGHT * 2);
+				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE,
+							   CHUNK_SIZE_M2);
 			}
 			ResetSubchunks;
 		}
@@ -179,29 +201,32 @@ void move_player(Player *player, SDL_Rect *camera, const Uint8 *keyboard) {
 				set_subchunk_world(1, i, j);
 	}
 
-	if (player->x < player_sx) {
+	if (player->x < player->prev_x) {
 		/* Apply verifications for moving LEFT */
 
 		/* If went to left chunk.
 		 * Move world to right and generate new chunks in left
 		 */
-		if (player->chunk_id.x > 1 && player->x < VIEWPORT_WIDTH) {
-			player->x = VIEWPORT_WIDTH_M2 - (VIEWPORT_WIDTH - player->x);
+		if (player->chunk_id.x > 1 && player->x < CHUNK_SIZE) {
+
+			player->x = (float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->x);
+			player->prev_x =
+				(float)CHUNK_SIZE_M2 - (CHUNK_SIZE - player->prev_x);
 			--player->chunk_id.x;
 
 			/* Move world to right */
+			deactivate_soil_all;
+			box2d_world_move_all_bodies(b2_world, X_TO_U(CHUNK_SIZE), 0);
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
-				memmove(&gameboard[j][VIEWPORT_WIDTH_M2],
-						&gameboard[j][VIEWPORT_WIDTH], VIEWPORT_WIDTH);
-				memmove(&gameboard[j][VIEWPORT_WIDTH], &gameboard[j][0],
-						VIEWPORT_WIDTH);
+				memmove(&gameboard[j][CHUNK_SIZE], &gameboard[j][0],
+						CHUNK_SIZE_M2);
 			}
 
 			/* Generate new world at left */
 			chunk_axis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
 				Chunk chunk = {.x = player->chunk_id.x - 1, .y = start_j + j};
-				generate_chunk(WORLD_SEED, chunk, 0, j * VIEWPORT_HEIGHT);
+				generate_chunk(WORLD_SEED, chunk, 0, j * CHUNK_SIZE);
 			}
 			ResetSubchunks;
 		}
@@ -217,31 +242,34 @@ void move_player(Player *player, SDL_Rect *camera, const Uint8 *keyboard) {
 			for (uint_fast16_t j = camera->y; j < camera->y + camera->h; j++)
 				set_subchunk_world(1, i, j);
 
-	} else if (player->x > player_sx) {
+	} else if (player->x > player->prev_x) {
 		/* Apply verifications for moving RIGHT */
 
 		/* If went to right chunk.
 		 * Move world to left and generate new chunks in right
 		 */
 		if (player->chunk_id.x < CHUNK_MAX_X - 1 &&
-			player->x >= VIEWPORT_WIDTH_M2) {
-			player->x = VIEWPORT_WIDTH + (player->x - VIEWPORT_WIDTH_M2);
+			player->x >= CHUNK_SIZE_M2) {
+
+			player->x = (float)CHUNK_SIZE + (player->x - CHUNK_SIZE_M2);
+			player->prev_x =
+				(float)CHUNK_SIZE + (player->prev_x - CHUNK_SIZE_M2);
 			++player->chunk_id.x;
 
 			/* Move world to left */
+			deactivate_soil_all;
+			box2d_world_move_all_bodies(b2_world, -X_TO_U(CHUNK_SIZE), 0);
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
-				memmove(&gameboard[j][0], &gameboard[j][VIEWPORT_WIDTH],
-						VIEWPORT_WIDTH);
-				memmove(&gameboard[j][VIEWPORT_WIDTH],
-						&gameboard[j][VIEWPORT_WIDTH_M2], VIEWPORT_WIDTH);
+				memmove(&gameboard[j][0], &gameboard[j][CHUNK_SIZE],
+						CHUNK_SIZE_M2);
 			}
 
 			/* Generate new world at right */
 			chunk_axis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
 				Chunk chunk = {.x = player->chunk_id.x + 1, .y = start_j + j};
-				generate_chunk(WORLD_SEED, chunk, VIEWPORT_WIDTH_M2,
-							   j * VIEWPORT_HEIGHT);
+				generate_chunk(WORLD_SEED, chunk, CHUNK_SIZE_M2,
+							   j * CHUNK_SIZE);
 			}
 			ResetSubchunks;
 		}
@@ -256,5 +284,15 @@ void move_player(Player *player, SDL_Rect *camera, const Uint8 *keyboard) {
 		for (uint_fast16_t i = start_cam_x; i <= end_cam_x; i++)
 			for (uint_fast16_t j = camera->y; j < camera->y + camera->h; j++)
 				set_subchunk_world(1, i, j);
+	}
+
+	/* Reposition player->body */
+	if (player->y != player_sy || player->x != player_sx) {
+		player->x = clamp(player->x, CHUNK_SIZE_DIV_2 + 1,
+						  VSCREEN_WIDTH - CHUNK_SIZE_DIV_2);
+		player->y = clamp(player->y, CHUNK_SIZE_DIV_2 + 1,
+						  VSCREEN_HEIGHT - CHUNK_SIZE_DIV_2);
+		box2d_body_set_position(player->body, X_TO_U(player->x),
+								X_TO_U(player->y));
 	}
 }

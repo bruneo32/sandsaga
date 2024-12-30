@@ -6,11 +6,13 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #include "assets/res/VGA-ROM.F08.h"
 #include "assets/res/player_body.png.h"
-#include "assets/res/player_head.png.h"
+
+#include "physics/physics.h"
 
 #include "assets/assets.h"
 #include "engine/engine.h"
@@ -25,25 +27,30 @@
 static size_t		 fps_	 = FPS;
 static volatile bool GAME_ON = true;
 
-static Player  player;
-static Sprite *player_head;
+static Player player;
 
 /** Handle `CTRL + C` to quit the game */
 void sigkillHandler(int signum) { GAME_ON = false; }
 
 int main(int argc, char *argv[]) {
 	signal(SIGINT, sigkillHandler);
-	signal(SIGKILL, sigkillHandler);
 
-	/* Set random seed */
-	srand(time(NULL));
-	// srand(0);
+	/* Set random seeds */
+	const time_t _st = time(NULL);
+	srand(_st);
+	sfrand(_st);
 
 	/* =============================================================== */
 	/* Init SDL */
-	Render_init("Falling sand sandbox game", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+	Render_init("SandSaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+
+#ifdef _WIN32
+	/* In windows, opengl could be suboptimal, d3d11 is the best balance
+	 * between performance and compatibility */
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+#endif
 
 	SDL_RenderSetLogicalSize(__renderer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetWindowSize(__window, VIEWPORT_WIDTH_M2, VIEWPORT_HEIGHT_M2);
@@ -59,8 +66,6 @@ int main(int argc, char *argv[]) {
 
 	player.sprite = loadIMG_from_mem(
 		res_player_body_png, res_player_body_png_len, __window, __renderer);
-	player_head = loadIMG_from_mem(res_player_head_png, res_player_head_png_len,
-								   __window, __renderer);
 
 	/* =============================================================== */
 	/* Init gameloop variables */
@@ -68,7 +73,7 @@ int main(int argc, char *argv[]) {
 	SDL_FPoint window_scale;
 	size_t	   frame_cx = 0;
 	char	   fps_str[4];
-	snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+	snprintf(fps_str, sizeof(fps_str), "%2zu", fps_);
 	short block_size	 = 1 << 3;
 	bool  grid_mode		 = false;
 	byte  current_object = GO_STONE;
@@ -78,10 +83,8 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Initialize data */
-	WORLD_SEED = rand();
-	player.chunk_id =
-		(Chunk){.x = GEN_WATERSEA_OFFSET_X + 1, .y = GEN_SKY_Y + 1};
-	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
+	WORLD_SEED		= rand();
+	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = GEN_SKY_Y - 1};
 
 	/* Generate world first instance*/
 	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
@@ -89,24 +92,27 @@ int main(int argc, char *argv[]) {
 	for (chunk_axis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
 		for (chunk_axis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
 			Chunk chunk = (Chunk){.x = i, .y = j};
-			generate_chunk(WORLD_SEED, chunk,
-						   (i - chunk_start_x) * VIEWPORT_WIDTH,
-						   (j - chunk_start_y) * VIEWPORT_HEIGHT);
+			generate_chunk(WORLD_SEED, chunk, (i - chunk_start_x) * CHUNK_SIZE,
+						   (j - chunk_start_y) * CHUNK_SIZE);
 		}
 	}
 	ResetSubchunks;
 
-	player.flying = true;
+	player.flying = false;
 	player.width  = 16;
 	player.height = 24;
-	player.x	  = VIEWPORT_WIDTH + VIEWPORT_WIDTH_DIV_2;
-	player.y	  = VIEWPORT_HEIGHT + VIEWPORT_HEIGHT_DIV_2;
+	player.x	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
+	player.y	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
 
-	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
-					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
+	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
+	camera.x		= clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
+							VSCREEN_WIDTH - VIEWPORT_WIDTH);
 
 	camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2, 0,
 					 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
+
+	b2_world = box2d_world_create(0, 9.8f);
+	create_player_body(&player);
 
 	/* =============================================================== */
 	/* Calculate ticks */
@@ -123,6 +129,7 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Get inputs */
+		static bool	 LCTRL;
 		int			 mouse_x, mouse_y;
 		const Uint32 mouse_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
 
@@ -131,9 +138,21 @@ int main(int argc, char *argv[]) {
 			switch (_event.type) {
 			case SDL_MOUSEWHEEL:
 				if (_event.wheel.y > 0) {
+					if (LCTRL) {
+						if (block_size < 256)
+							block_size <<= 1;
+						break;
+					}
+
 					current_object =
 						clamp(current_object + 1, GO_FIRST, GO_LAST);
 				} else {
+					if (LCTRL) {
+						if (block_size > 1)
+							block_size >>= 1;
+						break;
+					}
+
 					current_object =
 						clamp(current_object - 1, GO_FIRST, GO_LAST);
 				}
@@ -158,14 +177,56 @@ int main(int argc, char *argv[]) {
 					continue;
 				case SDL_SCANCODE_F4:
 					Render_TogleFullscreen;
+					ResetSubchunks; /* Redraw */
 					break;
-				case SDL_SCANCODE_F3:
-					DEBUG_ON = !DEBUG_ON;
-					if (!DEBUG_ON)
-						ResetSubchunks;
+				case SDL_SCANCODE_F9:
+					/* Toggle debug level UI */
+					if (DBGL(e_dbgl_ui)) {
+						DEBUG_LEVEL &= ~e_dbgl_ui;
+						ResetSubchunks; /* Clear debug artifacts */
+					} else {
+						DEBUG_LEVEL |= e_dbgl_ui;
+					}
+					break;
+				case SDL_SCANCODE_F10:
+					/* Toggle debug level Engine */
+					if (DBGL(e_dbgl_engine)) {
+						DEBUG_LEVEL &= ~e_dbgl_engine;
+						ResetSubchunks; /* Clear debug artifacts */
+					} else {
+						DEBUG_LEVEL |= e_dbgl_engine;
+					}
+					break;
+				case SDL_SCANCODE_F11:
+					/* Toggle debug level Engine */
+					if (DBGL(e_dbgl_physics)) {
+						DEBUG_LEVEL &= ~e_dbgl_physics;
+						box2d_debug_draw_active(false);
+						ResetSubchunks; /* Clear debug artifacts */
+					} else {
+						DEBUG_LEVEL |= e_dbgl_physics;
+						box2d_debug_draw_active(true);
+					}
+					break;
+				case SDL_SCANCODE_SPACE:
+					player.flying = !player.flying;
+					box2d_body_change_type(player.body, !player.flying
+															? b2_dynamicBody
+															: b2_kinematicBody);
+					break;
+				case SDL_SCANCODE_LCTRL:
+					LCTRL = true;
 					break;
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
+					break;
+				case SDL_SCANCODE_Q:
+					const bool fx = box2d_body_get_fixed_rotation(player.body);
+
+					if (!fx)
+						box2d_body_set_angle(player.body, 0);
+
+					box2d_body_set_fixed_rotation(player.body, !fx);
 					break;
 				case SDL_SCANCODE_KP_MINUS:
 					if (block_size > 1)
@@ -175,7 +236,20 @@ int main(int argc, char *argv[]) {
 					if (block_size < 256)
 						block_size <<= 1;
 					break;
+				case SDL_SCANCODE_RIGHTBRACKET:
+					current_object =
+						clamp(current_object + 1, GO_FIRST, GO_LAST);
+					break;
+				case SDL_SCANCODE_LEFTBRACKET:
+					current_object =
+						clamp(current_object - 1, GO_FIRST, GO_LAST);
+					break;
 				}
+			} break;
+			case SDL_KEYUP: {
+			case SDL_SCANCODE_LCTRL:
+				LCTRL = false;
+				break;
 			} break;
 
 			/* Handle SDL events */
@@ -243,71 +317,52 @@ int main(int argc, char *argv[]) {
 			current_object = _object;
 		}
 
-		/* Update objects behaviour */
+		/* Move player before world_step */
+		move_player(&player, SDL_GetKeyboardState(NULL));
+		/* Recalculate soil for active subchunks, not every frame since it is
+		 * expensive */
+		if (frame_cx % 4 == 0)
+			for (uint_fast8_t sj = 0; sj < SUBCHUNK_SIZE; ++sj)
+				for (uint_fast8_t si = 0; si < SUBCHUNK_SIZE; ++si)
+					if (is_subchunk_active(si, sj))
+						recalculate_soil(si, sj);
+
+		box2d_world_step(b2_world, FPS_DELTA, 10, 8);
+		move_camera(&player, &camera); /* After world_step */
+
+		/* Update gameboard, entities and physics after all */
 		update_gameboard();
-		move_player(&player, &camera, SDL_GetKeyboardState(NULL));
 
 		/* =============================================================== */
 		/* Draw game */
 		Render_Clearscreen_Color(C_DKGRAY);
 
 		/* Draw player */
-		const uint_fast16_t player_screen_x = player.x - camera.x;
-		const uint_fast16_t player_screen_y = player.y - camera.y;
+		const float player_screen_x = player.x - camera.x;
+		const float player_screen_y = player.y - camera.y;
+
+		const float player_angle	 = box2d_body_get_angle(player.body);
+		const float player_angle_deg = radtodeg(player_angle);
 
 		Render_image_ext(player.sprite->texture,
-						 player_screen_x - (player.width / 2),
-						 player_screen_y - (player.height / 2), player.width,
-						 player.height, 0, NULL, player.fliph);
-		Render_image_ext(player_head->texture,
-						 player_screen_x - (player.width / 2),
-						 player_screen_y - (player.height / 2), 16, 8, 0, NULL,
+						 player_screen_x - ((float)player.width / 2.0f),
+						 player_screen_y - ((float)player.height / 2.0f),
+						 player.width, player.height, player_angle_deg, NULL,
 						 player.fliph);
-
-		if (DEBUG_ON) {
-			const short player_height_2 = player.height / 2;
-			const short player_width_4	= player.width / 4;
-			const short player_screen_top =
-				player_screen_y - player_height_2 + 1;
-			const short player_screen_bottom =
-				player_screen_y + player_height_2 - 1;
-			const short player_screen_left =
-				player_screen_x - player_width_4 + 1;
-			const short player_screen_right =
-				player_screen_x + player_width_4 - 1;
-
-			const size_t forward = (!player.fliph) ? 1 : -1;
-
-			Render_Pixel_RGBA(player_screen_x, player_screen_y, 255, 0, 0, 255);
-
-			Render_Pixel_RGBA(player_screen_left, player_screen_top, 0, 255,
-							  255, 255);
-			Render_Pixel_RGBA(player_screen_right, player_screen_top, 0, 255,
-							  255, 255);
-
-			Render_Pixel_RGBA(player_screen_left, player_screen_bottom, 0, 255,
-							  0, 255);
-			Render_Pixel_RGBA(player_screen_right, player_screen_bottom, 0, 255,
-							  0, 255);
-
-			Render_Pixel_RGBA(player_screen_left, player_screen_bottom - 4, 255,
-							  255, 0, 255);
-			Render_Pixel_RGBA(player_screen_right, player_screen_bottom - 4,
-							  255, 255, 0, 255);
-
-			Render_Pixel_RGBA(player_screen_x +
-								  (forward * (player_width_4 - 1)),
-							  player_screen_y, 255, 0, 255, 255);
-		}
 
 		/* Draw gameboard */
 		SDL_SetRenderTarget(__renderer, vscreen_);
+		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
 		draw_gameboard_world(&camera);
-		SDL_SetRenderTarget(__renderer, NULL);
 
+		/* Draw gameboard on screen */
+		SDL_SetRenderTarget(__renderer, NULL);
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
 		SDL_RenderCopy(__renderer, vscreen_, &camera, NULL);
-		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
+
+		if (DBGL(e_dbgl_physics)) {
+			box2d_debug_draw(b2_world, (Rect *)&camera);
+		}
 
 		/* Draw mouse pointer */
 		Color color;
@@ -337,9 +392,9 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Draw UI */
-		if (DEBUG_ON) {
+		if (DBGL(e_dbgl_ui)) {
 			Render_Setcolor(C_WHITE);
-			snprintf(fps_str, sizeof(fps_str), "%2li", fps_);
+			snprintf(fps_str, sizeof(fps_str), "%2zu", fps_);
 			draw_string(fps_str, VIEWPORT_WIDTH - FSTR_WIDTH(fps_str), 0);
 
 			char str_xy[14];
@@ -367,7 +422,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	delete (player.sprite);
-	delete (player_head);
+
+	if (player.body)
+		box2d_body_destroy(player.body);
+
+	if (b2_world)
+		box2d_world_destroy(b2_world);
 
 	return 0;
 }

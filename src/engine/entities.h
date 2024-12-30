@@ -3,27 +3,34 @@
 
 #include <stdbool.h>
 
+#include "../physics/physics.h"
+
 #include "../assets/assets.h"
 #include "engine.h"
 
-#define GRAVITY				1
-#define PLAYER_SPEED_FLYING 4
-#define PLAYER_SPEED		2
-#define PLAYER_VSPEED_JUMP	9
-#define PLAYER_VSPEED_MAX	6
+#define PLAYER_FLYING_SPEED 16
+#define PLAYER_SPEED		6
+#define PLAYER_VSPEED_JUMP	-7
+
+#define PLAYER_DENSITY	8.0f
+#define PLAYER_FRICTION 0.8f
 
 typedef struct _Player {
-	short	x;
-	short	y;
-	short	width;
-	short	height;
-	short	vspeed;
+	b2Body *body;
+	float	x;
+	float	y;
+	float	prev_x;
+	float	prev_y;
 	Chunk	chunk_id;
-	Sprite *sprite;
 	bool	fliph;
 	bool	flying;
+	short	width;
+	short	height;
+	Sprite *sprite;
 } Player;
 
-void move_player(Player *player, SDL_Rect *camera, const Uint8 *keyboard);
+void create_player_body(Player *player);
+void move_player(Player *player, const Uint8 *keyboard);
+void move_camera(Player *player, SDL_Rect *camera);
 
 #endif // _ENTITIES_H

@@ -1,19 +1,25 @@
 {
 	"files.associations": {
 		"*.h": "c",
-		"*.ci": "c"
+		"*.ci": "c",
+		"*.hpp": "cpp",
 	},
+	"C_Cpp.default.includePath": [
+		"/usr/include/SDL2",
+		"/usr/include/box2d"
+	],
 	"clangd.fallbackFlags": [
 		"-xc",
-		"-I${workspaceFolder}/**",
 		"-I/usr/include/SDL2",
+		"-I/usr/include/box2d",
 		"-Wno-switch"
 	],
 	"cmake.configureOnOpen": false,
 	"cmake.configureOnEdit": false,
 	"cmake.clearOutputBeforeBuild": false,
 	"cmake.revealLog": "error",
-    "cmake.useCMakePresets": "always",
+	"cmake.useCMakePresets": "always",
+	"cmake.allowUnsupportedPresetsVersions": true,
 	"cmake.pinnedCommands": [
 		"workbench.action.tasks.configureTaskRunner",
 		"workbench.action.tasks.runTask"
