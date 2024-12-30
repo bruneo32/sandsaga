@@ -3,9 +3,29 @@ Sandfalling simulator in C
 
 ## Pre-build
 1. Install dependencies: `cat requirements.txt |xargs sudo apt install`
+2. Get compilers for arm64 and amd64. **If** you're only gonna build only for your **native** system, **at least** you need to setup the **mock compilers**.
+```
+# ==== Build ARM (from x86-64 native) ====
+# Get compilers for aarch64
+sudo dpkg --add-architecture arm64 && sudo apt update
+sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+# IMPORTANT! Link mock compiler to native x86-64 compiler
+sudo ln -s /usr/bin/gcc /usr/bin/x86-64-linux-gnu-gcc
+sudo ln -s /usr/bin/g++ /usr/bin/x86-64-linux-gnu-g++
+```
+```
+# ==== Build x86-64 (from ARM native) ====
+# Get compilers for x86-64
+sudo dpkg --add-architecture amd64 && sudo apt update
+sudo apt install gcc-x86-64-linux-gnu g++-x86-64-linux-gnu
+# IMPORTANT! Link mock compiler to native aarch64 compiler
+sudo ln -s /usr/bin/gcc /usr/bin/aarch64-linux-gnu-gcc
+sudo ln -s /usr/bin/g++ /usr/bin/aarch64-linux-gnu-g++
+```
+> Note: The previous commands are for debian, you shall adecuate it to your distro requirements.
 2. Bake assets before building (*or when they change*): `./bake_assets.sh`
 
-### (Optional) Build for Windows from linux
+### (Optional) Build for Windows from linux (*Only x86-64*)
 1. Make sure you installed mingw-w64 in the previous step
 2. Paste the following snippet to download the required libraries for mingw
 ```
