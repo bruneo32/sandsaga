@@ -338,17 +338,7 @@ int main(int argc, char *argv[]) {
 		Render_Clearscreen_Color(C_DKGRAY);
 
 		/* Draw player */
-		const float player_screen_x = player.x - camera.x;
-		const float player_screen_y = player.y - camera.y;
-
-		const float player_angle	 = box2d_body_get_angle(player.body);
-		const float player_angle_deg = radtodeg(player_angle);
-
-		Render_image_ext(player.sprite->texture,
-						 player_screen_x - ((float)player.width / 2.0f),
-						 player_screen_y - ((float)player.height / 2.0f),
-						 player.width, player.height, player_angle_deg, NULL,
-						 player.fliph);
+		draw_player(&player, &camera);
 
 		/* Draw gameboard */
 		SDL_SetRenderTarget(__renderer, vscreen_);

@@ -32,5 +32,6 @@ typedef struct _Player {
 void create_player_body(Player *player);
 void move_player(Player *player, const Uint8 *keyboard);
 void move_camera(Player *player, SDL_Rect *camera);
+void draw_player(Player *player, SDL_Rect *camera);
 
 #endif // _ENTITIES_H
