@@ -296,3 +296,18 @@ void move_camera(Player *player, SDL_Rect *camera) {
 								X_TO_U(player->y));
 	}
 }
+
+void draw_player(Player *player, SDL_Rect *camera) {
+	const float player_screen_x = player->x - camera->x;
+	const float player_screen_y = player->y - camera->y;
+
+	const float player_width_2	= (float)player->width / 2.0f;
+	const float player_height_2 = (float)player->height / 2.0f;
+
+	const float player_angle	 = box2d_body_get_angle(player->body);
+	const float player_angle_deg = radtodeg(player_angle);
+
+	Render_image_ext(player->sprite->texture, player_screen_x - player_width_2,
+					 player_screen_y - player_height_2, player->width,
+					 player->height, player_angle_deg, NULL, player->fliph);
+}
