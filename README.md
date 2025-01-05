@@ -82,7 +82,7 @@ The following table repesents the worst hardware where the game has been tested 
 |    **Memory** | 4 GB RAM                                  | 4 GB RAM                                  | 4 GB RAM                                  |
 |  **Graphics** | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 |
 |   **Storage** | 28 MB                                     | 144 KB                                    | 144 KB                                    |
-|    **System** | Windows NT, DirectX11                     | GLIBC_2.34, GLIBCXX_3.4.29                | GLIBC_2.34, GLIBCXX_3.4.29                |
+|    **System*** | Windows NT, DirectX11                     | GLIBC_2.34, GLIBCXX_3.4.29                | GLIBC_2.34, GLIBCXX_3.4.29                |
 > (*) System requirements might be not minimum, but exact version required (in some cases).
 
 # Some resources license and appreciation
