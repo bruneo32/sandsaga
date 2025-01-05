@@ -1,7 +1,14 @@
 # SandSaga
 Sandfalling simulator in C
 
-## Pre-build
+# Index
+- [Pre-build requirements](#pre-build-requirements)
+- [Build and Run](#build-and-run)
+- [System requirements (minimum)](#system-requirements-minimum)
+- [Some resources license or apreciation](#some-resources-license-or-apreciation)
+
+
+## Pre-build requirements
 1. Install dependencies: `cat requirements.txt |xargs sudo apt install`
 2. Get compilers for arm64 and amd64. **If** you're only gonna build only for your **native** system, **at least** you need to setup the **mock compilers**.
 ```
@@ -44,7 +51,7 @@ Box2D libs *(sadly, not prebuilt)*:
 git clone -b 'v2.4.1' --single-branch --depth 1 https://github.com/erincatto/box2d mingw_libs/box2d
 mkdir mingw_libs/box2d/build_mingw
 cd mingw_libs/box2d/build_mingw
-cmake -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DBUILD_SHARED_LIBS=ON -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=$(pwd)/../install ..
+cmake -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DBUILD_SHARED_LIBS=ON -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=$(pwd)/../install_mingw ..
 make -j$(nproc)
 make install
 cd ../../..
@@ -59,6 +66,17 @@ rm mingw_libs/*.tar.gz
 # Build and Run
 - Use vscode extension for CMake, select a preset and launch it with **CTRL+F5**
 - For windows, you can test with `wine ./game_sdl2`.
+
+# System requirements (minimum)
+The following table repesents the worst hardware where the game has been tested to work at ~60 FPS stable.
+|               |            **Windows (x86-64)**           |             **Linux (x86-64)**            |            **Linux (aarch64)**            |
+|--------------:|:------------------------------------------|:------------------------------------------|:------------------------------------------|
+| **Processor** | Intel Core i3 4130                        | Intel Core i3 4130 / AMD Ryzen 3 1200     | Rockchip RK3588                           |
+|    **Memory** | 4 GB RAM                                  | 4 GB RAM                                  | 4 GB RAM                                  |
+|  **Graphics** | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 |
+|   **Storage** | 28 MB                                     | 144 KB                                    | 144 KB                                    |
+|    **System** | Windows NT, DirectX11                     | GLIBC_2.34, GLIBCXX_3.4.29                | GLIBC_2.34, GLIBCXX_3.4.29                |
+> (*) System requirements might be not minimum, but exact version required (in some cases).
 
 # Some resources license or apreciation
 ### FNTCOL16
