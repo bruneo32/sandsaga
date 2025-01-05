@@ -5,13 +5,13 @@ Sandfalling simulator in C
 - [Pre-build requirements](#pre-build-requirements)
 - [Build and Run](#build-and-run)
 - [System requirements (minimum)](#system-requirements-minimum)
-- [Some resources license or apreciation](#some-resources-license-or-apreciation)
+- [Some resources license and appreciation](#some-resources-license-and-appreciation)
 
 
 ## Pre-build requirements
 1. Install dependencies: `cat requirements.txt |xargs sudo apt install`
 2. Get compilers for arm64 and amd64. **If** you're only gonna build only for your **native** system, **at least** you need to setup the **mock compilers**.
-```
+```sh
 # ==== Build ARM (from x86-64 native) ====
 # Get compilers for aarch64
 sudo dpkg --add-architecture arm64 && sudo apt update
@@ -20,7 +20,7 @@ sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 sudo ln -s /usr/bin/gcc /usr/bin/x86-64-linux-gnu-gcc
 sudo ln -s /usr/bin/g++ /usr/bin/x86-64-linux-gnu-g++
 ```
-```
+```sh
 # ==== Build x86-64 (from ARM native) ====
 # Get compilers for x86-64
 sudo dpkg --add-architecture amd64 && sudo apt update
@@ -35,18 +35,18 @@ sudo ln -s /usr/bin/g++ /usr/bin/aarch64-linux-gnu-g++
 ### (Optional) Build for Windows from linux (*Only x86-64*)
 1. Make sure you installed mingw-w64 in the previous step
 2. Paste the following snippet to download the required libraries for mingw
-```
+```sh
 mkdir mingw_libs
 ```
 SDL2 libs *(prebuilt)*:
-```
+```sh
 # SDL
 wget -P mingw_libs https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-mingw.tar.gz
 # SDL_image
 wget -P mingw_libs https://github.com/libsdl-org/SDL_image/releases/download/release-2.6.3/SDL2_image-devel-2.6.3-mingw.tar.gz
 ```
 Box2D libs *(sadly, not prebuilt)*:
-```
+```sh
 # Clone the Box2D repository
 git clone -b 'v2.4.1' --single-branch --depth 1 https://github.com/erincatto/box2d mingw_libs/box2d
 mkdir mingw_libs/box2d/build_mingw
@@ -57,15 +57,22 @@ make install
 cd ../../..
 ```
 3. Extract the libraries in mingw_libs
-```
+```sh
 for a in mingw_libs/*.tar.gz; do tar zxvf $a -C mingw_libs; done
 rm mingw_libs/*.tar.gz
 ```
 4. NOTE: In order to play it, you need to run CPack to gather all the DLLs and other resources.
 
 # Build and Run
-- Use vscode extension for CMake, select a preset and launch it with **CTRL+F5**
-- For windows, you can test with `wine ./game_sdl2`.
+1. You can use vscode extension for CMake for configure/build/pack. *(This is what I use because it's comfortable).*
+2. If you want to build from console, select a preset from `CMakePresets.json` as follows:
+```sh
+cmake --preset linux-release-x86_64      # Select preset
+cmake --build build/linux-x86_64/release # Build it
+cpack --preset linux-release-x86_64      # Pack it for distribution
+```
+
+> NOTE: For windows, you can test with `find dist -name sandsaga.exe |xargs wine`.
 
 # System requirements (minimum)
 The following table repesents the worst hardware where the game has been tested to work at ~60 FPS stable.
@@ -78,7 +85,7 @@ The following table repesents the worst hardware where the game has been tested 
 |    **System** | Windows NT, DirectX11                     | GLIBC_2.34, GLIBCXX_3.4.29                | GLIBC_2.34, GLIBCXX_3.4.29                |
 > (*) System requirements might be not minimum, but exact version required (in some cases).
 
-# Some resources license or apreciation
+# Some resources license and appreciation
 ### FNTCOL16
 - These fonts come from http://ftp.lanet.lv/ftp/mirror/x2ftp/msdos/programming/misc/fntcol16.zip
 - The package is (c) by Joseph Gil

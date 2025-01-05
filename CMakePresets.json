@@ -1,5 +1,5 @@
 {
-	"version": 8,
+	"version": 6,
 	"cmakeMinimumRequired": {
 		"major": 3,
 		"minor": 25,
@@ -93,19 +93,19 @@
 	],
 	"packagePresets": [
 		{
-			"name": "Linux x86_64",
+			"name": "linux-release-x86_64",
 			"description": "Package the Linux Release build into some installers like DEB and TGZ",
 			"displayName": "Linux Package",
 			"configurePreset": "linux-release-x86_64"
 		},
 		{
-			"name": "Linux ARM",
+			"name": "linux-release-aarch64",
 			"description": "Package the Linux Release build into some installers like DEB and TGZ",
 			"displayName": "Linux Package",
 			"configurePreset": "linux-release-aarch64"
 		},
 		{
-			"name": "Windows",
+			"name": "win64-release-mingw32",
 			"description": "Package the Windows Release build into a ZIP",
 			"displayName": "Windows ZIP Package",
 			"configurePreset": "win64-release-mingw32"
