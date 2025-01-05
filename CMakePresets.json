@@ -71,7 +71,7 @@
 				"PROCESSOR": "x86-64",
 				"SDL2_PATH": "mingw_libs/SDL2-2.26.5/x86_64-w64-mingw32",
 				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.6.3/x86_64-w64-mingw32",
-				"BOX2D_PATH": "mingw_libs/box2d/install",
+				"BOX2D_PATH": "mingw_libs/box2d/install_mingw",
 				"CMAKE_BUILD_TYPE": "Debug",
 				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake"
 			}
@@ -85,7 +85,7 @@
 				"PROCESSOR": "x86-64",
 				"SDL2_PATH": "mingw_libs/SDL2-2.26.5/x86_64-w64-mingw32",
 				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.6.3/x86_64-w64-mingw32",
-				"BOX2D_PATH": "mingw_libs/box2d/install",
+				"BOX2D_PATH": "mingw_libs/box2d/install_mingw",
 				"CMAKE_BUILD_TYPE": "Release",
 				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake"
 			}
