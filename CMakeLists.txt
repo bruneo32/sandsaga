@@ -3,9 +3,12 @@ cmake_policy(SET CMP0079 NEW)
 
 set(CMAKE_C_STANDARD 99)
 
+# TODO: test ARM executable
 # Box2D somehow does not work with less than -O2 level
-set(CMAKE_C_FLAGS_RELEASE "-O2 -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
-set(CMAKE_C_FLAGS_DEBUG "-O2 -Wall -Wno-switch -Wno-format-truncation -g")
+set(COMMON_FLAGS "-O2 -march=${PROCESSOR} -mtune=generic -flto -fno-builtin-memcpy")
+
+set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
+set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -Wall -Wno-switch -Wno-format-truncation -g")
 set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 
@@ -14,7 +17,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(sandsaga
-	VERSION 0.0.1.0
+	VERSION 0.0.1.1
 	LANGUAGES C CXX
 	DESCRIPTION "Sand falling simulator in C minigame"
 	HOMEPAGE_URL "https://github.com/bruneo32/sandsaga"
