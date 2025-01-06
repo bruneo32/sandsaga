@@ -1,7 +1,11 @@
 cmake
-libsdl2-dev=2.26.5*
-libsdl2-image-dev=2.6.3*
-libbox2d-dev=2.4.1*
+mingw-w64
 optipng
 xxd
-mingw-w64
+libsdl2-dev:amd64=2.26.5*
+libsdl2-image-dev:amd64=2.6.3*
+libbox2d-dev:amd64=2.4.1*
+
+libsdl2-dev:arm64=2.26.5*
+libsdl2-image-dev:arm64=2.6.3*
+libbox2d-dev:arm64=2.4.1*

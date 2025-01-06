@@ -1,5 +1,5 @@
 {
-	"version": 8,
+	"version": 6,
 	"cmakeMinimumRequired": {
 		"major": 3,
 		"minor": 25,
@@ -7,64 +7,108 @@
 	},
 	"configurePresets": [
 		{
-			"name": "linux-debug",
-			"displayName": "Linux (Debug)",
-			"description": "native",
-			"binaryDir": "${sourceDir}/build/linux/debug",
+			"name": "linux-debug-x86_64",
+			"displayName": "Linux x86_64 (Debug)",
+			"description": "x86_64",
+			"binaryDir": "${sourceDir}/build/linux-x86_64/debug",
 			"cacheVariables": {
+				"PROCESSOR": "x86-64",
+				"CMAKE_SYSTEM_NAME": "Linux",
+				"CMAKE_SYSTEM_PROCESSOR": "x86_64",
+				"CMAKE_C_COMPILER": "x86-64-linux-gnu-gcc",
+				"CMAKE_CXX_COMPILER": "x86-64-linux-gnu-g++",
 				"CMAKE_BUILD_TYPE": "Debug"
 			}
 		},
 		{
-			"name": "linux-release",
-			"displayName": "Linux (Release)",
-			"description": "native",
-			"binaryDir": "${sourceDir}/build/linux/release",
+			"name": "linux-release-x86_64",
+			"displayName": "Linux x86_64 (Release)",
+			"description": "x86_64",
+			"binaryDir": "${sourceDir}/build/linux-x86_64/release",
 			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Release",
-				"DIST_BUILDER": "linux"
+				"PROCESSOR": "x86-64",
+				"CMAKE_SYSTEM_NAME": "Linux",
+				"CMAKE_SYSTEM_PROCESSOR": "x86_64",
+				"CMAKE_C_COMPILER": "x86-64-linux-gnu-gcc",
+				"CMAKE_CXX_COMPILER": "x86-64-linux-gnu-g++",
+				"CMAKE_BUILD_TYPE": "Release"
 			}
 		},
 		{
-			"name": "win64-debug-mingw64",
+			"name": "linux-debug-aarch64",
+			"displayName": "Linux aarch64 (Debug)",
+			"description": "aarch64",
+			"binaryDir": "${sourceDir}/build/linux-aarch64/debug",
+			"cacheVariables": {
+				"PROCESSOR": "armv8-a",
+				"CMAKE_SYSTEM_NAME": "Linux",
+				"CMAKE_SYSTEM_PROCESSOR": "aarch64",
+				"CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
+				"CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++",
+				"CMAKE_BUILD_TYPE": "Debug"
+			}
+		},
+		{
+			"name": "linux-release-aarch64",
+			"displayName": "Linux aarch64 (Release)",
+			"description": "aarch64",
+			"binaryDir": "${sourceDir}/build/linux-aarch64/release",
+			"cacheVariables": {
+				"PROCESSOR": "armv8-a",
+				"CMAKE_SYSTEM_NAME": "Linux",
+				"CMAKE_SYSTEM_PROCESSOR": "aarch64",
+				"CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
+				"CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++",
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		},
+		{
+			"name": "win64-debug-mingw32",
 			"displayName": "Windows (Debug)",
-			"description": "mingw64",
+			"description": "mingw32",
 			"binaryDir": "${sourceDir}/build/win64-mingw32/debug",
 			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Debug",
+				"PROCESSOR": "x86-64",
 				"SDL2_PATH": "mingw_libs/SDL2-2.26.5/x86_64-w64-mingw32",
 				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.6.3/x86_64-w64-mingw32",
-				"BOX2D_PATH": "mingw_libs/box2d/install",
+				"BOX2D_PATH": "mingw_libs/box2d/install_mingw",
+				"CMAKE_BUILD_TYPE": "Debug",
 				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake"
 			}
 		},
 		{
-			"name": "win64-release-mingw64",
+			"name": "win64-release-mingw32",
 			"displayName": "Windows (Release)",
-			"description": "mingw64",
+			"description": "mingw32",
 			"binaryDir": "${sourceDir}/build/win64-mingw32/release",
 			"cacheVariables": {
-				"CMAKE_BUILD_TYPE": "Release",
+				"PROCESSOR": "x86-64",
 				"SDL2_PATH": "mingw_libs/SDL2-2.26.5/x86_64-w64-mingw32",
 				"SDL2_IMAGE_PATH": "mingw_libs/SDL2_image-2.6.3/x86_64-w64-mingw32",
-				"BOX2D_PATH": "mingw_libs/box2d/install",
-				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake",
-				"DIST_BUILDER": "windows"
+				"BOX2D_PATH": "mingw_libs/box2d/install_mingw",
+				"CMAKE_BUILD_TYPE": "Release",
+				"CMAKE_TOOLCHAIN_FILE": "cmake/win64-mingw32.toolchain.cmake"
 			}
 		}
 	],
 	"packagePresets": [
 		{
-			"name": "Linux",
+			"name": "linux-release-x86_64",
 			"description": "Package the Linux Release build into some installers like DEB and TGZ",
 			"displayName": "Linux Package",
-			"configurePreset": "linux-release"
+			"configurePreset": "linux-release-x86_64"
 		},
 		{
-			"name": "Windows",
+			"name": "linux-release-aarch64",
+			"description": "Package the Linux Release build into some installers like DEB and TGZ",
+			"displayName": "Linux Package",
+			"configurePreset": "linux-release-aarch64"
+		},
+		{
+			"name": "win64-release-mingw32",
 			"description": "Package the Windows Release build into a ZIP",
 			"displayName": "Windows ZIP Package",
-			"configurePreset": "win64-release-mingw64"
+			"configurePreset": "win64-release-mingw32"
 		}
 	]
 }
