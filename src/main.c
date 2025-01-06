@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Init SDL */
-	Render_init("SandSaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+	Render_init("Sandsaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 

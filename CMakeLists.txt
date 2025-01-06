@@ -17,7 +17,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 project(sandsaga
-	VERSION 0.0.1.0
+	VERSION 0.0.1.1
 	LANGUAGES C CXX
 	DESCRIPTION "Sand falling simulator in C minigame"
 	HOMEPAGE_URL "https://github.com/bruneo32/sandsaga"

@@ -1,4 +1,4 @@
-# SandSaga
+# Sandsaga
 Sandfalling simulator in C
 
 # Index
@@ -6,6 +6,7 @@ Sandfalling simulator in C
 - [Build and Run](#build-and-run)
 - [System requirements (minimum)](#system-requirements-minimum)
 - [Some resources license and appreciation](#some-resources-license-and-appreciation)
+- [Trademark notice](#trademark-notice)
 
 
 ## Pre-build requirements
@@ -93,3 +94,7 @@ The following table repesents the worst hardware where the game has been tested 
 ### Third-party algorithms implemented
 - https://github.com/Lecanyu/RDPSimplify
 - https://github.com/mapbox/earcut.hpp/
+
+# Trademark notice
+The name "Sandsaga" and the associated logo are trademarks of Bruno Castro García and are intended to identify the original, authentic version of the project.\
+See [TRADEMARK.md](TRADEMARK.md) for more information.
