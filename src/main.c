@@ -104,10 +104,10 @@ int main(int argc, char *argv[]) {
 	player.x	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
 	player.y	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
 
-	SDL_Rect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
-	camera.x		= clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
-							VSCREEN_WIDTH - VIEWPORT_WIDTH);
+	SDL_FRect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
+	camera.x = clamp(player.x - VIEWPORT_WIDTH_DIV_2, 0,
+					 VSCREEN_WIDTH - VIEWPORT_WIDTH);
 	camera.y = clamp(player.y - VIEWPORT_HEIGHT_DIV_2, 0,
 					 VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 
@@ -276,9 +276,9 @@ int main(int argc, char *argv[]) {
 		mouse_y = clamp((mouse_y / window_scale.y - window_viewport.y), 0,
 						VIEWPORT_HEIGHT);
 		const uint32_t mouse_wold_x =
-			clamp((mouse_x + camera.x), 0, VSCREEN_WIDTH);
+			clamp((mouse_x + (int)camera.x), 0, VSCREEN_WIDTH);
 		const uint32_t mouse_wold_y =
-			clamp((mouse_y + camera.y), 0, VSCREEN_HEIGHT);
+			clamp((mouse_y + (int)camera.y), 0, VSCREEN_HEIGHT);
 
 		/* =============================================================== */
 		/* Update game */
@@ -353,10 +353,12 @@ int main(int argc, char *argv[]) {
 		/* Draw gameboard on screen */
 		SDL_SetRenderTarget(__renderer, NULL);
 		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
-		SDL_RenderCopy(__renderer, vscreen_, &camera, NULL);
+		SDL_Rect icamera = {(int)camera.x, (int)camera.y, (int)camera.w,
+							(int)camera.h};
+		SDL_RenderCopy(__renderer, vscreen_, &icamera, NULL);
 
 		if (DBGL(e_dbgl_physics)) {
-			box2d_debug_draw(b2_world, (Rect *)&camera);
+			box2d_debug_draw(b2_world, (Rect *)&icamera);
 		}
 
 		/* Draw mouse pointer */
@@ -368,13 +370,15 @@ int main(int argc, char *argv[]) {
 			Render_Pixel_Color(mouse_x, mouse_y, color);
 		} else {
 			int_fast16_t bx =
-				(grid_mode ? (GRIDALIGN(mouse_wold_x, block_size) - camera.x) +
-								 block_size / 2
-						   : mouse_x);
+				(grid_mode
+					 ? (GRIDALIGN(mouse_wold_x, block_size) - (int)camera.x) +
+						   block_size / 2
+					 : mouse_x);
 			int_fast16_t by =
-				(grid_mode ? (GRIDALIGN(mouse_wold_y, block_size) - camera.y) +
-								 block_size / 2
-						   : mouse_y);
+				(grid_mode
+					 ? (GRIDALIGN(mouse_wold_y, block_size) - (int)camera.y) +
+						   block_size / 2
+					 : mouse_y);
 
 			for (int_fast16_t j = clamp_low((by - block_size / 2), 0);
 				 j < clamp_high(by + block_size / 2, VIEWPORT_HEIGHT); ++j) {

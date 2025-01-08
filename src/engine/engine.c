@@ -457,7 +457,7 @@ void update_gameboard() {
 }
 
 void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
-					   size_t end_j, const SDL_Rect *camera) {
+					   size_t end_j, const SDL_FRect *camera) {
 
 	/* Draw block */
 	for (size_t j = end_j - 1;; --j) {
@@ -499,7 +499,7 @@ void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
 	}
 }
 
-void draw_gameboard_world(const SDL_Rect *camera) {
+void draw_gameboard_world(const SDL_FRect *camera) {
 
 	/* Traverse all subchunks */
 	for (uint_fast8_t sj = SUBCHUNK_SIZE - 1;; --sj) {
