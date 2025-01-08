@@ -6,6 +6,7 @@
 #include "../physics/physics.h"
 
 #include "../assets/assets.h"
+#include "../engine/bonerig.h"
 #include "engine.h"
 
 #define PLAYER_FLYING_SPEED 16
@@ -16,17 +17,18 @@
 #define PLAYER_FRICTION 0.8f
 
 typedef struct _Player {
-	b2Body *body;
-	float	x;
-	float	y;
-	float	prev_x;
-	float	prev_y;
-	Chunk	chunk_id;
-	bool	fliph;
-	bool	flying;
-	short	width;
-	short	height;
-	Sprite *sprite;
+	b2Body		  *body;
+	float		   x;
+	float		   y;
+	float		   prev_x;
+	float		   prev_y;
+	Chunk		   chunk_id;
+	bool		   fliph;
+	bool		   flying;
+	short		   width;
+	short		   height;
+	Sprite		  *sprite;
+	BoneAnimation *animation;
 } Player;
 
 void create_player_body(Player *player);
