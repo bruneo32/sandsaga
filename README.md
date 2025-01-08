@@ -78,12 +78,12 @@ cpack --preset linux-release-x86_64      # Pack it for distribution
 # System requirements (minimum)
 The following table repesents the worst hardware where the game has been tested to work at ~60 FPS stable.
 |               |            **Windows (x86-64)**           |             **Linux (x86-64)**            |            **Linux (aarch64)**            |
-|--------------:|:------------------------------------------|:------------------------------------------|:------------------------------------------|
-| **Processor** | Intel Core i3 4130                        | Intel Core i3 4130 / AMD Ryzen 3 1200     | Rockchip RK3588                           |
+|--------------:|:-----------------------------------------:|:-----------------------------------------:|:-----------------------------------------:|
+| **Processor** | Intel Core i3 4130 / AMD Ryzen 3 1200     | Intel Core i3 4130 / AMD Ryzen 3 1200     | Rockchip RK3588                           |
 |    **Memory** | 4 GB RAM                                  | 4 GB RAM                                  | 4 GB RAM                                  |
 |  **Graphics** | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 |
 |   **Storage** | 28 MB                                     | 144 KB                                    | 144 KB                                    |
-|    **System*** | Windows NT, DirectX11                     | GLIBC_2.34, GLIBCXX_3.4.29                | GLIBC_2.34, GLIBCXX_3.4.29                |
+|   **System*** | Windows NT, DirectX11                     | GLIBC_2.34, GLIBCXX_3.4.29                | GLIBC_2.34, GLIBCXX_3.4.29                |
 > (*) System requirements might be not minimum, but exact version required (in some cases).
 
 # Some resources license and appreciation
