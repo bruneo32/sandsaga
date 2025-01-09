@@ -70,7 +70,7 @@ typedef struct _BoneAnimation {
  * @param alpha Ptr to output the angle (radians) of the bone in the world
  */
 void bone_get_world_position(Bone *bone, float theta, float *x, float *y,
-							 float *alpha);
+							 float *alpha, bool fliph);
 
 void step_animation(BoneAnimation *animation, float dt);
 

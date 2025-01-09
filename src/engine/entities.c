@@ -411,18 +411,18 @@ void draw_player(Player *player, SDL_FRect *camera) {
 
 		float bone_x, bone_y, bone_angle;
 		bone_get_world_position(bone, player_angle, &bone_x, &bone_y,
-								&bone_angle);
+								&bone_angle, player->fliph);
 
 		double angle = bone->anim_data.angle + player_angle_deg;
 
 		SDL_FRect skin_dst = {bone_x, bone_y,
 							  ((float)skinrig->subimage.w / PSF),
 							  ((float)skinrig->subimage.h / PSF)};
-		skin_dst.x += player_screen_x - skinrig->center.x;
-		skin_dst.y += player_screen_y - skinrig->center.y;
+		skin_dst.x += player_screen_x - skinrig->center.x + 0.5f;
+		skin_dst.y += player_screen_y - skinrig->center.y - 0.5f;
 
 		SDL_RenderCopyExF(__renderer, player->sprite->texture,
-						 &skinrig->subimage, &skin_dst, angle, &skinrig->center,
-						 SDL_FLIP_NONE);
+						  &skinrig->subimage, &skin_dst, angle,
+						  &skinrig->center, player->fliph);
 	}
 }

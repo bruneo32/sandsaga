@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 	ResetSubchunks;
 
 	player.flying = false;
-	player.width  = 16;
+	player.width  = 12;
 	player.height = 24;
 	player.x	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
 	player.y	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
