@@ -31,38 +31,10 @@ sudo ln -s /usr/bin/gcc /usr/bin/aarch64-linux-gnu-gcc
 sudo ln -s /usr/bin/g++ /usr/bin/aarch64-linux-gnu-g++
 ```
 > Note: The previous commands are for debian, you shall adecuate it to your distro requirements.
+
 2. Bake assets before building (*or when they change*): `./bake_assets.sh`
 
-### (Optional) Build for Windows from linux (*Only x86-64*)
-1. Make sure you installed mingw-w64 in the previous step
-2. Paste the following snippet to download the required libraries for mingw
-```sh
-mkdir mingw_libs
-```
-SDL2 libs *(prebuilt)*:
-```sh
-# SDL
-wget -P mingw_libs https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-mingw.tar.gz
-# SDL_image
-wget -P mingw_libs https://github.com/libsdl-org/SDL_image/releases/download/release-2.6.3/SDL2_image-devel-2.6.3-mingw.tar.gz
-```
-Box2D libs *(sadly, not prebuilt)*:
-```sh
-# Clone the Box2D repository
-git clone -b 'v2.4.1' --single-branch --depth 1 https://github.com/erincatto/box2d mingw_libs/box2d
-mkdir mingw_libs/box2d/build_mingw
-cd mingw_libs/box2d/build_mingw
-cmake -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DBUILD_SHARED_LIBS=ON -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=$(pwd)/../install_mingw ..
-make -j$(nproc)
-make install
-cd ../../..
-```
-3. Extract the libraries in mingw_libs
-```sh
-for a in mingw_libs/*.tar.gz; do tar zxvf $a -C mingw_libs; done
-rm mingw_libs/*.tar.gz
-```
-4. NOTE: In order to play it, you need to run CPack to gather all the DLLs and other resources.
+3. Run `make_libs.sh` this will automatically download and build all the required static libs like SDL, box2d, etc.
 
 # Build and Run
 1. You can use vscode extension for CMake for configure/build/pack. *(This is what I use because it's comfortable).*

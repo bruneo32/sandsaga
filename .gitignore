@@ -5,4 +5,4 @@ res/*.bak
 src/assets/res
 
 # Libraries
-mingw_libs/
+libs/

@@ -5,13 +5,13 @@
 		"*.hpp": "cpp",
 	},
 	"C_Cpp.default.includePath": [
-		"/usr/include/SDL2",
-		"/usr/include/box2d"
+		"libs/SDL/include",
+		"libs/box2d/include",
 	],
 	"clangd.fallbackFlags": [
 		"-xc",
-		"-I/usr/include/SDL2",
-		"-I/usr/include/box2d",
+		"libs/SDL/include",
+		"libs/box2d/include",
 		"-Wno-switch"
 	],
 	"cmake.configureOnOpen": false,
