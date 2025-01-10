@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 99)
 
 # TODO: test ARM executable
 # Box2D somehow does not work with less than -O2 level
-set(COMMON_FLAGS "-O2 -march=${PROCESSOR} -mtune=generic -flto -fno-builtin-memcpy")
+set(COMMON_FLAGS "-O2 -march=${PROCESSOR} -mtune=generic -flto")
 
 set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
 set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -Wall -Wno-switch -Wno-format-truncation -g")

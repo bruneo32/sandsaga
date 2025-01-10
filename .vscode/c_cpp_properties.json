@@ -3,8 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "/usr/include/SDL2",
-                "/usr/include/box2d",
+                "libs/SDL/include",
+                "libs/box2d/include",
                 "/usr/include"
             ],
             "defines": [],
