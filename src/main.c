@@ -125,6 +125,7 @@ int main(int argc, char *argv[]) {
 		/* Calculate ticks */
 		Uint32 currentTicks = SDL_GetTicks();
 		Uint32 delta		= currentTicks - prevTicks;
+		float  dt			= (float)delta / 1000.0;
 		prevTicks			= currentTicks;
 
 		/* =============================================================== */
@@ -332,6 +333,10 @@ int main(int argc, char *argv[]) {
 
 		/* Update gameboard, entities and physics after all */
 		update_gameboard();
+
+		/* =============================================================== */
+		/* Step animations */
+		step_animation(player.animation, dt);
 
 		/* =============================================================== */
 		/* Draw game */

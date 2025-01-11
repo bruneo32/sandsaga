@@ -1,6 +1,93 @@
 #include "entities.h"
 
+#include "bonerig.h"
+
 #define SLOPE 4
+
+Bone player_bone_rig[] = {
+	/* Base bone */
+	{NULL, {degtorad(0.0f), 0.0f}, {0.0}},
+	/* Left shoulder */
+	{&player_bone_rig[0], {degtorad(-140.0f), 5.0f}, {0.0}},
+	/* Right shoulder */
+	{&player_bone_rig[0], {degtorad(-40.0f), 5.0f}, {0.0}},
+	/* Left leg */
+	{&player_bone_rig[0], {degtorad(110.0f), 4.0f}, {0.0}},
+	/* Right leg */
+	{&player_bone_rig[0], {degtorad(70.0f), 4.0f}, {0.0}},
+	/* Head */
+	{&player_bone_rig[0], {degtorad(-90.0f), 7.0f}, {0.0}},
+};
+const size_t player_bone_count =
+	sizeof(player_bone_rig) / sizeof(*player_bone_rig);
+
+#define PSF	  4.0f
+#define PSF_2 (PSF * 2)
+
+SkinRig player_skin_rig[] = {
+	/* Chest */
+	{{20, 24, 24, 36}, {25.0f / PSF_2, 36.0f / PSF_2}},
+	/* Left upper arm */
+	{{0, 24, 8, 38}, {1.0f, 1.0f}},
+	/* Right upper arm */
+	{{55, 24, 8, 38}, {1.0f, 1.0f}},
+	/* Left leg */
+	{{10, 57, 8, 38}, {1.0f, 1.0f}},
+	/* Right leg */
+	{{45, 57, 8, 38}, {1.0f, 1.0f}},
+	/* Head */
+	{{19, 0, 24, 21}, {24.0f / PSF_2, 21.0f / PSF_2}},
+};
+const size_t player_skin_count =
+	sizeof(player_skin_rig) / sizeof(*player_skin_rig);
+
+static BoneAnimation anim_player_idle = {
+	0,
+	2,
+	{
+		{BA_TRANSITION,
+		 4,
+		 {{&player_bone_rig[1], 0.0},
+		  {&player_bone_rig[2], 0.0},
+		  {&player_bone_rig[3], 0.0},
+		  {&player_bone_rig[4], 0.0}}},
+		{0.3f,
+		 4,
+		 {{&player_bone_rig[1], 0.0},
+		  {&player_bone_rig[2], 0.0},
+		  {&player_bone_rig[3], 0.0},
+		  {&player_bone_rig[4], 0.0}}},
+	},
+};
+
+static BoneAnimation anim_player_walk = {
+	0,
+	3,
+	{
+		{BA_TRANSITION,
+		 4,
+		 {{&player_bone_rig[1], 0.0},
+		  {&player_bone_rig[2], 0.0},
+		  {&player_bone_rig[3], 0.0},
+		  {&player_bone_rig[4], 0.0}}},
+		{0.4f,
+		 4,
+		 {
+			 {&player_bone_rig[1], 20.0},
+			 {&player_bone_rig[2], -20.0},
+			 {&player_bone_rig[3], -20.0},
+			 {&player_bone_rig[4], 20.0},
+		 }},
+		{0.8f,
+		 4,
+		 {
+			 {&player_bone_rig[1], -20.0},
+			 {&player_bone_rig[2], 20.0},
+			 {&player_bone_rig[3], 20.0},
+			 {&player_bone_rig[4], -20.0},
+		 }},
+	},
+};
 
 void create_player_body(Player *player) {
 	player->body =
@@ -28,6 +115,8 @@ void create_player_body(Player *player) {
 		player->body,
 		box2d_shape_circle(player_width_div4_u, 0, player_mhd2_p_wd4m1_u),
 		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f);
+
+	player->animation = &anim_player_idle;
 }
 
 void move_player(Player *player, const Uint8 *keyboard) {
@@ -74,7 +163,13 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	if (hspeed != 0) {
 		player->fliph = (hspeed < 0) ? true : false;
 		hspeed *= player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED;
-		if (!player->flying)
+		if (!player->flying) {
+			if (player_is_on_floor) {
+				play_animation(&player->animation, &anim_player_walk, false);
+			} else {
+				play_animation(&player->animation, &anim_player_idle, false);
+			}
+
 			if (player_is_on_wall && SIGN(hspeed) == SIGN(facing)) {
 				hspeed *= (float)facing * fabsf(ray_forward.normal_y);
 				if (player_is_on_floor)
@@ -83,8 +178,12 @@ void move_player(Player *player, const Uint8 *keyboard) {
 			} else if (player_is_on_floor) {
 				box2d_body_add_velocity(player->body, 0, 0.8f);
 			}
+		} else {
+			play_animation(&player->animation, &anim_player_idle, false);
+		}
 		box2d_body_set_velocity_h(player->body, hspeed);
 	} else if (player->flying || player_is_on_floor) {
+		play_animation(&player->animation, &anim_player_idle, false);
 		box2d_body_set_velocity_h(player->body, 0);
 	}
 
@@ -301,13 +400,27 @@ void draw_player(Player *player, SDL_Rect *camera) {
 	const float player_screen_x = player->x - camera->x;
 	const float player_screen_y = player->y - camera->y;
 
-	const float player_width_2	= (float)player->width / 2.0f;
-	const float player_height_2 = (float)player->height / 2.0f;
-
 	const float player_angle	 = box2d_body_get_angle(player->body);
 	const float player_angle_deg = radtodeg(player_angle);
 
-	Render_image_ext(player->sprite->texture, player_screen_x - player_width_2,
-					 player_screen_y - player_height_2, player->width,
-					 player->height, player_angle_deg, NULL, player->fliph);
+	for (size_t k = 0; k < player_skin_count; ++k) {
+		Bone	*bone	 = &player_bone_rig[k];
+		SkinRig *skinrig = &player_skin_rig[k];
+
+		float bone_x, bone_y, bone_angle;
+		bone_get_world_position(bone, player_angle, &bone_x, &bone_y,
+								&bone_angle);
+
+		double angle = bone->anim_data.angle + player_angle_deg;
+
+		SDL_FRect skin_dst = {bone_x, bone_y,
+							  (int)((float)skinrig->subimage.w / PSF),
+							  (int)((float)skinrig->subimage.h / PSF)};
+		skin_dst.x += player_screen_x - skinrig->center.x;
+		skin_dst.y += player_screen_y - skinrig->center.y;
+
+		SDL_RenderCopyExF(__renderer, player->sprite->texture,
+						  &skinrig->subimage, &skin_dst, angle,
+						  &skinrig->center, SDL_FLIP_NONE);
+	}
 }
