@@ -29,6 +29,7 @@ typedef struct _Bone {
 } Bone;
 
 typedef struct _SkinRig {
+	Bone	  *bone;
 	SDL_Rect   subimage;
 	SDL_FPoint center;
 } SkinRig;

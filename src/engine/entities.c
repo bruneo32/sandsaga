@@ -25,18 +25,18 @@ const size_t player_bone_count =
 #define PSF_2 (PSF * 2)
 
 SkinRig player_skin_rig[] = {
-	/* Chest */
-	{{20, 24, 24, 36}, {25.0f / PSF_2, 36.0f / PSF_2}},
-	/* Left upper arm */
-	{{0, 24, 8, 38}, {1.0f, 1.0f}},
 	/* Right upper arm */
-	{{55, 24, 8, 38}, {1.0f, 1.0f}},
-	/* Left leg */
-	{{10, 57, 8, 38}, {1.0f, 1.0f}},
+	{&player_bone_rig[2], {55, 24, 8, 38}, {1.0f, 1.0f}},
 	/* Right leg */
-	{{45, 57, 8, 38}, {1.0f, 1.0f}},
+	{&player_bone_rig[4], {45, 57, 8, 38}, {1.0f, 1.0f}},
+	/* Left leg */
+	{&player_bone_rig[3], {10, 57, 8, 38}, {1.0f, 1.0f}},
+	/* Chest */
+	{&player_bone_rig[0], {20, 24, 24, 36}, {25.0f / PSF_2, 36.0f / PSF_2}},
+	/* Left upper arm */
+	{&player_bone_rig[1], {0, 24, 8, 38}, {1.0f, 1.0f}},
 	/* Head */
-	{{19, 0, 24, 21}, {24.0f / PSF_2, 21.0f / PSF_2}},
+	{&player_bone_rig[5], {19, 0, 24, 21}, {24.0f / PSF_2, 21.0f / PSF_2}},
 };
 const size_t player_skin_count =
 	sizeof(player_skin_rig) / sizeof(*player_skin_rig);
@@ -404,8 +404,8 @@ void draw_player(Player *player, SDL_Rect *camera) {
 	const float player_angle_deg = radtodeg(player_angle);
 
 	for (size_t k = 0; k < player_skin_count; ++k) {
-		Bone	*bone	 = &player_bone_rig[k];
 		SkinRig *skinrig = &player_skin_rig[k];
+		Bone	*bone	 = skinrig->bone;
 
 		float bone_x, bone_y, bone_angle;
 		bone_get_world_position(bone, player_angle, &bone_x, &bone_y,
