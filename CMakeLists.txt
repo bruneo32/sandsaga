@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD 99)
 set(COMMON_FLAGS "-O2 -march=${PROCESSOR} -mtune=generic -flto")
 
 set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
-set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -Wall -Wno-switch -Wno-format-truncation -g")
+set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -g -Wall -Wno-switch -Wno-format-truncation -Wno-unused-but-set-variable")
 set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 

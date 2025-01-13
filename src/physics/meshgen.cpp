@@ -73,10 +73,10 @@ const uint8_t LUT_MSQR_VALID[] = {
 	0b01010010,
 };
 
-std::vector<mbPoint> traverse_contour(uint8_t *plist, const size_t list_width,
-									  const size_t list_height,
-									  const size_t start_j,
-									  const size_t start_i,
+std::vector<mbPoint> traverse_contour(uint8_t *plist, const ssize_t list_width,
+									  const ssize_t list_height,
+									  const ssize_t start_j,
+									  const ssize_t start_i,
 									  uint8_t	   polygon_index) {
 
 	std::vector<mbPoint>	result = std::vector<mbPoint>();
@@ -273,30 +273,30 @@ std::vector<mbPoint> traverse_contour(uint8_t *plist, const size_t list_width,
 }
 
 std::vector<PolyList>
-create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
-							  size_t end_j,
-							  bool (*is_valid)(size_t y, size_t x)) {
+create_pointlist_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+							  ssize_t end_j,
+							  bool (*is_valid)(ssize_t y, ssize_t x)) {
 
-	const size_t list_width	 = end_i - start_i;
-	const size_t list_height = end_j - start_j;
+	const ssize_t list_width	 = end_i - start_i;
+	const ssize_t list_height = end_j - start_j;
 
 	uint8_t *plist =
 		(uint8_t *)calloc(list_height * list_width, sizeof(uint8_t));
 
-	for (size_t j = 0; j < list_height; ++j) {
-		for (size_t i = 0; i < list_width; ++i) {
-			const size_t centerv = j + start_j;
-			const size_t centerh = i + start_i;
+	for (ssize_t j = 0; j < list_height; ++j) {
+		for (ssize_t i = 0; i < list_width; ++i) {
+			const ssize_t centerv = j + start_j;
+			const ssize_t centerh = i + start_i;
 
 			if (!is_valid(centerv, centerh)) {
 				plist[j * list_width + i] = 0;
 				continue;
 			}
 
-			const size_t top	= centerv - 1;
-			const size_t bottom = centerv + 1;
-			const size_t left	= centerh - 1;
-			const size_t right	= centerh + 1;
+			const ssize_t top	= centerv - 1;
+			const ssize_t bottom = centerv + 1;
+			const ssize_t left	= centerh - 1;
+			const ssize_t right	= centerh + 1;
 
 			uint8_t checksum =
 				(VERTEX_IS_IN_BOUNDS(i - 1, j - 1) ? is_valid(top, left) << 7
@@ -350,11 +350,11 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 	size_t	prev		 = 0;
 	uint8_t curr_idx	 = 0;
 	uint8_t outside_poly = 0;
-	for (ssize_t j = 0; j < list_height; ++j) {
+	for (ssize_t j = 0; j < (ssize_t)list_height; ++j) {
 		/* Ray as line from 0 to i */
 		size_t h_vertex_count = 0;
 
-		for (ssize_t i = 0; i < list_width; ++i) {
+		for (ssize_t i = 0; i < (ssize_t)list_width; ++i) {
 			uint8_t current = Get_plist(plist, i, j);
 
 			if (current == 0) {
@@ -412,8 +412,8 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 	for (PolyList &poly : result)
 		for (std::vector<mbPoint> &path : poly.polygon) {
 			for (auto it = path.begin(); it != path.end();) {
-				const size_t i = static_cast<size_t>(it->at(0));
-				const size_t j = static_cast<size_t>(it->at(1));
+				const ssize_t i = static_cast<ssize_t>(it->at(0));
+				const ssize_t j = static_cast<ssize_t>(it->at(1));
 
 				/* Don't erase subchunk edges */
 				if (i == 0 || j == 0 || i == list_width - 1 ||
@@ -422,10 +422,10 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 					continue;
 				}
 
-				const size_t top	= j - 1;
-				const size_t bottom = j + 1;
-				const size_t left	= i - 1;
-				const size_t right	= i + 1;
+				const ssize_t top	= j - 1;
+				const ssize_t bottom = j + 1;
+				const ssize_t left	= i - 1;
+				const ssize_t right	= i + 1;
 
 				uint8_t checksum =
 					(VERTEX_IS_IN_BOUNDS(left, top)
@@ -490,8 +490,8 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 	for (PolyList &polygon : result)
 		for (std::vector<mbPoint> &path : polygon.polygon) {
 			for (mbPoint &point : path) {
-				const size_t i = static_cast<size_t>(point.at(0));
-				const size_t j = static_cast<size_t>(point.at(1));
+				const ssize_t i = static_cast<ssize_t>(point.at(0));
+				const ssize_t j = static_cast<ssize_t>(point.at(1));
 
 				plist[j * list_width + i] = polygon.index;
 			}
@@ -503,8 +503,8 @@ create_pointlist_from_contour(size_t start_i, size_t end_i, size_t start_j,
 }
 
 std::vector<PolyList>
-rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
-						  size_t end_j, bool (*is_valid)(size_t x, size_t y)) {
+rdp_simplify_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+						  ssize_t end_j, bool (*is_valid)(ssize_t x, ssize_t y)) {
 
 	std::vector<PolyList> inputPoints =
 		create_pointlist_from_contour(start_i, end_i, start_j, end_j, is_valid);
@@ -542,8 +542,8 @@ rdp_simplify_from_contour(size_t start_i, size_t end_i, size_t start_j,
 	return result;
 }
 
-TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
-						  size_t end_j, bool (*is_valid)(size_t x, size_t y)) {
+TriangleMesh *triangulate(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+						  ssize_t end_j, bool (*is_valid)(ssize_t x, ssize_t y)) {
 
 	std::vector<PolyList> polylist = rdp_simplify_from_contour(
 		start_i, end_i, start_j, end_j, is_valid);
@@ -599,9 +599,9 @@ TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
 	return mesh;
 }
 
-CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
-							  size_t end_j,
-							  bool (*is_valid)(size_t x, size_t y)) {
+CList *loopchain_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+							  ssize_t end_j,
+							  bool (*is_valid)(ssize_t x, ssize_t y)) {
 
 	std::vector<PolyList> inputPoints =
 		rdp_simplify_from_contour(start_i, end_i, start_j, end_j, is_valid);

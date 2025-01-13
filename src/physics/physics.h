@@ -141,12 +141,12 @@ void box2d_sweep_raycast(b2Body *body, RaycastData *output, int numRays,
 
 /* =============================================================== */
 /* Meshgen functions */
-TriangleMesh *triangulate(size_t start_i, size_t end_i, size_t start_j,
-						  size_t end_j, bool (*is_valid)(size_t x, size_t y));
+TriangleMesh *triangulate(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+						  ssize_t end_j, bool (*is_valid)(ssize_t x, ssize_t y));
 
-CList *loopchain_from_contour(size_t start_i, size_t end_i, size_t start_j,
-							  size_t end_j,
-							  bool (*is_valid)(size_t x, size_t y));
+CList *loopchain_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+							  ssize_t end_j,
+							  bool (*is_valid)(ssize_t x, ssize_t y));
 
 void convert_triangle_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
 									 double *centroid_y);

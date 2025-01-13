@@ -1,6 +1,13 @@
 #ifndef _UTILS_H
 #define _UTILS_H
 
+#ifndef _WIN32
+#include <stddef.h>
+typedef ptrdiff_t ssize_t;
+#else
+#include <unistd.h>
+#endif
+
 #ifdef __cplusplus
 #include <cmath>
 #include <cstdint>
@@ -28,13 +35,15 @@
 
 /* =============================================================== */
 /* Mathematics */
-#ifndef M_PI
-#define M_E	   2.7182818284590452354  /* e */
-#define M_PI   3.14159265358979323846 /* pi */
-#define M_PI_2 1.57079632679489661923 /* pi/2 */
-#endif
-#define M_2PI			   6.28318530717958647688
-#define M_TWO_THIRDS_PLUS1 1.666666
+#undef M_E
+#undef M_PI
+#undef M_PI_2
+#define M_E	   2.71828182845904523536028747135266249 /* e */
+#define M_PI   3.14159265358979323846264338327950288 /* pi */
+#define M_PI_2 1.57079632679489661923132169163975144 /* pi/2 */
+#define M_2PI				6.28318530717958647692528676655900576 /* 2*pi */
+
+#define M_TWO_THIRDS_PLUS1	1.666666
 
 #define fequals_E(f1, f2, epsilon)	(fabs(f1 - f2) <= epsilon)
 #define fequalsf_E(f1, f2, epsilon) (fabsf(f1 - f2) <= epsilon)
