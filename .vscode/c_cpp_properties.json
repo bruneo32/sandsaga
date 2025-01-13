@@ -4,6 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "libs/SDL/include",
+                "libs/SDL_image",
                 "libs/box2d/include/box2d",
                 "/usr/include"
             ],

@@ -4,11 +4,6 @@
 		"*.ci": "c",
 		"*.hpp": "cpp",
 	},
-	"C_Cpp.default.includePath": [
-		"/usr/include",
-		"libs/SDL/include",
-		"libs/box2d/include/box2d",
-	],
 	"cmake.configureOnOpen": false,
 	"cmake.configureOnEdit": false,
 	"cmake.clearOutputBeforeBuild": false,
