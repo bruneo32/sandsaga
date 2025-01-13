@@ -24,7 +24,7 @@ project(sandsaga
 	)
 
 link_libraries(
-	m # Link lib-math
+	m	# libm (math)
 	)
 
 # ===============================================================

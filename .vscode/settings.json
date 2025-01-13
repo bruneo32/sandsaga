@@ -6,12 +6,12 @@
 	},
 	"C_Cpp.default.includePath": [
 		"libs/SDL/include",
-		"libs/box2d/include",
+		"libs/box2d/include/box2d",
 	],
 	"clangd.fallbackFlags": [
 		"-xc",
 		"libs/SDL/include",
-		"libs/box2d/include",
+		"libs/box2d/include/box2d",
 		"-Wno-switch"
 	],
 	"cmake.configureOnOpen": false,
