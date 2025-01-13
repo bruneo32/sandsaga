@@ -57,7 +57,7 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
 
 /** Returns true if any object was updated, false otherwise */
 void update_gameboard();
-void draw_gameboard_world(const SDL_Rect *camera);
+void draw_gameboard_world(const SDL_FRect *camera);
 
 /* =============================================================== */
 /* Chunks */

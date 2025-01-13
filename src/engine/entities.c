@@ -8,9 +8,9 @@ Bone player_bone_rig[] = {
 	/* Base bone */
 	{NULL, {degtorad(0.0f), 0.0f}, {0.0}},
 	/* Left shoulder */
-	{&player_bone_rig[0], {degtorad(-140.0f), 5.0f}, {0.0}},
+	{&player_bone_rig[0], {degtorad(-136.0f), 5.0f}, {0.0}},
 	/* Right shoulder */
-	{&player_bone_rig[0], {degtorad(-40.0f), 5.0f}, {0.0}},
+	{&player_bone_rig[0], {degtorad(-44.0f), 5.0f}, {0.0}},
 	/* Left leg */
 	{&player_bone_rig[0], {degtorad(110.0f), 4.0f}, {0.0}},
 	/* Right leg */
@@ -42,26 +42,28 @@ const size_t player_skin_count =
 	sizeof(player_skin_rig) / sizeof(*player_skin_rig);
 
 static BoneAnimation anim_player_idle = {
-	0,
+	0.0f,
 	2,
 	{
 		{BA_TRANSITION,
-		 4,
+		 5,
 		 {{&player_bone_rig[1], 0.0},
 		  {&player_bone_rig[2], 0.0},
 		  {&player_bone_rig[3], 0.0},
-		  {&player_bone_rig[4], 0.0}}},
+		  {&player_bone_rig[4], 0.0},
+		  {&player_bone_rig[5], 0.0}}},
 		{0.3f,
-		 4,
+		 5,
 		 {{&player_bone_rig[1], 0.0},
 		  {&player_bone_rig[2], 0.0},
 		  {&player_bone_rig[3], 0.0},
-		  {&player_bone_rig[4], 0.0}}},
+		  {&player_bone_rig[4], 0.0},
+		  {&player_bone_rig[5], 0.0}}},
 	},
 };
 
 static BoneAnimation anim_player_walk = {
-	0,
+	0.0f,
 	3,
 	{
 		{BA_TRANSITION,
@@ -201,7 +203,7 @@ void move_player(Player *player, const Uint8 *keyboard) {
 }
 
 /** This is called after box2d_world_step */
-void move_camera(Player *player, SDL_Rect *camera) {
+void move_camera(Player *player, SDL_FRect *camera) {
 	float bx, by;
 	box2d_body_get_position(player->body, &bx, &by);
 
@@ -396,7 +398,7 @@ void move_camera(Player *player, SDL_Rect *camera) {
 	}
 }
 
-void draw_player(Player *player, SDL_Rect *camera) {
+void draw_player(Player *player, SDL_FRect *camera) {
 	const float player_screen_x = player->x - camera->x;
 	const float player_screen_y = player->y - camera->y;
 
@@ -414,13 +416,13 @@ void draw_player(Player *player, SDL_Rect *camera) {
 		double angle = bone->anim_data.angle + player_angle_deg;
 
 		SDL_FRect skin_dst = {bone_x, bone_y,
-							  (int)((float)skinrig->subimage.w / PSF),
-							  (int)((float)skinrig->subimage.h / PSF)};
+							  ((float)skinrig->subimage.w / PSF),
+							  ((float)skinrig->subimage.h / PSF)};
 		skin_dst.x += player_screen_x - skinrig->center.x;
 		skin_dst.y += player_screen_y - skinrig->center.y;
 
 		SDL_RenderCopyExF(__renderer, player->sprite->texture,
-						  &skinrig->subimage, &skin_dst, angle,
-						  &skinrig->center, SDL_FLIP_NONE);
+						 &skinrig->subimage, &skin_dst, angle, &skinrig->center,
+						 SDL_FLIP_NONE);
 	}
 }
