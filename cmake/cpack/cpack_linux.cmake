@@ -17,7 +17,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(CPACK_DEBIAN_COMPRESSION_TYPE "gzip")
 	set(CPACK_DEBIAN_PACKAGE_HOMEPAGE ${PROJECT_HOMEPAGE_URL})
 	set(CPACK_DEBIAN_PACKAGE_SECTION "games")
-	set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsdl2-2.0-0, libsdl2-image-2.0-0, libbox2d2")
+	set(CPACK_DEBIAN_PACKAGE_DEPENDS "")
 	# Architecture
 	if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
 		set(DEBIAN_ARCH "amd64")
@@ -32,7 +32,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(CPACK_RPM_PACKAGE_GROUP "Games")
 	set(CPACK_RPM_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
 	set(CPACK_RPM_PACKAGE_DESCRIPTION ${PROJECT_DESCRIPTION})
-	set(CPACK_RPM_PACKAGE_REQUIRES "SDL2 >= 2.0, SDL2_image >= 2.0, box2d >= 2.0")
+	set(CPACK_RPM_PACKAGE_REQUIRES "")
 
 	# Since we are distributing a stripped version without debug symbols,
 	# the build ID links serve no practical purpose for the end user.
