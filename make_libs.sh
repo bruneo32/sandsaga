@@ -3,7 +3,7 @@
 _CWD=$(pwd)
 
 COMMON_FLAGS="-mtune=generic -O2 -flto"
-COMMON_FLAGS_WIN="-mtune=generic -O2 -flto -fopenmp -m64 -funroll-loops -msha"
+COMMON_FLAGS_WIN="$COMMON_FLAGS -fopenmp -m64 -funroll-loops -msha"
 
 FLAGS_AMD64=(
 	-DCMAKE_SYSTEM_NAME=Linux
@@ -55,8 +55,17 @@ build_sdl() {
 	local install_dir="$build_dir/../$2"
 	local flags=("${!3}")
 
+	if [[ $2 == "install_mingw" ]]; then
+		# Windows libs are DLL, not static
+		local ISDLL=ON
+		local ISNDLL=OFF
+	else
+		local ISDLL=OFF
+		local ISNDLL=ON
+	fi
+
 	if [[ ! -d "$build_dir" ]]; then
-		TFLAGS="-DSDL_STATIC=ON -DSDL_SHARED=OFF -DBUILD_SHARED_LIBS=OFF"
+		TFLAGS="-DSDL_STATIC=$ISNDLL -DSDL_SHARED=$ISDLL -DBUILD_SHARED_LIBS=$ISDLL -DSDL_DYNAMIC_API=$ISDLL"
 		mkdir -p "$build_dir" && cd "$build_dir"
 		cmake "${flags[@]}" $TFLAGS -DCMAKE_INSTALL_PREFIX="$install_dir" ..
 		make -j$(nproc)
@@ -76,10 +85,22 @@ build_sdl_image() {
 	local install_dir="$build_dir/../$2"
 	local flags=("${!3}")
 
+	if [[ $2 == "install_mingw" ]]; then
+		# Windows libs are DLL, not static
+		local ISDLL=ON
+		local ISNDLL=OFF
+	else
+		local ISDLL=OFF
+		local ISNDLL=ON
+	fi
+
 	if [[ ! -d "$build_dir" ]]; then
-		TFLAGS="-DSDL_STATIC=ON -DBUILD_SHARED_LIBS=OFF -DSDL2_DIR=\"$_CWD/libs/SDL/$2/lib/cmake/SDL2\""
+		TFLAGS="-DSDL_STATIC=$ISNDLL -DBUILD_SHARED_LIBS=$ISDLL -DSDL_DYNAMIC_API=$ISDLL"
 		mkdir -p "$build_dir" && cd "$build_dir"
-		cmake "${flags[@]}" $TFLAGS -DCMAKE_PREFIX_PATH="$_CWD/libs/SDL/$2" -DCMAKE_INSTALL_PREFIX="$install_dir" ..
+		cmake "${flags[@]}" $TFLAGS \
+			-DSDL2_DIR="$_CWD/libs/SDL/$2/lib/cmake/SDL2" \
+			-DCMAKE_PREFIX_PATH="$_CWD/libs/SDL/$2" \
+			-DCMAKE_INSTALL_PREFIX="$install_dir" ..
 		make -j$(nproc)
 		make install
 		cd "$_CWD/libs"
@@ -91,8 +112,15 @@ build_box2d() {
 	local install_dir="$build_dir/../$2"
 	local flags=("${!3}")
 
+	if [[ $2 == "install_mingw" ]]; then
+		# Windows libs are DLL, not static
+		local ISDLL=ON
+	else
+		local ISDLL=OFF
+	fi
+
 	if [[ ! -d "$build_dir" ]]; then
-		TFLAGS="-DBUILD_SHARED_LIBS=OFF -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF"
+		TFLAGS="-DBUILD_SHARED_LIBS=$ISDLL -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF"
 		mkdir -p "$build_dir" && cd "$build_dir"
 		cmake "${flags[@]}" $TFLAGS -DCMAKE_INSTALL_PREFIX="$install_dir" ..
 		make -j$(nproc)

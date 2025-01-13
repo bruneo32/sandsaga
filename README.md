@@ -34,7 +34,8 @@ sudo ln -s /usr/bin/g++ /usr/bin/aarch64-linux-gnu-g++
 
 2. Bake assets before building (*or when they change*): `./bake_assets.sh`
 
-3. Run `make_libs.sh` this will automatically download and build all the required static libs like SDL, box2d, etc.
+3. Run `make_libs.sh` this will automatically download and build all the required static libs like SDL, box2d, etc. \
+**This will take a while, go for a coffee.**
 
 # Build and Run
 1. You can use vscode extension for CMake for configure/build/pack. *(This is what I use because it's comfortable).*

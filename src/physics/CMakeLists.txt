@@ -11,8 +11,11 @@ set_source_files_properties(${physics_src} PROPERTIES LANGUAGE CXX)
 
 add_library(physics STATIC ${physics_src})
 
-# Link graphics
-target_link_libraries(physics PRIVATE graphics)
+# Link required libs
+target_link_libraries(physics PRIVATE
+	graphics
+	box2d
+	)
 
 # Set C++ standard
 target_compile_features(physics PRIVATE cxx_std_17)

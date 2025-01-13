@@ -2,7 +2,7 @@
 #define PHYSICS_H
 
 #ifdef __cplusplus
-#include <box2d/box2d.h> /* Include Box2D only in C++ */
+#include <box2d.h> /* Include Box2D only in C++ */
 extern "C" {
 #include <cmath>
 #include <cstdint>
