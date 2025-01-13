@@ -379,7 +379,8 @@ void update_gameboard() {
 		/* Optimization, process whole line, since the whole line of subchunks
 		 * is active  */
 		if (subchunkopt[sj] == SUBCHUNK_ROW_COMPLETE) {
-			/* dummy ===> */ bool p; /* <=== dummy */
+			/* Dummy variable, but required to call inline_update_object_body */
+			static bool p __attribute__((used));
 			repeat(2) {
 				for (ssize_t j = end_j - 1; j >= start_j; --j) {
 					bool ltr = fast_rand() & 1;
@@ -563,7 +564,7 @@ void draw_gameboard_world(const SDL_FRect *camera) {
 	}
 }
 
-bool F_IS_FLOOR(size_t y, size_t x) {
+bool F_IS_FLOOR(ssize_t y, ssize_t x) {
 	return GO_IS_SOIL(GOBJECT(gameboard[y][x]));
 }
 
