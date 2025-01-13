@@ -8,9 +8,9 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	install(TARGETS ${PROJECT_NAME} DESTINATION sandsaga)
 	install(FILES
 		"${CMAKE_SOURCE_DIR}/LICENSE"
-		"${CMAKE_SOURCE_DIR}/mingw_libs/SDL2-2.26.5/x86_64-w64-mingw32/bin/SDL2.dll"
-		"${CMAKE_SOURCE_DIR}/mingw_libs/SDL2_image-2.6.3/x86_64-w64-mingw32/bin/SDL2_image.dll"
-		"${CMAKE_SOURCE_DIR}/mingw_libs/box2d/install_mingw/bin/libbox2d.dll"
+		"${CMAKE_SOURCE_DIR}/libs/SDL/install_mingw/bin/SDL2.dll"
+		"${CMAKE_SOURCE_DIR}/libs/SDL_image/install_mingw/bin/SDL2_image.dll"
+		"${CMAKE_SOURCE_DIR}/libs/box2d/install_mingw/bin/libbox2d.dll"
 		"/usr/lib/gcc/x86_64-w64-mingw32/12-win32/libstdc++-6.dll"
 		"/usr/lib/gcc/x86_64-w64-mingw32/12-win32/libgcc_s_seh-1.dll"
 		DESTINATION sandsaga
