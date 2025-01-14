@@ -1,14 +1,22 @@
 #include "bonerig.h"
 
 void bone_get_world_position(Bone *bone, float theta, float *x, float *y,
-							 float *alpha) {
+							 float *alpha, bool fliph) {
 	float parent_x = 0.0f, parent_y = 0.0f, parent_angle = 0.0f;
 	float world_angle = bone->local.angle;
+
+	/* Horizontal mirror the bone origin when fliph is true */
+	if (fliph) {
+		const float world_angle_n = fmodf(world_angle, M_2PI);
+
+		const float xB = fmodf((world_angle_n - degtorad(90.0f)), M_2PI);
+		world_angle	   = fmodf((degtorad(90.0f) - world_angle_n), M_2PI);
+	}
 
 	if (bone->parent != NULL) {
 		/* Get the parent's propagated global position */
 		bone_get_world_position(bone->parent, theta, &parent_x, &parent_y,
-								&parent_angle);
+								&parent_angle, fliph);
 		/* Apply the parent's global rotation */
 		world_angle = parent_angle + world_angle;
 	} else {
@@ -32,7 +40,6 @@ void bone_get_world_position(Bone *bone, float theta, float *x, float *y,
 void step_animation(BoneAnimation *animation, float dt) {
 	if (animation->keyframe_count == 0)
 		return;
-
 
 	BoneKeyframe *first_keyframe = &animation->keyframes[0];
 	BoneKeyframe *last_keyframe =
