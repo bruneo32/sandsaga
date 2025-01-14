@@ -7,5 +7,6 @@ file(GLOB graphics_src
 	)
 
 add_library(graphics ${graphics_src})
+target_link_libraries(graphics PRIVATE SDL2)
 
 target_link_libraries(${PROJECT_NAME} graphics)

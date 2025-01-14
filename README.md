@@ -34,7 +34,7 @@ sudo ln -s /usr/bin/g++ /usr/bin/aarch64-linux-gnu-g++
 
 2. Bake assets before building (*or when they change*): `./bake_assets.sh`
 
-3. Run `make_libs.sh` this will automatically download and build all the required static libs like SDL, box2d, etc. \
+3. Run `./make_libs.sh all` this will automatically download and build all the required static libs like SDL, box2d, etc. \
 **This will take a while, go for a coffee.**
 
 # Build and Run
@@ -52,10 +52,10 @@ cpack --preset linux-release-x86_64      # Pack it for distribution
 The following table repesents the worst hardware where the game has been tested to work at ~60 FPS stable.
 |               |            **Windows (x86-64)**           |             **Linux (x86-64)**            |            **Linux (aarch64)**            |
 |--------------:|:-----------------------------------------:|:-----------------------------------------:|:-----------------------------------------:|
-| **Processor** | Intel Core i3 4130 / AMD Ryzen 3 1200     | Intel Core i3 4130 / AMD Ryzen 3 1200     | Rockchip RK3588                           |
-|    **Memory** | 4 GB RAM                                  | 4 GB RAM                                  | 4 GB RAM                                  |
+| **Processor** | Intel Core i3 4130 / AMD Ryzen 3 1200     | Intel Core i3 4130 / AMD Ryzen 3 1200     | Qualcomm Snapdragon 625 / Rockchip RK3588 |
+|    **Memory** | 0.99 GB RAM                               | 0.99 GB RAM                               | 0.99 GB RAM                               |
 |  **Graphics** | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 |
-|   **Storage** | 28 MB                                     | 2.0 MB                                    | 2.0 MB                                    |
+|   **Storage** | 28 MB                                     | 2.8 MB                                    | 2.8 MB                                    |
 |    **System** | Windows NT, DirectX11                     | GLIBC_2.29, GLIBCXX_3.4.29 *              | GLIBC_2.29, GLIBCXX_3.4.29 *              |
 > (*) GLIBC, and GLIBCXX shall be ABI compatible with this version.
 
