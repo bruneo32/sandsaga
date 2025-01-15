@@ -95,7 +95,7 @@ void step_animation(BoneAnimation *animation, float dt) {
 	}
 
 	if (current_keyframe != NULL) {
-		for (size_t i = 0; i < current_keyframe->data_count; ++i) {
+		for (size_t i = 0; i < animation->keyframe_bone_count; ++i) {
 			BoneKeyframeData *current_keyframe_data =
 				&current_keyframe->data[i];
 			BoneKeyframeData *next_keyframe_data = &next_keyframe->data[i];
@@ -112,6 +112,7 @@ void step_animation(BoneAnimation *animation, float dt) {
 
 void play_animation(BoneAnimation	   **dst_animation,
 					const BoneAnimation *animation_to_play, bool force) {
+	/* Do nothing if the animation hasn't changed */
 	if (!(force || *dst_animation != animation_to_play))
 		return;
 
@@ -130,7 +131,7 @@ void play_animation(BoneAnimation	   **dst_animation,
 			/* Not a merger */
 			return;
 
-		size_t ref_keyframe_count = (*dst_animation)->keyframe_count;
+		size_t ref_keyframe_count = (*dst_animation)->keyframe_bone_count;
 
 		for (size_t i = 0; i < ref_keyframe_count; ++i) {
 			BoneKeyframeData *ref_keyframe_data = &ref_keyframe->data[i];
