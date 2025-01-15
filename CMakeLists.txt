@@ -9,7 +9,6 @@ elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
 	set(PFLAGS "-march=armv8-a -mfix-cortex-a53-835769")
 endif()
 
-# TODO: test ARM executable
 # Box2D somehow does not work with less than -O2 level
 set(COMMON_FLAGS "-O2 -mtune=generic ${PFLAGS} \
 	-fopenmp -falign-functions=32 -ftree-vectorize -funroll-loops -ffast-math")
