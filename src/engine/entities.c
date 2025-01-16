@@ -6,7 +6,7 @@
 
 Bone player_bone_rig[] = {
 	/* Base bone */
-	{NULL, {degtorad(0.0f), 0.0f}, {0.0}},
+	{NULL, {0.0f, 0.0f}, {0.0}},
 	/* Left shoulder */
 	{&player_bone_rig[0], {degtorad(-136.0f), 5.0f}, {0.0}},
 	/* Right shoulder */
@@ -44,16 +44,15 @@ const size_t player_skin_count =
 static BoneAnimation anim_player_idle = {
 	0.0f,
 	2,
+	5,
 	{
 		{BA_TRANSITION,
-		 5,
 		 {{&player_bone_rig[1], 0.0},
 		  {&player_bone_rig[2], 0.0},
 		  {&player_bone_rig[3], 0.0},
 		  {&player_bone_rig[4], 0.0},
 		  {&player_bone_rig[5], 0.0}}},
-		{0.3f,
-		 5,
+		{0.2f,
 		 {{&player_bone_rig[1], 0.0},
 		  {&player_bone_rig[2], 0.0},
 		  {&player_bone_rig[3], 0.0},
@@ -65,29 +64,23 @@ static BoneAnimation anim_player_idle = {
 static BoneAnimation anim_player_walk = {
 	0.0f,
 	3,
+	4,
 	{
 		{BA_TRANSITION,
-		 4,
 		 {{&player_bone_rig[1], 0.0},
 		  {&player_bone_rig[2], 0.0},
 		  {&player_bone_rig[3], 0.0},
 		  {&player_bone_rig[4], 0.0}}},
 		{0.4f,
-		 4,
-		 {
-			 {&player_bone_rig[1], 20.0},
-			 {&player_bone_rig[2], -20.0},
-			 {&player_bone_rig[3], -20.0},
-			 {&player_bone_rig[4], 20.0},
-		 }},
+		 {{&player_bone_rig[1], 20.0},
+		  {&player_bone_rig[2], -20.0},
+		  {&player_bone_rig[3], -20.0},
+		  {&player_bone_rig[4], 20.0}}},
 		{0.8f,
-		 4,
-		 {
-			 {&player_bone_rig[1], -20.0},
-			 {&player_bone_rig[2], 20.0},
-			 {&player_bone_rig[3], 20.0},
-			 {&player_bone_rig[4], -20.0},
-		 }},
+		 {{&player_bone_rig[1], -20.0},
+		  {&player_bone_rig[2], 20.0},
+		  {&player_bone_rig[3], 20.0},
+		  {&player_bone_rig[4], -20.0}}},
 	},
 };
 

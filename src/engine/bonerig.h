@@ -45,8 +45,6 @@ typedef struct _BoneKeyframeData {
 typedef struct _BoneKeyframe {
 	/* The moment of this keyframe, in seconds */
 	float moment;
-	/* Number of bones to animate */
-	size_t data_count;
 	/* Keyframe data for each bone */
 	BoneKeyframeData data[MAX_KEYFRAMES];
 } BoneKeyframe;
@@ -56,7 +54,11 @@ typedef struct _BoneAnimation {
 	float time;
 	/* Number of keyframes */
 	size_t keyframe_count;
-	/* Keyframes */
+	/* Number of bones on each keyframe */
+	size_t keyframe_bone_count;
+	/* Keyframes. Bones have to remain in the same order throughout the
+	 * animation, do not set bones in a different order at different
+	 *keyframes. */
 	BoneKeyframe keyframes[MAX_KEYFRAMES];
 } BoneAnimation;
 
