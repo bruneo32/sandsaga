@@ -23,7 +23,7 @@ extern BitFont __font_current;
  * @param str The string to calculate the width of.
  * @return The width of the string in pixels.
  */
-#define FSTR_WIDTH(str) (strlen(str) * BITFONT_CHAR_WIDTH)
+#define FSTR_WIDTH(str) (strlen((str)) * BITFONT_CHAR_WIDTH)
 
 /**
  * Draws a character from a font bitmap at the specified position.

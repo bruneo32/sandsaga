@@ -22,12 +22,20 @@
 #include "graphics/color.h"
 #include "graphics/font/font.h"
 #include "graphics/graphics.h"
+#include "ui/ui.h"
 #include "util.h"
 
 static size_t		 fps_	 = FPS;
 static volatile bool GAME_ON = true;
+static volatile bool PAUSED	 = false;
 
 static Player player;
+
+void F_QUITGAME() { GAME_ON = false; }
+void F_RESUME() {
+	PAUSED = false;
+	ui_set_cursor(0); /* Default cursor */
+}
 
 /** Handle `CTRL + C` to quit the game */
 void sigkillHandler(int signum) { GAME_ON = false; }
@@ -80,6 +88,21 @@ int main(int argc, char *argv[]) {
 
 	SDL_RenderGetViewport(__renderer, &window_viewport);
 	SDL_RenderGetScale(__renderer, &window_scale.x, &window_scale.y);
+
+	/* =============================================================== */
+	/* Init UI */
+	UIButton *btn_resume = UIButton_new(
+		"Resume", VIEWPORT_WIDTH_DIV_2,
+		VIEWPORT_HEIGHT_DIV_2 - BITFONT_CHAR_HEIGHT, UI_ALIGN_CENTER);
+
+	UIButton *btn_quit = UIButton_new(
+		"Quit game", VIEWPORT_WIDTH_DIV_2,
+		VIEWPORT_HEIGHT_DIV_2 + BITFONT_CHAR_HEIGHT, UI_ALIGN_CENTER);
+
+	btn_resume->onClick = F_RESUME;
+	btn_quit->onClick	= F_QUITGAME;
+
+	UICanvas pause_canvas = {2, {btn_resume, btn_quit}};
 
 	/* =============================================================== */
 	/* Initialize data */
@@ -174,8 +197,11 @@ int main(int argc, char *argv[]) {
 			case SDL_KEYDOWN: {
 				switch (_event.key.keysym.scancode) {
 				case SDL_SCANCODE_ESCAPE:
-					GAME_ON = false;
-					continue;
+					if (!PAUSED)
+						PAUSED = true;
+					else
+						F_RESUME();
+					break;
 				case SDL_SCANCODE_F4:
 					Render_TogleFullscreen;
 					ResetSubchunks; /* Redraw */
@@ -284,8 +310,8 @@ int main(int argc, char *argv[]) {
 		/* Update game */
 
 		/* Place/remove object at mouse pencil */
-		if ((mouse_buttons & (SDL_BUTTON(SDL_BUTTON_LEFT) |
-							  SDL_BUTTON(SDL_BUTTON_RIGHT))) != 0) {
+		if (!PAUSED && (mouse_buttons & (SDL_BUTTON(SDL_BUTTON_LEFT) |
+										 SDL_BUTTON(SDL_BUTTON_RIGHT))) != 0) {
 			byte _object = current_object;
 			if (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
 				current_object = GO_NONE;
@@ -319,7 +345,25 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* Move player before world_step */
-		move_player(&player, SDL_GetKeyboardState(NULL));
+		if (!PAUSED)
+			move_player(&player, SDL_GetKeyboardState(NULL));
+		else
+			canvas_process(&pause_canvas, mouse_buttons, mouse_x, mouse_y);
+
+		box2d_world_step(b2_world, FPS_DELTA, 10, 8);
+
+		/* Calculate soil collisions around player */
+		const size_t si = (size_t)(player.x) / SUBCHUNK_WIDTH;
+		const size_t sj = (size_t)(player.y) / SUBCHUNK_HEIGHT;
+		for (size_t j = sj - 2; j <= sj + 2; ++j) {
+			for (size_t i = si - 2; i <= si + 2; ++i) {
+				if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
+					activate_soil(i, j);
+				else
+					deactivate_soil(i, j);
+			}
+		}
+
 		/* Recalculate soil for active subchunks, not every frame since it is
 		 * expensive */
 		if (frame_cx % 4 == 0)
@@ -328,7 +372,6 @@ int main(int argc, char *argv[]) {
 					if (is_subchunk_active(si, sj))
 						recalculate_soil(si, sj);
 
-		box2d_world_step(b2_world, FPS_DELTA, 10, 8);
 		move_camera(&player, &camera); /* After world_step */
 
 		/* Update gameboard, entities and physics after all */
@@ -362,29 +405,33 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* Draw mouse pointer */
-		Color color;
-		memcpy(&color, &GO_COLORS[current_object], sizeof(color));
-		color.a = 0xAF;
+		if (!PAUSED) {
+			Color color;
+			memcpy(&color, &GO_COLORS[current_object], sizeof(color));
+			color.a = 0xAF;
 
-		if (block_size == 1) {
-			Render_Pixel_Color(mouse_x, mouse_y, color);
-		} else {
-			int_fast16_t bx =
-				(grid_mode
-					 ? (GRIDALIGN(mouse_wold_x, block_size) - (int)camera.x) +
-						   block_size / 2
-					 : mouse_x);
-			int_fast16_t by =
-				(grid_mode
-					 ? (GRIDALIGN(mouse_wold_y, block_size) - (int)camera.y) +
-						   block_size / 2
-					 : mouse_y);
+			if (block_size == 1) {
+				Render_Pixel_Color(mouse_x, mouse_y, color);
+			} else {
+				int_fast16_t bx =
+					(grid_mode ? (GRIDALIGN(mouse_wold_x, block_size) -
+								  (int)camera.x) +
+									 block_size / 2
+							   : mouse_x);
+				int_fast16_t by =
+					(grid_mode ? (GRIDALIGN(mouse_wold_y, block_size) -
+								  (int)camera.y) +
+									 block_size / 2
+							   : mouse_y);
 
-			for (int_fast16_t j = clamp_low((by - block_size / 2), 0);
-				 j < clamp_high(by + block_size / 2, VIEWPORT_HEIGHT); ++j) {
-				for (int_fast16_t i = clamp_low((bx - block_size / 2), 0);
-					 i < clamp_high(bx + block_size / 2, VIEWPORT_WIDTH); ++i) {
-					Render_Pixel_Color(i, j, color);
+				for (int_fast16_t j = clamp_low((by - block_size / 2), 0);
+					 j < clamp_high(by + block_size / 2, VIEWPORT_HEIGHT);
+					 ++j) {
+					for (int_fast16_t i = clamp_low((bx - block_size / 2), 0);
+						 i < clamp_high(bx + block_size / 2, VIEWPORT_WIDTH);
+						 ++i) {
+						Render_Pixel_Color(i, j, color);
+					}
 				}
 			}
 		}
@@ -400,6 +447,14 @@ int main(int argc, char *argv[]) {
 			snprintf(str_xy, sizeof(str_xy), "%i,%i", player.chunk_id.x,
 					 player.chunk_id.y);
 			draw_string(str_xy, 0, 0);
+		}
+
+		if (PAUSED) {
+			/* Draw transparent black background */
+			Render_Setcolor(C_DARK2);
+			Render_FillRect(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+			canvas_draw(&pause_canvas);
 		}
 
 		/* =============================================================== */
@@ -419,6 +474,8 @@ int main(int argc, char *argv[]) {
 				fps_ = FPS;
 		}
 	}
+
+	canvas_delete(&pause_canvas);
 
 	delete (player.sprite);
 

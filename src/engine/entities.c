@@ -181,18 +181,6 @@ void move_player(Player *player, const Uint8 *keyboard) {
 		play_animation(&player->animation, &anim_player_idle, false);
 		box2d_body_set_velocity_h(player->body, 0);
 	}
-
-	const size_t si = (size_t)(player->x) / SUBCHUNK_WIDTH;
-	const size_t sj = (size_t)(player->y) / SUBCHUNK_HEIGHT;
-
-	for (size_t j = sj - 2; j <= sj + 2; ++j) {
-		for (size_t i = si - 2; i <= si + 2; ++i) {
-			if (i >= si - 1 && i <= si + 1 && j >= sj - 1 && j <= sj + 1)
-				activate_soil(i, j);
-			else
-				deactivate_soil(i, j);
-		}
-	}
 }
 
 /** This is called after box2d_world_step */

@@ -20,6 +20,7 @@ typedef ptrdiff_t ssize_t;
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
 /* =============================================================== */
 /* The following definitions create errors in C++ */
 #define new(C) ((C *)calloc(sizeof(C), 1))
@@ -34,6 +35,27 @@ typedef ptrdiff_t ssize_t;
 #endif
 
 /* =============================================================== */
+/* For interoperability with SDL2 */
+typedef struct Point {
+	int x;
+	int y;
+} Point;
+typedef struct FPoint {
+	float x;
+	float y;
+} FPoint;
+typedef struct Rect {
+	int x, y;
+	int w, h;
+} Rect;
+typedef struct FRect {
+	float x;
+	float y;
+	float w;
+	float h;
+} FRect;
+
+/* =============================================================== */
 /* Mathematics */
 #undef M_E
 #undef M_PI
@@ -41,9 +63,9 @@ typedef ptrdiff_t ssize_t;
 #define M_E	   2.71828182845904523536028747135266249 /* e */
 #define M_PI   3.14159265358979323846264338327950288 /* pi */
 #define M_PI_2 1.57079632679489661923132169163975144 /* pi/2 */
-#define M_2PI				6.28318530717958647692528676655900576 /* 2*pi */
+#define M_2PI  6.28318530717958647692528676655900576 /* 2*pi */
 
-#define M_TWO_THIRDS_PLUS1	1.666666
+#define M_TWO_THIRDS_PLUS1 1.666666
 
 #define fequals_E(f1, f2, epsilon)	(fabs(f1 - f2) <= epsilon)
 #define fequalsf_E(f1, f2, epsilon) (fabsf(f1 - f2) <= epsilon)
@@ -102,6 +124,7 @@ typedef struct _CList {
 	}
 
 #define __repeat_body(n, v) for (size_t(v) = 0; (v) < (n); ++(v))
+
 #define repeat(n) __repeat_body(n, _tmp##__COUNTER__##_)
 
 /** Enable attribute packing in tcc compiler */

@@ -101,6 +101,13 @@ void Render_ResizeWindow(int newWidth, int newHeight, bool keepAspectRatio);
 #define Render_Line_Color(x1, y1, x2, y2, c)                                   \
 	Render_Line_RGBA(x1, y1, x2, y2, c.r, c.g, c.b, c.a)
 
+#define Render_Rect(x1, y1, x2, y2)                                            \
+	SDL_RenderDrawRect(__renderer,                                             \
+					   &(SDL_Rect){.x = x1, .y = y1, .w = x2, .h = y2});
+#define Render_FillRect(x1, y1, x2, y2)                                        \
+	SDL_RenderFillRect(__renderer,                                             \
+					   &(SDL_Rect){.x = x1, .y = y1, .w = x2, .h = y2});
+
 /**
  * Draw an ellipse.
  * @param rx horizontal radius
