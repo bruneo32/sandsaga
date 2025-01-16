@@ -81,12 +81,6 @@ typedef struct _TriangleMesh {
 	Triangle *triangles;
 } TriangleMesh;
 
-/* For interoperability with SDL2 */
-typedef struct Rect {
-	int x, y;
-	int w, h;
-} Rect;
-
 /* =============================================================== */
 /* Box2D World functions */
 b2World *box2d_world_create(float gravity_x, float gravity_y);
