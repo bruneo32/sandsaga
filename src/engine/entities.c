@@ -218,14 +218,46 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			/* Move world to bottom */
 			deactivate_soil_all;
 			box2d_world_move_all_bodies(b2_world, 0, X_TO_U(CHUNK_SIZE));
+
+			/* Save modified chunks to cache before erasing */
+			if (vctable[2][0].modified)
+				cache_chunk(vctable[2][0], CHUNK_SIZE_M2, 0);
+			if (vctable[2][1].modified)
+				cache_chunk(vctable[2][1], CHUNK_SIZE_M2, CHUNK_SIZE);
+			if (vctable[2][2].modified)
+				cache_chunk(vctable[2][2], CHUNK_SIZE_M2, CHUNK_SIZE_M2);
+
+			/* Overwrite vctable and gameboard */
+			memmove(&vctable[1][0], &vctable[0][0], 6 * sizeof(Chunk));
 			memmove(&gameboard[CHUNK_SIZE][0], &gameboard[0][0],
 					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at top */
 			chunk_xaxis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
-				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y - 1};
-				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE, 0);
+				Chunk chunk = {
+					.x		  = start_x + i,
+					.y		  = player->chunk_id.y - 1,
+					.modified = 0,
+				};
+				vctable[0][i] = chunk;
+
+				const size_t vx = i * CHUNK_SIZE;
+				const size_t vy = 0;
+
+				/* Find chunk in cache, else read it from disk,
+				 * otherwise generate it. */
+				byte *chunk_data = cache_get_chunk(chunk);
+				if (chunk_data != NULL) {
+					/* Dereference chunk line by line */
+					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
+						const size_t gby = vy + k;
+						memcpy(&gameboard[gby][vx],
+							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
+					}
+				} else {
+					generate_chunk(WORLD_SEED, chunk, vx, vy);
+				}
 			}
 			ResetSubchunks;
 		}
@@ -258,15 +290,46 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			/* Move world to top */
 			deactivate_soil_all;
 			box2d_world_move_all_bodies(b2_world, 0, -X_TO_U(CHUNK_SIZE));
+
+			/* Save modified chunks to cache before erasing */
+			if (vctable[0][0].modified)
+				cache_chunk(vctable[0][0], 0, 0);
+			if (vctable[0][1].modified)
+				cache_chunk(vctable[0][1], 0, CHUNK_SIZE);
+			if (vctable[0][2].modified)
+				cache_chunk(vctable[0][2], 0, CHUNK_SIZE_M2);
+
+			/* Overwrite vctable and gameboard */
+			memmove(&vctable[0][0], &vctable[1][0], 6 * sizeof(Chunk));
 			memmove(&gameboard[0][0], &gameboard[CHUNK_SIZE][0],
 					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at bottom */
 			chunk_xaxis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
-				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y + 1};
-				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE,
-							   CHUNK_SIZE_M2);
+				Chunk chunk = {
+					.x		  = start_x + i,
+					.y		  = player->chunk_id.y + 1,
+					.modified = 0,
+				};
+				vctable[2][i] = chunk;
+
+				const size_t vx = i * CHUNK_SIZE;
+				const size_t vy = CHUNK_SIZE_M2;
+
+				/* Find chunk in cache, else read it from disk,
+				 * otherwise generate it. */
+				byte *chunk_data = cache_get_chunk(chunk);
+				if (chunk_data != NULL) {
+					/* Dereference chunk line by line */
+					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
+						const size_t gby = vy + k;
+						memcpy(&gameboard[gby][vx],
+							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
+					}
+				} else {
+					generate_chunk(WORLD_SEED, chunk, vx, vy);
+				}
 			}
 			ResetSubchunks;
 		}
@@ -299,6 +362,20 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			/* Move world to right */
 			deactivate_soil_all;
 			box2d_world_move_all_bodies(b2_world, X_TO_U(CHUNK_SIZE), 0);
+
+			/* Save modified chunks to cache before erasing */
+			if (vctable[0][2].modified)
+				cache_chunk(vctable[0][2], 0, CHUNK_SIZE_M2);
+			if (vctable[1][2].modified)
+				cache_chunk(vctable[1][2], CHUNK_SIZE, CHUNK_SIZE_M2);
+			if (vctable[2][2].modified)
+				cache_chunk(vctable[2][2], CHUNK_SIZE_M2, CHUNK_SIZE_M2);
+
+			/* Overwrite vctable and gameboard */
+			for (uint_fast16_t j = 0; j < 3; ++j) {
+				vctable[j][2] = vctable[j][1];
+				vctable[j][1] = vctable[j][0];
+			}
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 				memmove(&gameboard[j][CHUNK_SIZE], &gameboard[j][0],
 						CHUNK_SIZE_M2);
@@ -307,8 +384,29 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			/* Generate new world at left */
 			chunk_yaxis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
-				Chunk chunk = {.x = player->chunk_id.x - 1, .y = start_j + j};
-				generate_chunk(WORLD_SEED, chunk, 0, j * CHUNK_SIZE);
+				Chunk chunk = {
+					.x		  = player->chunk_id.x - 1,
+					.y		  = start_j + j,
+					.modified = 0,
+				};
+				vctable[j][0] = chunk;
+
+				const size_t vx = 0;
+				const size_t vy = j * CHUNK_SIZE;
+
+				/* Find chunk in cache, else read it from disk,
+				 * otherwise generate it. */
+				byte *chunk_data = cache_get_chunk(chunk);
+				if (chunk_data != NULL) {
+					/* Dereference chunk line by line */
+					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
+						const size_t gby = vy + k;
+						memcpy(&gameboard[gby][vx],
+							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
+					}
+				} else {
+					generate_chunk(WORLD_SEED, chunk, vx, vy);
+				}
 			}
 			ResetSubchunks;
 		}
@@ -341,6 +439,20 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			/* Move world to left */
 			deactivate_soil_all;
 			box2d_world_move_all_bodies(b2_world, -X_TO_U(CHUNK_SIZE), 0);
+
+			/* Save modified chunks to cache before erasing */
+			if (vctable[0][0].modified)
+				cache_chunk(vctable[0][0], 0, 0);
+			if (vctable[1][0].modified)
+				cache_chunk(vctable[1][0], CHUNK_SIZE, 0);
+			if (vctable[2][0].modified)
+				cache_chunk(vctable[2][0], CHUNK_SIZE_M2, 0);
+
+			/* Overwrite vctable and gameboard */
+			for (uint_fast16_t j = 0; j < 3; ++j) {
+				vctable[j][0] = vctable[j][1];
+				vctable[j][1] = vctable[j][2];
+			}
 			for (uint_fast16_t j = 0; j < VSCREEN_HEIGHT; ++j) {
 				memmove(&gameboard[j][0], &gameboard[j][CHUNK_SIZE],
 						CHUNK_SIZE_M2);
@@ -349,9 +461,30 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			/* Generate new world at right */
 			chunk_yaxis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
-				Chunk chunk = {.x = player->chunk_id.x + 1, .y = start_j + j};
-				generate_chunk(WORLD_SEED, chunk, CHUNK_SIZE_M2,
-							   j * CHUNK_SIZE);
+				Chunk chunk = {
+					.x		  = player->chunk_id.x + 1,
+					.y		  = start_j + j,
+					.modified = 0,
+				};
+
+				vctable[j][2] = chunk;
+
+				const size_t vx = CHUNK_SIZE_M2;
+				const size_t vy = j * CHUNK_SIZE;
+
+				/* Find chunk in cache, else read it from disk,
+				 * otherwise generate it. */
+				byte *chunk_data = cache_get_chunk(chunk);
+				if (chunk_data != NULL) {
+					/* Dereference chunk line by line */
+					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
+						const size_t gby = vy + k;
+						memcpy(&gameboard[gby][vx],
+							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
+					}
+				} else {
+					generate_chunk(WORLD_SEED, chunk, vx, vy);
+				}
 			}
 			ResetSubchunks;
 		}
