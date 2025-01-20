@@ -37,7 +37,7 @@ extern subchunk_t subchunkopt[SUBCHUNK_SIZE];
 #define SUBCHUNK_ROW_COMPLETE ((subchunk_t)~0)
 
 typedef struct _SoilData {
-	b2Body	*body;
+	b2Body *body;
 } SoilData;
 extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
@@ -61,23 +61,27 @@ void draw_gameboard_world(const SDL_FRect *camera);
 
 /* =============================================================== */
 /* Chunks */
-#define CHUNK_MAX_X UINT16_MAX
-#define CHUNK_MAX_Y UINT16_MAX
+#define CHUNK_MAX_X (UINT16_MAX)
+#define CHUNK_MAX_Y (UINT8_MAX)
 
 typedef uint32_t seed_t;
-typedef uint16_t chunk_axis_t;
+typedef uint16_t chunk_xaxis_t;
+typedef uint8_t	 chunk_yaxis_t;
 typedef union chunk_u {
 	seed_t id;
 	struct {
-		chunk_axis_t y;
-		chunk_axis_t x;
+		chunk_xaxis_t x;
+		chunk_yaxis_t y;
+		/* Chunk flags*/
+		bit modified : 1;
+		bit reserved : 7; /* Padding to match seed_t size */
 	} PACKED;
 } Chunk;
 
 #define GEN_WATERSEA_OFFSET_X 128
-#define GEN_SKY_Y			  1024
-#define GEN_TOP_LAYER_Y		  1028
-#define GEN_BEDROCK_MARGIN_Y  512
+#define GEN_SKY_Y			  32
+#define GEN_TOP_LAYER_Y		  48
+#define GEN_BEDROCK_MARGIN_Y  (CHUNK_MAX_Y - 1)
 void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx, const size_t vy);
 
 /* =============================================================== */
