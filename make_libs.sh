@@ -16,7 +16,7 @@ else TARGETS=${@}; fi
 echo "Building for targets: ${TARGETS[*]}"
 
 # Define global flags
-AMD64_FLAGS="-march=x86-64 -m64 -mfma -mavx2 -mabm -mprefer-vector-width=256"
+AMD64_FLAGS="-march=x86-64 -m64 -mfma -mavx2 -mabm"
 ARM64_FLAGS="-march=armv8-a -mfix-cortex-a53-835769"
 
 COMMON_FLAGS="-O2 -mtune=generic -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer \
