@@ -4,7 +4,7 @@ cmake_policy(SET CMP0079 NEW)
 set(CMAKE_C_STANDARD 99)
 
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-	set(PFLAGS "-march=x86-64 -m64 -mfma -mavx2 -mabm -mprefer-vector-width=256")
+	set(PFLAGS "-march=x86-64 -m64 -mfma -mavx2 -mabm")
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
 	set(PFLAGS "-march=armv8-a -mfix-cortex-a53-835769")
 endif()
