@@ -17,7 +17,7 @@
 #define PATH_SEP_STR "\\"
 #include <io.h>
 #include <windows.h>
-#define mkdir(a)	   mkdir(a)
+#define mkdir(a) mkdir(a)
 /* not implemented in mingw */
 #define MAP_FAILED NULL
 #define PROT_READ  0x1
@@ -44,13 +44,18 @@ int	  munmap(void *addr, size_t length);
 #include <sys/statvfs.h>
 #include <sys/types.h>
 #include <unistd.h>
-#define mkdir(a)	   mkdir(a, 0755)
+#define mkdir(a) mkdir(a, 0755)
 #endif
+
+#define _1K (1024)
+#define _1M (_1K * _1K)
+#define _1G (_1M * _1K)
 
 extern char			 path_separator[2];
 extern char			*user_path;
 extern WorldControl *world_control;
 
-void disk_init();
+size_t check_disk_space(const char *path);
+void   disk_init();
 
 #endif // _DISK_H

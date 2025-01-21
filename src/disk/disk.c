@@ -4,31 +4,27 @@
 
 char path_separator[2];
 
-#define _1K (1024)
-#define _1M (_1K * _1K)
-#define _1G (_1M * _1K)
-
-char		 *user_path		   = NULL;
-WorldControl *world_control	   = NULL;
-int			  world_control_fd = -1;
+char *user_path = NULL;
 
 const char *game_folder			   = ".sandsaga" PATH_SEP_STR;
 const char *world_folder		   = "worlds" PATH_SEP_STR "Test" PATH_SEP_STR;
 const char *world_sparse_folder	   = "sparse" PATH_SEP_STR;
 const char *world_control_filename = "control";
+const char *world_data_filename	   = "data.bin";
 
 char *world_folder_path	 = NULL;
 char *world_control_path = NULL;
+char *world_data_path	 = NULL;
 
-static size_t check_disk_space(const char *path) {
+size_t check_disk_space(const char *path) {
 #ifdef _WIN32
 	ULARGE_INTEGER freeBytesAvailable, totalBytes, freeBytes;
 	if (GetDiskFreeSpaceExA(path, &freeBytesAvailable, &totalBytes,
 							&freeBytes)) {
 		return freeBytesAvailable.QuadPart;
 	}
-	logerr("Failed to query free space: (%lu) %s\n", GetLastError(),
-		   strerror(GetLastError()));
+	logerr("check_disk_space: Failed to query free space: (%lu) %s\n",
+		   GetLastError(), strerror(GetLastError()));
 	errno = GetLastError();
 	return 0;
 #else
@@ -36,8 +32,8 @@ static size_t check_disk_space(const char *path) {
 	if (statvfs(path, &stat) == 0) {
 		return stat.f_bavail * stat.f_frsize;
 	} else {
-		logerr("Failed to query free space: (%lu) %s\n", errno,
-			   strerror(errno));
+		logerr("check_disk_space: Failed to query free space: (%lu) %s\n",
+			   errno, strerror(errno));
 		return 0;
 	}
 #endif
@@ -63,6 +59,9 @@ static void mkdir_r(const char *path) {
 static void disk_deinit() {
 	if (world_control && world_control != MAP_FAILED)
 		munmap(world_control, sizeof(WorldControl));
+
+	if (world_data_fd)
+		close(world_data_fd);
 
 	if (world_control_fd)
 		close(world_control_fd);
@@ -105,7 +104,8 @@ void disk_init() {
 	/* Check if we have enough space */
 	const size_t free_space = check_disk_space(world_folder_path);
 	if (free_space < _1G) {
-		logerr("Disk small or running out of space (<1GB).\nFree space: "
+		logerr("disk_init: Disk small or running out of space (<1GB).\nFree "
+			   "space: "
 			   "%zu MB\n",
 			   free_space / _1M);
 		exit(1);
@@ -121,12 +121,14 @@ void disk_init() {
 
 	world_control_fd = open(world_control_path, O_RDWR | O_CREAT, 0644);
 	if (world_control_fd < 0) {
-		logerr("Failed to open world control file: %s\n", strerror(errno));
+		logerr("disk_init: Failed to open world control file: %s\n",
+			   strerror(errno));
 		exit(1);
 	}
 
 	if (ftruncate(world_control_fd, sizeof(WorldControl)) != 0) {
-		logerr("Failed to set world control file size: %s\n", strerror(errno));
+		logerr("disk_init: Failed to set world control file size: %s\n",
+			   strerror(errno));
 		exit(1);
 	}
 
@@ -135,19 +137,42 @@ void disk_init() {
 						 MAP_SHARED, world_control_fd, 0);
 
 	if (world_control == MAP_FAILED) {
-		logerr("Failed to map world control file: %s\n", strerror(errno));
+		logerr("disk_init: Failed to map world control file: %s\n",
+			   strerror(errno));
 		exit(1);
 	}
 
-	if (!world_control->version) {
+	const byte wversion = world_control->version;
+	if (!wversion) {
 		/* Initialize world control file */
 		world_control->version = SAVEFILE_VERSION;
 		world_control->seed	   = rand();
-	} else if (world_control->version != SAVEFILE_VERSION) {
-		logerr("World control file version mismatch. Expected: %d Got: %d\n",
-			   SAVEFILE_VERSION, world_control->version);
+		/* Initialize catable to INVALID_CATABLE */
+		memset(world_control->catable, INVALID_CATABLE,
+			   sizeof(world_control->catable));
+	} else if (wversion != SAVEFILE_VERSION) {
+		logerr("disk_init: World control file version mismatch. Expected: %u "
+			   "Got: %u\n",
+			   SAVEFILE_VERSION, wversion);
 		exit(1);
 	}
+
+	/* Create world data path */
+	world_data_path =
+		calloc(strlen(world_folder_path) + strlen(world_data_filename) + 1,
+			   sizeof(char));
+	strcpy(world_data_path, world_folder_path);
+	strcat(world_data_path, world_data_filename);
+
+	world_data_fd = open(world_data_path, O_RDWR | O_CREAT, 0644);
+	if (world_data_fd < 0) {
+		logerr("disk_init: Failed to open world data file: %s\n",
+			   strerror(errno));
+		exit(1);
+	}
+
+	/* Initialize worldctrl */
+	world_control_init(world_control);
 }
 
 #ifdef _WIN32
@@ -165,7 +190,7 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 		   off_t offset) {
 	HANDLE file_handle = (HANDLE)_get_osfhandle(fd);
 	if (file_handle == INVALID_HANDLE_VALUE) {
-		logerr("Invalid file handle: %d\n", fd);
+		logerr("mmap (WIN32): Invalid file handle: %d\n", fd);
 		return MAP_FAILED;
 	}
 
@@ -184,7 +209,7 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 	HANDLE mapping = CreateFileMapping(file_handle, NULL, protect, size_high,
 									   size_low, NULL);
 	if (!mapping) {
-		logerr("CreateFileMapping failed: %lu\n", GetLastError());
+		logerr("mmap (WIN32): CreateFileMapping failed: %lu\n", GetLastError());
 		return MAP_FAILED;
 	}
 
@@ -198,7 +223,7 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 	void *map = MapViewOfFile(mapping, access, offset_high, offset_low, length);
 	if (!map) {
 		CloseHandle(mapping);
-		logerr("MapViewOfFile failed: %lu\n", GetLastError());
+		logerr("mmap (WIN32): MapViewOfFile failed: %lu\n", GetLastError());
 		return MAP_FAILED;
 	}
 
@@ -207,7 +232,7 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd,
 
 int munmap(void *addr, size_t length) {
 	if (!UnmapViewOfFile(addr)) {
-		logerr("UnmapViewOfFile failed: %lu\n", GetLastError());
+		logerr("munmap (WIN32): UnmapViewOfFile failed: %lu\n", GetLastError());
 		return -1;
 	}
 	return 0;

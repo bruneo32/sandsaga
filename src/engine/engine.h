@@ -81,15 +81,19 @@ typedef union chunk_u {
 
 extern const Chunk CHUNK_ID_VALID_MASK;
 /* Get chunk id without flags, only x and y */
-#define CHUNK_ID(chunk_id) (((chunk_id).id) & (CHUNK_ID_VALID_MASK.id))
+#define CHUNK_ID(chunk_) (((chunk_).id) & (CHUNK_ID_VALID_MASK.id))
 
 /** Virtual Chunk Table */
 extern Chunk vctable[3][3];
 
+#define INVALID_CACHE_CHUNK ((seed_t)~0)
 typedef struct _CacheChunk {
 	Chunk chunk_id;
 	byte  chunk_data[CHUNK_MEMSIZE];
 } CacheChunk;
+
+void cache_chunk_init();
+void cache_chunk_flushall();
 
 /** Saves the chunk gameboard[vy][vx] in cache. The modified flag will tell if
  * the chunk is marked for disk storage when this cached is flushed out. */

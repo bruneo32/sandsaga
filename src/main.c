@@ -32,6 +32,22 @@ static volatile bool PAUSED	 = false;
 
 static Player player;
 
+/* Save game when the game is interrupte by any reason */
+void F_PANIC_SAVE() {
+	/* Cache modified chunks in vscreen to save later */
+	for (uint_fast8_t j = 0; j < 3; ++j) {
+		for (uint_fast8_t i = 0; i < 3; ++i) {
+			const Chunk x = vctable[j][i];
+			if (x.modified) {
+				cache_chunk(x, j * CHUNK_SIZE, i * CHUNK_SIZE);
+			}
+		}
+	}
+
+	/* Save cached chunks */
+	cache_chunk_flushall();
+}
+
 void F_QUITGAME() { GAME_ON = false; }
 void F_RESUME() {
 	PAUSED = false;
@@ -52,6 +68,8 @@ int main(int argc, char *argv[]) {
 	/* =============================================================== */
 	/* Init */
 	disk_init();
+	cache_chunk_init();
+	atexit(F_PANIC_SAVE);
 
 	Render_init("Sandsaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
@@ -127,8 +145,20 @@ int main(int argc, char *argv[]) {
 				.modified = 0,
 			};
 			vctable[j - chunk_start_y][i - chunk_start_x].id = chunk.id;
-			generate_chunk(WORLD_SEED, chunk, (i - chunk_start_x) * CHUNK_SIZE,
-						   (j - chunk_start_y) * CHUNK_SIZE);
+
+			const size_t vx = (i - chunk_start_x) * CHUNK_SIZE;
+			const size_t vy = (j - chunk_start_y) * CHUNK_SIZE;
+
+			/* Load chunk from disk or generate it */
+			byte chunk_data_disk[CHUNK_MEMSIZE];
+			if (load_chunk_from_disk(chunk, chunk_data_disk)) {
+				for (size_t __k = 0; __k < CHUNK_SIZE; ++__k) {
+					memcpy(&gameboard[(vy + __k)][vx],
+						   (chunk_data_disk) + (__k * CHUNK_SIZE), CHUNK_SIZE);
+				}
+			} else {
+				generate_chunk(WORLD_SEED, chunk, vx, vy);
+			}
 		}
 	}
 	ResetSubchunks;

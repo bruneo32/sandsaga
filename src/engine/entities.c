@@ -2,6 +2,8 @@
 
 #include "bonerig.h"
 
+#include "../disk/worldctrl.h"
+
 #define SLOPE 4
 
 Bone player_bone_rig[] = {
@@ -183,6 +185,11 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	}
 }
 
+#define dereference_chunk_by_lines(addr_, vy_, vx_)                            \
+	for (size_t __k = 0; __k < CHUNK_SIZE; ++__k) {                            \
+		memcpy(&gameboard[(vy_ + __k)][vx_], (addr_) + (__k * CHUNK_SIZE),     \
+			   CHUNK_SIZE);                                                    \
+	}
 /** This is called after box2d_world_step */
 void move_camera(Player *player, SDL_FRect *camera) {
 	float bx, by;
@@ -249,14 +256,14 @@ void move_camera(Player *player, SDL_FRect *camera) {
 				 * otherwise generate it. */
 				byte *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
-					/* Dereference chunk line by line */
-					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
-						const size_t gby = vy + k;
-						memcpy(&gameboard[gby][vx],
-							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
-					}
+					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					generate_chunk(WORLD_SEED, chunk, vx, vy);
+					byte chunk_data_disk[CHUNK_MEMSIZE];
+					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
+						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
+					} else {
+						generate_chunk(WORLD_SEED, chunk, vx, vy);
+					}
 				}
 			}
 			ResetSubchunks;
@@ -321,14 +328,14 @@ void move_camera(Player *player, SDL_FRect *camera) {
 				 * otherwise generate it. */
 				byte *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
-					/* Dereference chunk line by line */
-					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
-						const size_t gby = vy + k;
-						memcpy(&gameboard[gby][vx],
-							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
-					}
+					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					generate_chunk(WORLD_SEED, chunk, vx, vy);
+					byte chunk_data_disk[CHUNK_MEMSIZE];
+					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
+						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
+					} else {
+						generate_chunk(WORLD_SEED, chunk, vx, vy);
+					}
 				}
 			}
 			ResetSubchunks;
@@ -398,14 +405,14 @@ void move_camera(Player *player, SDL_FRect *camera) {
 				 * otherwise generate it. */
 				byte *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
-					/* Dereference chunk line by line */
-					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
-						const size_t gby = vy + k;
-						memcpy(&gameboard[gby][vx],
-							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
-					}
+					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					generate_chunk(WORLD_SEED, chunk, vx, vy);
+					byte chunk_data_disk[CHUNK_MEMSIZE];
+					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
+						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
+					} else {
+						generate_chunk(WORLD_SEED, chunk, vx, vy);
+					}
 				}
 			}
 			ResetSubchunks;
@@ -476,14 +483,14 @@ void move_camera(Player *player, SDL_FRect *camera) {
 				 * otherwise generate it. */
 				byte *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
-					/* Dereference chunk line by line */
-					for (size_t k = 0; k < CHUNK_SIZE; ++k) {
-						const size_t gby = vy + k;
-						memcpy(&gameboard[gby][vx],
-							   chunk_data + (k * CHUNK_SIZE), CHUNK_SIZE);
-					}
+					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					generate_chunk(WORLD_SEED, chunk, vx, vy);
+					byte chunk_data_disk[CHUNK_MEMSIZE];
+					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
+						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
+					} else {
+						generate_chunk(WORLD_SEED, chunk, vx, vy);
+					}
 				}
 			}
 			ResetSubchunks;
