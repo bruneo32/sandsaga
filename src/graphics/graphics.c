@@ -1,5 +1,8 @@
 #include "graphics.h"
+
 #include <stdio.h>
+
+#include "../log/log.h"
 
 SDL_Window	 *__window	 = NULL;
 SDL_Renderer *__renderer = NULL;
@@ -16,7 +19,7 @@ void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 
 	/* Initialize SDL2 */
 	if (0 != SDL_Init(SDL_INIT_VIDEO)) {
-		fprintf(stderr, "Error initializing SDL: %s\n", SDL_GetError());
+		logerr("Error initializing SDL: %s\n", SDL_GetError());
 		exit(-1);
 	}
 
@@ -27,7 +30,7 @@ void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 		SDL_WINDOW_RESIZABLE /*| SDL_WINDOW_FULLSCREEN_DESKTOP*/);
 
 	if (!__window) {
-		fprintf(stderr, "Error creating window: %s\n", SDL_GetError());
+		logerr("Error creating window: %s\n", SDL_GetError());
 		SDL_Quit();
 		exit(-2);
 	}
@@ -38,7 +41,7 @@ void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 										SDL_RENDERER_TARGETTEXTURE |
 										SDL_RENDERER_PRESENTVSYNC);
 	if (!__renderer) {
-		fprintf(stderr, "Error creating renderer: %s\n", SDL_GetError());
+		logerr("Error creating renderer: %s\n", SDL_GetError());
 		SDL_DestroyWindow(__window);
 		SDL_Quit();
 		exit(-3);
@@ -139,7 +142,8 @@ void Render_ResizeWindow(int newWidth, int newHeight, bool keepAspectRatio) {
 }
 
 void Render_Ellipse(int rx, int ry, int xc, int yc) {
-	/* Extracted from https://www.geeksforgeeks.org/midpoint-ellipse-drawing-algorithm/ */
+	/* Extracted from
+	 * https://www.geeksforgeeks.org/midpoint-ellipse-drawing-algorithm/ */
 	float dx, dy, d1, d2, x, y;
 	x = 0;
 	y = ry;

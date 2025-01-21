@@ -110,10 +110,10 @@ int main(int argc, char *argv[]) {
 	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = GEN_SKY_Y - 1};
 
 	/* Generate world first instance*/
-	chunk_axis_t chunk_start_x = player.chunk_id.x - 1;
-	chunk_axis_t chunk_start_y = player.chunk_id.y - 1;
-	for (chunk_axis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
-		for (chunk_axis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
+	chunk_xaxis_t chunk_start_x = player.chunk_id.x - 1;
+	chunk_yaxis_t chunk_start_y = player.chunk_id.y - 1;
+	for (chunk_yaxis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
+		for (chunk_xaxis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
 			Chunk chunk = (Chunk){.x = i, .y = j};
 			generate_chunk(WORLD_SEED, chunk, (i - chunk_start_x) * CHUNK_SIZE,
 						   (j - chunk_start_y) * CHUNK_SIZE);

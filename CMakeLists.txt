@@ -51,6 +51,7 @@ include(cmake/box2d.cmake)
 
 # ===============================================================
 # Other C Modules
+add_subdirectory( "src/log" )
 add_subdirectory( "src/physics" )
 add_subdirectory( "src/assets" )
 add_subdirectory( "src/graphics" )

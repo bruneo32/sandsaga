@@ -222,7 +222,7 @@ void move_camera(Player *player, SDL_FRect *camera) {
 					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at top */
-			chunk_axis_t start_x = player->chunk_id.x - 1;
+			chunk_xaxis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
 				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y - 1};
 				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE, 0);
@@ -262,7 +262,7 @@ void move_camera(Player *player, SDL_FRect *camera) {
 					CHUNK_SIZE_M2 * VSCREEN_WIDTH);
 
 			/* Generate new world at bottom */
-			chunk_axis_t start_x = player->chunk_id.x - 1;
+			chunk_xaxis_t start_x = player->chunk_id.x - 1;
 			for (uint_fast8_t i = 0; i < 3; ++i) {
 				Chunk chunk = {.x = start_x + i, .y = player->chunk_id.y + 1};
 				generate_chunk(WORLD_SEED, chunk, i * CHUNK_SIZE,
@@ -305,7 +305,7 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			}
 
 			/* Generate new world at left */
-			chunk_axis_t start_j = player->chunk_id.y - 1;
+			chunk_yaxis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
 				Chunk chunk = {.x = player->chunk_id.x - 1, .y = start_j + j};
 				generate_chunk(WORLD_SEED, chunk, 0, j * CHUNK_SIZE);
@@ -347,7 +347,7 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			}
 
 			/* Generate new world at right */
-			chunk_axis_t start_j = player->chunk_id.y - 1;
+			chunk_yaxis_t start_j = player->chunk_id.y - 1;
 			for (uint_fast8_t j = 0; j < 3; ++j) {
 				Chunk chunk = {.x = player->chunk_id.x + 1, .y = start_j + j};
 				generate_chunk(WORLD_SEED, chunk, CHUNK_SIZE_M2,

@@ -1,4 +1,5 @@
 #include "assets.h"
+#include "../log/log.h"
 
 SDL_Surface *optimize_surface(SDL_Surface *surface, SDL_Window *window) {
 	/* Convert the given surface to the format of the window surface */
@@ -31,7 +32,7 @@ Sprite *loadIMG_from_path(const char *imagePath, SDL_Window *window,
 						  SDL_Renderer *render) {
 	SDL_Surface *surface = IMG_Load(imagePath);
 	if (!surface) {
-		printf("Failed to load image: %s\n", IMG_GetError());
+		logerr("Failed to load image: %s\n", IMG_GetError());
 		return NULL;
 	}
 
