@@ -28,7 +28,11 @@ void loginfo(const char *fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 	vfprintf(m_fout, fmt, args);
-	fprintf(stdout, fmt, args); /* Show in terminal too */
+	va_end(args);
+
+	/* Show in terminal too */
+	va_start(args, fmt);
+	vfprintf(stdout, fmt, args);
 	va_end(args);
 }
 
@@ -41,6 +45,10 @@ void logerr(const char *fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 	vfprintf(m_ferr, fmt, args);
-	fprintf(stderr, fmt, args); /* Show in terminal too */
+	va_end(args);
+
+	/* Show in terminal too */
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
 	va_end(args);
 }
