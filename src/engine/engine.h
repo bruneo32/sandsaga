@@ -61,8 +61,9 @@ void draw_gameboard_world(const SDL_FRect *camera);
 
 /* =============================================================== */
 /* Chunks */
-#define CHUNK_MAX_X (UINT16_MAX)
-#define CHUNK_MAX_Y (UINT8_MAX)
+#define CHUNK_MAX_X	  (UINT16_MAX)
+#define CHUNK_MAX_Y	  (UINT8_MAX)
+#define CHUNK_MEMSIZE (CHUNK_SIZE * CHUNK_SIZE)
 
 typedef uint32_t seed_t;
 typedef uint16_t chunk_xaxis_t;
@@ -74,9 +75,29 @@ typedef union chunk_u {
 		chunk_yaxis_t y;
 		/* Chunk flags*/
 		bit modified : 1;
-		bit reserved : 7; /* Padding to match seed_t size */
+		bit reserved : 7; /* Padding to match `seed_t` size */
 	} PACKED;
 } Chunk;
+
+extern const Chunk CHUNK_ID_VALID_MASK;
+/* Get chunk id without flags, only x and y */
+#define CHUNK_ID(chunk_id) (((chunk_id).id) & (CHUNK_ID_VALID_MASK.id))
+
+/** Virtual Chunk Table */
+extern Chunk vctable[3][3];
+
+typedef struct _CacheChunk {
+	Chunk chunk_id;
+	byte  chunk_data[CHUNK_MEMSIZE];
+} CacheChunk;
+
+/** Saves the chunk gameboard[vy][vx] in cache. The modified flag will tell if
+ * the chunk is marked for disk storage when this cached is flushed out. */
+void cache_chunk(Chunk chunk_id, const size_t vy, const size_t vx);
+
+/** Returns the cached chunk data, or NULL if it's not in cache. Flags are
+ * insensitive. */
+byte *cache_get_chunk(Chunk chunk_id);
 
 #define GEN_WATERSEA_OFFSET_X 128
 #define GEN_SKY_Y			  32

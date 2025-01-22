@@ -110,14 +110,23 @@ int main(int argc, char *argv[]) {
 	/* =============================================================== */
 	/* Initialize data */
 	WORLD_SEED		= world_control->seed;
-	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = GEN_SKY_Y - 1};
+	player.chunk_id = (Chunk){
+		.x		  = CHUNK_MAX_X / 2,
+		.y		  = GEN_SKY_Y - 1,
+		.modified = 0,
+	};
 
-	/* Generate world first instance*/
+	/* Initialize world chunks and vctable */
 	chunk_xaxis_t chunk_start_x = player.chunk_id.x - 1;
 	chunk_yaxis_t chunk_start_y = player.chunk_id.y - 1;
 	for (chunk_yaxis_t j = chunk_start_y; j <= player.chunk_id.y + 1; ++j) {
 		for (chunk_xaxis_t i = chunk_start_x; i <= player.chunk_id.x + 1; ++i) {
-			Chunk chunk = (Chunk){.x = i, .y = j};
+			Chunk chunk = (Chunk){
+				.x		  = i,
+				.y		  = j,
+				.modified = 0,
+			};
+			vctable[j - chunk_start_y][i - chunk_start_x].id = chunk.id;
 			generate_chunk(WORLD_SEED, chunk, (i - chunk_start_x) * CHUNK_SIZE,
 						   (j - chunk_start_y) * CHUNK_SIZE);
 		}
@@ -323,6 +332,10 @@ int main(int argc, char *argv[]) {
 			if (block_size == 1) {
 				gameboard[mouse_wold_y][mouse_wold_x] = current_object;
 				set_subchunk_world(1, mouse_wold_x, mouse_wold_y);
+				/* Mark Chunk at mouse position as modified */
+				vctable[(mouse_wold_x / CHUNK_SIZE)]
+					   [(mouse_wold_y / CHUNK_SIZE)]
+						   .modified = 1;
 			} else {
 				int_fast16_t bx =
 					(grid_mode
@@ -340,6 +353,9 @@ int main(int argc, char *argv[]) {
 						 ++i) {
 						gameboard[j][i] = current_object;
 						set_subchunk_world(1, i, j);
+						/* Mark Chunk at brush size position as modified */
+						vctable[(i / CHUNK_SIZE)][(j / CHUNK_SIZE)].modified =
+							1;
 					}
 				}
 			}

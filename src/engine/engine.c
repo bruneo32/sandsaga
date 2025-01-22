@@ -25,6 +25,15 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j) {
 
 SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
+const Chunk CHUNK_ID_VALID_MASK = ((Chunk){
+	.x		  = CHUNK_MAX_X,
+	.y		  = CHUNK_MAX_Y,
+	.modified = 0,
+	.reserved = 0,
+});
+
+Chunk vctable[3][3];
+
 void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 					const size_t vy) {
 	/* Check world borders */
@@ -148,6 +157,70 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 			}
 		}
 	}
+}
+
+#define INVALID_CACHE_CHUNK ((seed_t)~0)
+#define CHUNK_CACHE_SIZE	32
+#define CHUNK_CACHE_SIZE_M1 (CHUNK_CACHE_SIZE - 1)
+
+static CacheChunk m_cached_chunks[CHUNK_CACHE_SIZE] = {
+	{.chunk_id.id = INVALID_CACHE_CHUNK}};
+
+static size_t m_cc_idx = 0;
+
+void cache_chunk(Chunk chunk_id, const size_t vy, const size_t vx) {
+	/* Get cached chunk ready to store */
+	CacheChunk *cache_chunk = &m_cached_chunks[m_cc_idx];
+
+	/* If cache is not full, iterate until m_cc_idx */
+	const uint_fast8_t max_cache_idx =
+		(m_cached_chunks[CHUNK_CACHE_SIZE_M1].chunk_id.id ==
+		 INVALID_CACHE_CHUNK)
+			? m_cc_idx
+			: CHUNK_CACHE_SIZE;
+
+	/* Search for already cached chunk to overwrite instead */
+	for (size_t i = 0; i < max_cache_idx; ++i) {
+		if (CHUNK_ID(m_cached_chunks[i].chunk_id) == CHUNK_ID(chunk_id)) {
+			cache_chunk = &m_cached_chunks[i];
+			break;
+		}
+	}
+
+	/* TODO: Save to disk the previous cached chunk data */
+	if (cache_chunk->chunk_id.id != INVALID_CACHE_CHUNK) {
+		;
+	}
+
+	/* Update cached chunk with new data */
+	cache_chunk->chunk_id = chunk_id;
+	for (size_t k = 0; k < CHUNK_SIZE; ++k) {
+		memcpy(cache_chunk->chunk_data + (k * CHUNK_SIZE),
+			   &gameboard[vy + k][vx], CHUNK_SIZE);
+	}
+
+	/* Update index if it's a new cache chunk */
+	if (cache_chunk == &m_cached_chunks[m_cc_idx]) {
+		if (++m_cc_idx == CHUNK_CACHE_SIZE)
+			m_cc_idx = 0;
+	}
+}
+
+byte *cache_get_chunk(Chunk chunk_id) {
+	/* If cache is not full, iterate until m_cc_idx */
+	const uint_fast8_t max_cache_idx =
+		(m_cached_chunks[CHUNK_CACHE_SIZE_M1].chunk_id.id ==
+		 INVALID_CACHE_CHUNK)
+			? m_cc_idx
+			: CHUNK_CACHE_SIZE;
+
+	for (size_t i = 0; i < max_cache_idx; ++i) {
+		if (CHUNK_ID(m_cached_chunks[i].chunk_id) == CHUNK_ID(chunk_id)) {
+			return m_cached_chunks[i].chunk_data;
+		}
+	}
+
+	return NULL;
 }
 
 bool update_object(const size_t x, const size_t y, const bool ltr) {
