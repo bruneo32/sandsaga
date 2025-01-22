@@ -15,6 +15,7 @@
 #include "physics/physics.h"
 
 #include "assets/assets.h"
+#include "disk/disk.h"
 #include "engine/engine.h"
 #include "engine/entities.h"
 #include "engine/gameobjects.h"
@@ -49,7 +50,9 @@ int main(int argc, char *argv[]) {
 	sfrand(_st);
 
 	/* =============================================================== */
-	/* Init SDL */
+	/* Init */
+	disk_init();
+
 	Render_init("Sandsaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -106,7 +109,7 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Initialize data */
-	WORLD_SEED		= rand();
+	WORLD_SEED		= world_control->seed;
 	player.chunk_id = (Chunk){.x = CHUNK_MAX_X / 2, .y = GEN_SKY_Y - 1};
 
 	/* Generate world first instance*/
