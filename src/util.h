@@ -108,7 +108,7 @@ typedef struct FRect {
 #define BITL(_bits, _i) (1 << (((_bits) - 1) - (_i)))
 
 typedef uint8_t byte;
-typedef uint8_t byte;
+typedef int8_t sbyte;
 /** Intended for use in bitfields */
 typedef unsigned int bit;
 
