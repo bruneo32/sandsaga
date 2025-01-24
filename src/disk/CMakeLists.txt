@@ -2,6 +2,7 @@ file(GLOB disk_src
 	"disk.h"
 	"disk.c"
 	"worldctrl.h"
+	"worldctrl.c"
 	)
 
 add_library(disk ${disk_src})

@@ -1,6 +1,9 @@
 #include "engine.h"
 
 #include "noise.h"
+
+#include "../disk/worldctrl.h"
+
 int DEBUG_LEVEL = e_dbgl_none;
 
 size_t WORLD_SEED = 0;
@@ -159,14 +162,26 @@ void generate_chunk(seed_t SEED, Chunk CHUNK, const size_t vx,
 	}
 }
 
-#define INVALID_CACHE_CHUNK ((seed_t)~0)
 #define CHUNK_CACHE_SIZE	32
 #define CHUNK_CACHE_SIZE_M1 (CHUNK_CACHE_SIZE - 1)
 
-static CacheChunk m_cached_chunks[CHUNK_CACHE_SIZE] = {
-	{.chunk_id.id = INVALID_CACHE_CHUNK}};
+static CacheChunk m_cached_chunks[CHUNK_CACHE_SIZE];
 
-static size_t m_cc_idx = 0;
+static size_t m_cc_idx;
+
+void cache_chunk_init() {
+	memset(m_cached_chunks, INVALID_CACHE_CHUNK, sizeof(m_cached_chunks));
+	m_cc_idx = 0;
+}
+
+void cache_chunk_flushall() {
+	for (size_t i = 0; i < CHUNK_CACHE_SIZE; ++i) {
+		Chunk cid = m_cached_chunks[i].chunk_id;
+		if (cid.id != INVALID_CACHE_CHUNK) {
+			save_chunk_to_disk(cid, m_cached_chunks[i].chunk_data);
+		}
+	}
+}
 
 void cache_chunk(Chunk chunk_id, const size_t vy, const size_t vx) {
 	/* Get cached chunk ready to store */
@@ -187,12 +202,12 @@ void cache_chunk(Chunk chunk_id, const size_t vy, const size_t vx) {
 		}
 	}
 
-	/* TODO: Save to disk the previous cached chunk data */
+	/* Save to disk the previous cached chunk data */
 	if (cache_chunk->chunk_id.id != INVALID_CACHE_CHUNK) {
-		;
+		save_chunk_to_disk(cache_chunk->chunk_id, cache_chunk->chunk_data);
 	}
 
-	/* Update cached chunk with new data */
+	/* Update cached chunk with new data line by line */
 	cache_chunk->chunk_id = chunk_id;
 	for (size_t k = 0; k < CHUNK_SIZE; ++k) {
 		memcpy(cache_chunk->chunk_data + (k * CHUNK_SIZE),

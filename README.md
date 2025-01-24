@@ -55,7 +55,7 @@ The following table repesents the worst hardware where the game has been tested 
 | **Processor** | Intel Core i3 4130 / AMD Ryzen 3 1200     | Intel Core i3 4130 / AMD Ryzen 3 1200     | Qualcomm Snapdragon 625 / Rockchip RK3588 |
 |    **Memory** | 0.99 GB RAM                               | 0.99 GB RAM                               | 0.99 GB RAM                               |
 |  **Graphics** | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 | Intel HD Graphics 530 / AMD Radeon R5 240 |
-|   **Storage** | 28 MB                                     | 2.8 MB                                    | 2.8 MB                                    |
+|   **Storage** | 2 GB                                      | 2 GB                                      | 2 GB                                      |
 |    **System** | Windows NT, DirectX11                     | GLIBC_2.29, GLIBCXX_3.4.29 *              | GLIBC_2.29, GLIBCXX_3.4.29 *              |
 > (*) GLIBC, and GLIBCXX shall be ABI compatible with this version.
 
