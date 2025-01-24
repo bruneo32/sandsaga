@@ -30,10 +30,12 @@ void loginfo(const char *fmt, ...) {
 	vfprintf(m_fout, fmt, args);
 	va_end(args);
 
+#ifndef NDEBUG
 	/* Show in terminal too */
 	va_start(args, fmt);
 	vfprintf(stdout, fmt, args);
 	va_end(args);
+#endif
 }
 
 void logerr(const char *fmt, ...) {
@@ -47,8 +49,10 @@ void logerr(const char *fmt, ...) {
 	vfprintf(m_ferr, fmt, args);
 	va_end(args);
 
+#ifndef NDEBUG
 	/* Show in terminal too */
 	va_start(args, fmt);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
+#endif
 }
