@@ -289,14 +289,14 @@ int main(int argc, char *argv[]) {
 				case SDL_SCANCODE_G:
 					grid_mode = !grid_mode;
 					break;
-				case SDL_SCANCODE_Q:
+				case SDL_SCANCODE_Q: {
 					const bool fx = box2d_body_get_fixed_rotation(player.body);
 
 					if (!fx)
 						box2d_body_set_angle(player.body, 0);
 
 					box2d_body_set_fixed_rotation(player.body, !fx);
-					break;
+				} break;
 				case SDL_SCANCODE_KP_MINUS:
 					if (block_size > 1)
 						block_size >>= 1;
