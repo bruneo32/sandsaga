@@ -29,12 +29,14 @@ void loginfo(const char *fmt, ...) {
 	va_start(args, fmt);
 	vfprintf(m_fout, fmt, args);
 	va_end(args);
+	fputc('\n', m_fout);
 
 #ifndef NDEBUG
 	/* Show in terminal too */
 	va_start(args, fmt);
 	vfprintf(stdout, fmt, args);
 	va_end(args);
+	fputc('\n', stdout);
 #endif
 }
 
@@ -48,11 +50,13 @@ void logerr(const char *fmt, ...) {
 	va_start(args, fmt);
 	vfprintf(m_ferr, fmt, args);
 	va_end(args);
+	fputc('\n', m_ferr);
 
 #ifndef NDEBUG
 	/* Show in terminal too */
 	va_start(args, fmt);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
+	fputc('\n', stderr);
 #endif
 }

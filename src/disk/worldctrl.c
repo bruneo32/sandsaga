@@ -44,12 +44,12 @@ void save_chunk_to_disk(Chunk chunk_id, byte *chunk_data) {
 	off_t file_offset = chunk_file_idx * CHUNK_MEMSIZE;
 
 	if (lseek(world_data_fd, file_offset, SEEK_SET) < 0) {
-		logerr("save_chunk_to_disk: lseek failed: %lu\n", errno);
+		logerr("save_chunk_to_disk: lseek failed: %lu", errno);
 		return;
 	}
 
 	if (write(world_data_fd, chunk_data, CHUNK_MEMSIZE) != CHUNK_MEMSIZE) {
-		logerr("save_chunk_to_disk: write failed: %lu\n", errno);
+		logerr("save_chunk_to_disk: write failed: %lu", errno);
 	}
 }
 
@@ -61,12 +61,12 @@ int load_chunk_from_disk(Chunk chunk_id, void *chunk_data) {
 	off_t file_offset = chunk_file_idx * CHUNK_MEMSIZE;
 
 	if (lseek(world_data_fd, file_offset, SEEK_SET) < 0) {
-		logerr("load_chunk_from_disk: lseek failed: %lu\n", errno);
+		logerr("load_chunk_from_disk: lseek failed: %lu", errno);
 		return 0;
 	}
 
 	if (read(world_data_fd, chunk_data, CHUNK_MEMSIZE) != CHUNK_MEMSIZE) {
-		logerr("load_chunk_from_disk: read failed: %lu\n", errno);
+		logerr("load_chunk_from_disk: read failed: %lu", errno);
 		return 0;
 	}
 

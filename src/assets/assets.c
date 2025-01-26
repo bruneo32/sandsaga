@@ -32,7 +32,7 @@ Sprite *loadIMG_from_path(const char *imagePath, SDL_Window *window,
 						  SDL_Renderer *render) {
 	SDL_Surface *surface = IMG_Load(imagePath);
 	if (!surface) {
-		logerr("Failed to load image: %s\n", IMG_GetError());
+		logerr("Failed to load image: %s", IMG_GetError());
 		return NULL;
 	}
 
