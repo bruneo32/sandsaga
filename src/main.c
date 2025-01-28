@@ -103,7 +103,6 @@ int main(int argc, char *argv[]) {
 	/* Init gameloop variables */
 	SDL_Rect   window_viewport;
 	SDL_FPoint window_scale;
-	size_t	   frame_cx = 0;
 	char	   fps_str[4];
 	snprintf(fps_str, sizeof(fps_str), "%2zu", fps_);
 	short block_size	 = 1 << 3;

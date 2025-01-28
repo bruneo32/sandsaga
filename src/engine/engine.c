@@ -7,6 +7,7 @@
 int DEBUG_LEVEL = e_dbgl_none;
 
 size_t WORLD_SEED = 0;
+size_t frame_cx	  = 0;
 
 GO_ID gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 

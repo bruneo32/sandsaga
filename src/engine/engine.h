@@ -13,6 +13,7 @@
 #include "gameobjects.h"
 
 extern size_t WORLD_SEED;
+extern size_t frame_cx;
 
 enum e_dbgl /* : int */ {
 	e_dbgl_none	   = 0x1,
@@ -89,7 +90,7 @@ extern Chunk vctable[3][3];
 #define INVALID_CACHE_CHUNK ((seed_t)~0)
 typedef struct _CacheChunk {
 	Chunk chunk_id;
-	GO_ID  chunk_data[CHUNK_MEMSIZE];
+	GO_ID chunk_data[CHUNK_MEMSIZE];
 } CacheChunk;
 
 void cache_chunk_init();
