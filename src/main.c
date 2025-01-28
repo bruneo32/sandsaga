@@ -66,11 +66,7 @@ int main(int argc, char *argv[]) {
 	sfrand(_st);
 
 	/* =============================================================== */
-	/* Init */
-	disk_init();
-	cache_chunk_init();
-	atexit(F_PANIC_SAVE);
-
+	/* Init window */
 	Render_init("Sandsaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
 	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
@@ -86,13 +82,20 @@ int main(int argc, char *argv[]) {
 	SDL_SetWindowPosition(__window, SDL_WINDOWPOS_CENTERED,
 						  SDL_WINDOWPOS_CENTERED);
 
+	Font_SetCurrent(res_VGA_ROM_F08);
+
 	Render_Clearscreen_Color(C_BLUE);
 	Render_Update;
 
 	/* =============================================================== */
-	/* Load resources */
-	Font_SetCurrent(res_VGA_ROM_F08);
+	/* Init stuff */
+	disk_init();
+	cache_chunk_init();
+	atexit(F_PANIC_SAVE);
+	init_gameobjects();
 
+	/* =============================================================== */
+	/* Load resources */
 	player.sprite = loadIMG_from_mem(
 		res_player_body_png, res_player_body_png_len, __window, __renderer);
 
@@ -105,7 +108,7 @@ int main(int argc, char *argv[]) {
 	snprintf(fps_str, sizeof(fps_str), "%2zu", fps_);
 	short block_size	 = 1 << 3;
 	bool  grid_mode		 = false;
-	byte  current_object = GO_STONE;
+	GO_ID current_object = GO_FIRST;
 
 	SDL_RenderGetViewport(__renderer, &window_viewport);
 	SDL_RenderGetScale(__renderer, &window_scale.x, &window_scale.y);
@@ -150,7 +153,7 @@ int main(int argc, char *argv[]) {
 			const size_t vy = (j - chunk_start_y) * CHUNK_SIZE;
 
 			/* Load chunk from disk or generate it */
-			byte chunk_data_disk[CHUNK_MEMSIZE];
+			GO_ID chunk_data_disk[CHUNK_MEMSIZE];
 			if (load_chunk_from_disk(chunk, chunk_data_disk)) {
 				for (size_t __k = 0; __k < CHUNK_SIZE; ++__k) {
 					memcpy(&gameboard[(vy + __k)][vx],
@@ -210,8 +213,8 @@ int main(int argc, char *argv[]) {
 						break;
 					}
 
-					current_object =
-						clamp(current_object + 1, GO_FIRST, GO_LAST);
+					current_object.raw = clamp(current_object.raw + 1,
+											   GO_FIRST.raw, GO_LAST.raw);
 				} else {
 					if (LCTRL) {
 						if (block_size > 1)
@@ -219,8 +222,8 @@ int main(int argc, char *argv[]) {
 						break;
 					}
 
-					current_object =
-						clamp(current_object - 1, GO_FIRST, GO_LAST);
+					current_object.raw = clamp(current_object.raw - 1,
+											   GO_FIRST.raw, GO_LAST.raw);
 				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
@@ -306,12 +309,12 @@ int main(int argc, char *argv[]) {
 						block_size <<= 1;
 					break;
 				case SDL_SCANCODE_RIGHTBRACKET:
-					current_object =
-						clamp(current_object + 1, GO_FIRST, GO_LAST);
+					current_object.raw = clamp(current_object.raw + 1,
+											   GO_FIRST.raw, GO_LAST.raw);
 					break;
 				case SDL_SCANCODE_LEFTBRACKET:
-					current_object =
-						clamp(current_object - 1, GO_FIRST, GO_LAST);
+					current_object.raw = clamp(current_object.raw - 1,
+											   GO_FIRST.raw, GO_LAST.raw);
 					break;
 				}
 			} break;
@@ -354,7 +357,7 @@ int main(int argc, char *argv[]) {
 		/* Place/remove object at mouse pencil */
 		if (!PAUSED && (mouse_buttons & (SDL_BUTTON(SDL_BUTTON_LEFT) |
 										 SDL_BUTTON(SDL_BUTTON_RIGHT))) != 0) {
-			byte _object = current_object;
+			GO_ID _object = current_object;
 			if (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
 				current_object = GO_NONE;
 			}
@@ -456,7 +459,7 @@ int main(int argc, char *argv[]) {
 		/* Draw mouse pointer */
 		if (!PAUSED) {
 			Color color;
-			memcpy(&color, &GO_COLORS[current_object], sizeof(color));
+			memcpy(&color, &(GOBJECT(current_object).color), sizeof(color));
 			color.a = 0xAF;
 
 			if (block_size == 1) {

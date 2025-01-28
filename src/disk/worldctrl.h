@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #include "../engine/engine.h"
+#include "../engine/gameobjects.h"
 #include "../util.h"
 
 #define SAVEFILE_VERSION (1)
@@ -42,7 +43,7 @@ extern int world_data_fd;
 extern WorldControl *world_control;
 
 void world_control_init(WorldControl *world_control);
-void save_chunk_to_disk(Chunk chunk, byte *chunk_data);
+void save_chunk_to_disk(Chunk chunk, GO_ID *chunk_data);
 int	 load_chunk_from_disk(Chunk chunk, void *chunk_data);
 
 #endif // _WORLDCTRL_H

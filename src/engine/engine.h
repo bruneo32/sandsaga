@@ -24,7 +24,7 @@ enum e_dbgl /* : int */ {
 
 extern int DEBUG_LEVEL;
 
-extern byte gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
+extern GO_ID gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
 /* 16-bit subchunk_t means 16x16 subchunks filling VSCREEN */
 typedef uint16_t subchunk_t;
@@ -73,9 +73,9 @@ typedef union chunk_u {
 	struct {
 		chunk_xaxis_t x;
 		chunk_yaxis_t y;
-		/* Chunk flags*/
-		bit modified : 1;
+		/* Chunk flags */
 		bit reserved : 7; /* Padding to match `seed_t` size */
+		bit modified : 1;
 	} PACKED;
 } Chunk;
 
@@ -89,7 +89,7 @@ extern Chunk vctable[3][3];
 #define INVALID_CACHE_CHUNK ((seed_t)~0)
 typedef struct _CacheChunk {
 	Chunk chunk_id;
-	byte  chunk_data[CHUNK_MEMSIZE];
+	GO_ID  chunk_data[CHUNK_MEMSIZE];
 } CacheChunk;
 
 void cache_chunk_init();
@@ -101,7 +101,7 @@ void cache_chunk(Chunk chunk_id, const size_t vy, const size_t vx);
 
 /** Returns the cached chunk data, or NULL if it's not in cache. Flags are
  * insensitive. */
-byte *cache_get_chunk(Chunk chunk_id);
+GO_ID *cache_get_chunk(Chunk chunk_id);
 
 #define GEN_WATERSEA_OFFSET_X 128
 #define GEN_SKY_Y			  32

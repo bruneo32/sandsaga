@@ -2,6 +2,7 @@ file(GLOB engine_src
 	"bonerig.h"
 	"bonerig.c"
 	"gameobjects.h"
+	"gameobjects.c"
 	"engine.h"
 	"engine.c"
 	"entities.h"

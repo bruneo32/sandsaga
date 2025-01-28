@@ -3,47 +3,56 @@
 
 #include "../graphics/color.h"
 
-#define BITMASK_GO_UPDATED (0b10000000)
-#define GUPDATE(go)		   ((go) | BITMASK_GO_UPDATED)
-#define GOBJECT(go)		   ((go) & ~BITMASK_GO_UPDATED)
-#define IS_GUPDATED(go)	   (((go) & BITMASK_GO_UPDATED) != 0)
+#define MAX_GO_ID (0b01111111)
+typedef union GO_ID {
+	uint8_t raw;
+	struct {
+		bit id		: 7;
+		bit updated : 1;
+	} PACKED;
+} GO_ID;
 
-enum GameObject_t /* : uint8_t */ {
-	GO_NONE = 0,
+typedef enum GO_Type {
+	GO_STATIC = 0,
+	GO_POWDER,
+	GO_LIQUID,
+	GO_GAS,
+} GO_Type;
+#define GO_Type uint8_t
 
-	/* Gases */
-	GO_VAPOR,
+typedef struct GameObject {
+	GO_Type type;
+	float	density;
+	Color	color;
+	void (*draw)(size_t wx, size_t wy, int vx, int vy);
+} PACKED GameObject;
 
-	/* Fluids */
-	GO_WATER,
-	GO_SAND,
+extern size_t	  go_table_size;
+extern GameObject go_table[MAX_GO_ID];
 
-	/* Solids */
-	GO_STONE,
+extern GO_ID GO_VAPOR;
+extern GO_ID GO_WATER;
+extern GO_ID GO_SAND;
+extern GO_ID GO_STONE;
 
-	/* Enum defs */
-	GO_FIRST = 1,
-	GO_LAST	 = GO_STONE,
+#define GO_NONE		 ((GO_ID){.raw = 0})
+#define GO_FIRST	 ((GO_ID){.raw = 1})
+#define GO_LAST		 ((GO_ID){.raw = go_table_size})
+#define GOBJECT(_id) (go_table[(_id).id - 1])
 
-	GO_LAST_FLUID = GO_SAND,
-	GO_LAST_SOLID = GO_STONE,
-};
+/**
+ * \brief Register a new gameobject in the game
+ *
+ * \param type The type of the gameobject
+ * \param density The density of the gameobject
+ * \param color The color of the gameobject
+ * \param draw The draw function of the gameobject
+ *
+ * \return The id of the gameobject [1-127]. Zero is reserved for GO_NONE
+ */
+GO_ID register_gameobject(GO_Type type, float density, Color color,
+						  void (*draw)(size_t wx, size_t wy, int vx, int vy));
 
-#define GO_IS_FLUID(go) ((go) > GO_NONE && (go) <= GO_LAST_FLUID)
-#define GO_IS_SOLID(go) ((go) > GO_LAST_FLUID && (go) <= GO_LAST_SOLID)
-#define GO_IS_SOIL(go)	((go) >= GO_SAND)
-
-static const Color GO_COLORS[] = {
-	/* None (transparent) */
-	{0xFF, 0xFF, 0xFF, 0},
-	/* Vapor */
-	{0x7F, 0xFF, 0xFF, 0x69},
-	/* Water */
-	{0x7F, 0x7F, 0xFF, 0xAF},
-	/* Sand */
-	{0xFF, 0xFF, 0x7F, 0xFF},
-	/* Stone */
-	{0x7F, 0x7F, 0x7F, 0xFF},
-};
+void init_gameobjects();
 
 #endif // _GAMEOBJECTS_H

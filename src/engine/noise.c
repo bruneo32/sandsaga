@@ -3,20 +3,22 @@
 /* ========================================================================= */
 /* Fast Random */
 
+size_t fast_rand_impl(size_t *seed) {
+#if __SIZE_WIDTH__ == 64
+	*seed ^= *seed << 7;
+	*seed ^= *seed >> 9;
+#else
+	*seed ^= *seed << 13;
+	*seed ^= *seed >> 17;
+	*seed ^= *seed << 5;
+#endif
+	return *seed;
+}
+
 static size_t _fseed_ = SIZE_MAX;
 
 void   sfrand(size_t seed) { _fseed_ = seed; }
-size_t fast_rand() {
-#if __SIZE_WIDTH__ == 64
-	_fseed_ ^= _fseed_ << 7;
-	_fseed_ ^= _fseed_ >> 9;
-#else
-	_fseed_ ^= _fseed_ << 13;
-	_fseed_ ^= _fseed_ >> 17;
-	_fseed_ ^= _fseed_ << 5;
-#endif
-	return _fseed_;
-}
+size_t fast_rand() { return fast_rand_impl(&_fseed_); }
 
 /* ========================================================================= */
 /* Mersenne Twister Random */

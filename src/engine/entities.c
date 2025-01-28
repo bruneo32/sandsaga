@@ -254,11 +254,11 @@ void move_camera(Player *player, SDL_FRect *camera) {
 
 				/* Find chunk in cache, else read it from disk,
 				 * otherwise generate it. */
-				byte *chunk_data = cache_get_chunk(chunk);
+				GO_ID *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
 					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					byte chunk_data_disk[CHUNK_MEMSIZE];
+					GO_ID chunk_data_disk[CHUNK_MEMSIZE];
 					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
 						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
 					} else {
@@ -326,11 +326,11 @@ void move_camera(Player *player, SDL_FRect *camera) {
 
 				/* Find chunk in cache, else read it from disk,
 				 * otherwise generate it. */
-				byte *chunk_data = cache_get_chunk(chunk);
+				GO_ID *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
 					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					byte chunk_data_disk[CHUNK_MEMSIZE];
+					GO_ID chunk_data_disk[CHUNK_MEMSIZE];
 					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
 						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
 					} else {
@@ -403,11 +403,11 @@ void move_camera(Player *player, SDL_FRect *camera) {
 
 				/* Find chunk in cache, else read it from disk,
 				 * otherwise generate it. */
-				byte *chunk_data = cache_get_chunk(chunk);
+				GO_ID *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
 					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					byte chunk_data_disk[CHUNK_MEMSIZE];
+					GO_ID chunk_data_disk[CHUNK_MEMSIZE];
 					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
 						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
 					} else {
@@ -481,11 +481,11 @@ void move_camera(Player *player, SDL_FRect *camera) {
 
 				/* Find chunk in cache, else read it from disk,
 				 * otherwise generate it. */
-				byte *chunk_data = cache_get_chunk(chunk);
+				GO_ID *chunk_data = cache_get_chunk(chunk);
 				if (chunk_data != NULL) {
 					dereference_chunk_by_lines(chunk_data, vy, vx);
 				} else {
-					byte chunk_data_disk[CHUNK_MEMSIZE];
+					GO_ID chunk_data_disk[CHUNK_MEMSIZE];
 					if (load_chunk_from_disk(chunk, chunk_data_disk)) {
 						dereference_chunk_by_lines(chunk_data_disk, vy, vx);
 					} else {

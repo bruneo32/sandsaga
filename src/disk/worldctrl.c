@@ -21,7 +21,7 @@ void world_control_init(WorldControl *world_control) {
 	}
 }
 
-void save_chunk_to_disk(Chunk chunk_id, byte *chunk_data) {
+void save_chunk_to_disk(Chunk chunk_id, GO_ID *chunk_data) {
 	/* Check if OS have enough space to work */
 	const size_t free_space = check_disk_space(user_path);
 	if (free_space < _1G) {

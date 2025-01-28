@@ -2,9 +2,9 @@
 #define _NOISE_H
 
 #include <math.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stddef.h>
 
 #include "engine.h"
 
@@ -14,6 +14,9 @@ void sfrand(size_t seed);
 /** It's fine for low-entropy, non-critical applications where speed matters
  * more than statistical quality. */
 size_t fast_rand();
+
+/** fast_rand implementation for external seed manipulation */
+size_t fast_rand_impl(size_t *seed);
 
 /** Set the seed for mt_rand */
 void mt_seed(size_t seed);
