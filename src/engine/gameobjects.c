@@ -36,26 +36,17 @@ static void F_draw_sand(size_t wx, size_t wy, int vx, int vy) {
 	/* Pseudo-random seed based only on world coordinates */
 	const size_t seed = wy - (wx ^ wy);
 
-	const double frequency = 1; /* Controls the granularity of the noise */
-	const size_t depth	   = 1; /* Controls the layers of detail */
-
-	/* Generate a pseudo-random value based on Perlin noise */
-	double noise_value =
-		perlin2d(seed, (double)wx, (double)wy, frequency, depth);
-
-	/* Normalize noise value to a range of 0-1 */
-	noise_value = fmod(noise_value, 1.0);
-	if (noise_value < 0)
-		noise_value += 1.0;
+	/* noise2 is way faster than perlin2d, and is very good for this case */
+	size_t noise = noise2(wx, wy, seed);
 
 	/* Map noise value to a specific color */
-	if (noise_value < 0.02)
+	if (noise < 6)
 		Render_Setcolor(C_LTGRAY);
-	else if (noise_value < 0.07)
+	else if (noise < 12)
 		Render_Setcolor(C_SAND4);
-	else if (noise_value < 0.3)
+	else if (noise < 64)
 		Render_Setcolor(C_SAND3);
-	else if (noise_value < 0.6)
+	else if (noise < 128)
 		Render_Setcolor(C_SAND2);
 	else
 		Render_Setcolor(C_SAND);
@@ -63,49 +54,37 @@ static void F_draw_sand(size_t wx, size_t wy, int vx, int vy) {
 	Render_Pixel(vx, vy);
 }
 
-static Color C_STONE  = {0x78, 0x7A, 0x79, 0xFF};
-static Color C_STONE2 = {0x70, 0x72, 0x71, 0xFF};
-static Color C_STONE3 = {0x83, 0x85, 0x84, 0xFF};
-static Color C_STONE4 = {0x65, 0x67, 0x66, 0xFF};
+static Color C_STONE  = {0x79, 0x7B, 0x7A, 0xFF};
+static Color C_STONE2 = {0x76, 0x78, 0x77, 0xFF};
+static Color C_STONE4 = {0x7D, 0x7F, 0x7E, 0xFF};
+static Color C_STONE3 = {0x73, 0x75, 0x74, 0xFF};
 
 /* Draw pattern for stone */
 static void F_draw_stone(size_t wx, size_t wy, int vx, int vy) {
-	/* Pseudo-random seed based only on world coordinates */
-	const size_t seed = wx + (wy ^ wx);
-
-	const double frequency = 3.0; /* Controls the granularity of the noise */
-	const size_t depth	   = 3;	  /* Controls the layers of detail */
-
-	/* Generate a pseudo-random value based on Perlin noise */
-	double noise_value =
-		perlin2d(seed, (double)wx, (double)wy, frequency, depth);
-
-	/* Normalize noise value to a range of 0-1 */
-	noise_value = fmod(noise_value, 1.0);
-	if (noise_value < 0)
-		noise_value += 1.0;
+	size_t noise = noise2(wx, wy, 0);
 
 	/* Map noise value to a specific color */
-	if (noise_value > 0.4)
-		Render_Setcolor(C_STONE);
-	else if (noise_value > 0.2)
-		Render_Setcolor(C_STONE2);
-	else if (noise_value > 0.1)
-		Render_Setcolor(C_STONE3);
-	else
+	if (noise < 24)
 		Render_Setcolor(C_STONE4);
+	else if (noise < 48)
+		Render_Setcolor(C_STONE3);
+	else if (noise < 128)
+		Render_Setcolor(C_STONE2);
+	else
+		Render_Setcolor(C_STONE);
 
 	Render_Pixel(vx, vy);
 }
 
-static Color C_WATER = {0x7F, 0x9D, 0xFF, 0xAF};
+#define C_WATER_DATA 0x7F, 0x9D, 0xFF, 0xAF
+static Color C_WATER = {C_WATER_DATA};
 
 /* Draw pattern for water */
 static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
-	Color color = {0x7F, 0x9D, 0xFF, 0xAF};
+	Color color = {C_WATER_DATA};
 
-	const double frequency = 0.04; /* Controls the granularity of the noise */
-	const size_t depth	   = 1;	   /* Controls the layers of detail */
+	const double frequency = 0.03;
+	const size_t depth	   = 1;
 
 	/* Generate a pseudo-random value based on Perlin noise */
 	double noise_value = perlin2d(0, (double)wx, (double)wy, frequency, depth);
@@ -117,9 +96,8 @@ static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
 	noise_value *= 12;
 
 	uint8_t nv = (uint8_t)noise_value;
-	color.r -= nv;
 	color.g += nv;
-	color.a -= nv;
+	color.b -= nv / 2;
 
 	Render_Setcolor(color);
 	Render_Pixel(vx, vy);

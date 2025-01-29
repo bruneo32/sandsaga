@@ -128,7 +128,7 @@ static const unsigned char HASH[] = {
 	27,	 127, 246, 250, 1,	 8,	  198, 250, 209, 92,  222, 173, 21,	 88,  102,
 	219};
 
-static size_t noise2(size_t x, size_t y, seed_t SEED) {
+size_t noise2(size_t x, size_t y, seed_t SEED) {
 	size_t yindex = (y + SEED) % 256;
 	if (yindex < 0)
 		yindex += 256;
@@ -147,7 +147,7 @@ static double smooth_inter(double x, double y, double s) {
 	return lin_inter(x, y, s * s * (3 - 2 * s));
 }
 
-static double noise2d(double x, double y, seed_t SEED) {
+double noise2d(double x, double y, seed_t SEED) {
 	const size_t x_int	= floor(x);
 	const size_t y_int	= floor(y);
 	const double x_frac = x - x_int;
