@@ -69,6 +69,8 @@ void draw_gameboard_world(const SDL_FRect *camera);
 typedef uint32_t seed_t;
 typedef uint16_t chunk_xaxis_t;
 typedef uint8_t	 chunk_yaxis_t;
+
+#pragma pack(push, 1)
 typedef union chunk_u {
 	seed_t id;
 	struct {
@@ -79,6 +81,7 @@ typedef union chunk_u {
 		bit modified : 1;
 	} PACKED;
 } Chunk;
+#pragma pack(pop)
 
 extern const Chunk CHUNK_ID_VALID_MASK;
 /* Get chunk id without flags, only x and y */

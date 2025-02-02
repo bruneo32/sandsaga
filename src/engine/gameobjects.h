@@ -3,15 +3,6 @@
 
 #include "../graphics/color.h"
 
-#define MAX_GO_ID (0b01111111)
-typedef union GO_ID {
-	uint8_t raw;
-	struct {
-		bit id		: 7;
-		bit updated : 1;
-	} PACKED;
-} GO_ID;
-
 typedef enum GO_Type {
 	GO_STATIC = 0,
 	GO_POWDER,
@@ -20,12 +11,24 @@ typedef enum GO_Type {
 } GO_Type;
 #define GO_Type uint8_t
 
+#pragma pack(push, 1)
+typedef union GO_ID {
+	uint8_t raw;
+	struct {
+		bit id		: 7;
+		bit updated : 1;
+	} PACKED;
+} GO_ID;
+
 typedef struct GameObject {
 	GO_Type type;
 	float	density;
 	Color	color;
 	void (*draw)(size_t wx, size_t wy, int vx, int vy);
 } PACKED GameObject;
+#pragma pack(pop)
+
+#define MAX_GO_ID (0b01111111)
 
 extern size_t	  go_table_size;
 extern GameObject go_table[MAX_GO_ID];

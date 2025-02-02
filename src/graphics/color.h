@@ -4,12 +4,14 @@
 
 #include "../util.h"
 
+#pragma pack(push, 1)
 typedef struct _Color {
 	uint8_t r; /* Red */
 	uint8_t g; /* Green */
 	uint8_t b; /* Blue */
 	uint8_t a; /* Alpha */
 } PACKED Color;
+#pragma pack(pop)
 
 static const Color C_BLACK	= {0x00, 0x00, 0x00, 0xFF};
 static const Color C_WHITE	= {0xFF, 0xFF, 0xFF, 0xFF};

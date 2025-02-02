@@ -130,10 +130,6 @@ typedef struct _CList {
 
 #define repeat(n) __repeat_body(n, _tmp##__COUNTER__##_)
 
-/** Enable attribute packing in tcc compiler */
-#if defined(__TINYC__)
-#pragma pack(1)
-#endif
 #define PACKED __attribute__((packed))
 
 #endif // _UTILS_H

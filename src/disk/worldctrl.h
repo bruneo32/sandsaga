@@ -31,11 +31,13 @@
 #define CATABLE_SIZE (CHUNK_MAX_X * CHUNK_MAX_Y)
 typedef uint32_t catable_t;
 
+#pragma pack(push, 1)
 typedef struct {
 	byte	  version;
 	seed_t	  seed;
 	catable_t catable[CATABLE_SIZE];
 } PACKED WorldControl;
+#pragma pack(pop)
 
 extern int world_control_fd;
 extern int world_data_fd;

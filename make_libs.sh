@@ -21,7 +21,7 @@ ARM64_FLAGS="-march=armv8-a -mfix-cortex-a53-835769"
 
 COMMON_FLAGS="-O2 -mtune=generic -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer \
 	-fopenmp -falign-functions=32 -ftree-vectorize -funroll-loops -ffast-math"
-COMMON_FLAGS_WIN="$COMMON_FLAGS"
+COMMON_FLAGS_WIN="$COMMON_FLAGS -mno-ms-bitfields"
 
 FLAGS_AMD64=(
 	-DCMAKE_SYSTEM_NAME=Linux
@@ -49,8 +49,8 @@ FLAGS_MINGW=(
 	-DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc
 	-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
 	-DCMAKE_BUILD_TYPE=Release
-	-DCMAKE_C_FLAGS_RELEASE="${COMMON_FLAGS} ${AMD64_FLAGS}"
-	-DCMAKE_CXX_FLAGS_RELEASE="${COMMON_FLAGS} ${AMD64_FLAGS}"
+	-DCMAKE_C_FLAGS_RELEASE="${COMMON_FLAGS_WIN} ${AMD64_FLAGS}"
+	-DCMAKE_CXX_FLAGS_RELEASE="${COMMON_FLAGS_WIN} ${AMD64_FLAGS}"
 )
 
 if [[ ! -d "libs" ]]; then mkdir -p libs; fi
