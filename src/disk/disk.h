@@ -51,11 +51,20 @@ int	  munmap(void *addr, size_t length);
 #define _1M (_1K * _1K)
 #define _1G (_1M * _1K)
 
-extern char			 path_separator[2];
-extern char			*user_path;
+extern char path_separator[2];
+
+extern char *user_path;
+extern char *player_data_folder_path;
+extern char *player_sprite_file_path;
+extern char *world_folder_path;
+extern char *world_control_path;
+extern char *world_data_path;
+
 extern WorldControl *world_control;
 
 size_t check_disk_space(const char *path);
+int	   file_exists(const char *path);
+void   mkdir_r(const char *path);
 void   disk_init();
 
 #endif // _DISK_H

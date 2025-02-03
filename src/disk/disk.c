@@ -4,17 +4,18 @@
 
 char path_separator[2];
 
-char *user_path = NULL;
+char *user_path				  = NULL;
+char *player_data_folder_path = NULL;
+char *player_sprite_file_path = NULL;
+char *world_folder_path		  = NULL;
+char *world_control_path	  = NULL;
+char *world_data_path		  = NULL;
 
 const char *game_folder			   = ".sandsaga" PATH_SEP_STR;
 const char *world_folder		   = "worlds" PATH_SEP_STR "Test" PATH_SEP_STR;
 const char *world_sparse_folder	   = "sparse" PATH_SEP_STR;
 const char *world_control_filename = "control";
 const char *world_data_filename	   = "data.bin";
-
-char *world_folder_path	 = NULL;
-char *world_control_path = NULL;
-char *world_data_path	 = NULL;
 
 size_t check_disk_space(const char *path) {
 #ifdef _WIN32
@@ -32,14 +33,24 @@ size_t check_disk_space(const char *path) {
 	if (statvfs(path, &stat) == 0) {
 		return stat.f_bavail * stat.f_frsize;
 	} else {
-		logerr("check_disk_space: Failed to query free space: (%lu) %s",
-			   errno, strerror(errno));
+		logerr("check_disk_space: Failed to query free space: (%lu) %s", errno,
+			   strerror(errno));
 		return 0;
 	}
 #endif
 }
 
-static void mkdir_r(const char *path) {
+int file_exists(const char *path) {
+#ifdef _WIN32
+	DWORD dwAttrib = GetFileAttributes(path);
+	return (dwAttrib != INVALID_FILE_ATTRIBUTES);
+#else
+	struct stat buffer;
+	return (stat(path, &buffer) == 0);
+#endif
+}
+
+void mkdir_r(const char *path) {
 	char *p = strdup(path);
 
 	for (char *s = strchr(p, PATH_SEP); s != NULL;
@@ -66,8 +77,20 @@ static void disk_deinit() {
 	if (world_control_fd)
 		close(world_control_fd);
 
+	if (world_data_path)
+		free(world_data_path);
+
 	if (world_control_path)
 		free(world_control_path);
+
+	if (world_folder_path)
+		free(world_folder_path);
+
+	if (player_sprite_file_path)
+		free(player_sprite_file_path);
+
+	if (player_data_folder_path)
+		free(player_data_folder_path);
 
 	if (user_path)
 		free(user_path);

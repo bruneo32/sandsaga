@@ -16,6 +16,7 @@
 
 #include "assets/assets.h"
 #include "disk/disk.h"
+#include "disk/resources.h"
 #include "engine/engine.h"
 #include "engine/entities.h"
 #include "engine/gameobjects.h"
@@ -23,6 +24,7 @@
 #include "graphics/color.h"
 #include "graphics/font/font.h"
 #include "graphics/graphics.h"
+#include "log/log.h"
 #include "ui/ui.h"
 #include "util.h"
 
@@ -96,8 +98,7 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Load resources */
-	player.sprite = loadIMG_from_mem(
-		res_player_body_png, res_player_body_png_len, __window, __renderer);
+	load_player_sprite(&player, res_player_body_png, res_player_body_png_len);
 
 	/* =============================================================== */
 	/* Init gameloop variables */
