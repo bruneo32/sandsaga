@@ -6,16 +6,40 @@
 
 SDL_Window	 *__window	 = NULL;
 SDL_Renderer *__renderer = NULL;
-SDL_Texture	 *vscreen_	 = NULL;
+SDL_Texture	 *__vscreen	 = NULL;
 
 uint32_t __windowWidth	= 0;
 uint32_t __windowHeight = 0;
 
+static void Render_deinit() {
+	if (__vscreen)
+		SDL_DestroyTexture(__vscreen);
+
+	if (__renderer)
+		SDL_DestroyRenderer(__renderer);
+
+	if (__window)
+		SDL_DestroyWindow(__window);
+
+	SDL_Quit();
+}
+
 void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 				 uint32_t WINDOW_HEIGHT) {
+	atexit(Render_deinit);
+
 	/* Save data for calculations */
 	__windowWidth  = WINDOW_WIDTH;
 	__windowHeight = WINDOW_HEIGHT;
+
+	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+
+#ifdef _WIN32
+	/* In windows, opengl could be suboptimal, d3d11 is the best balance
+	 * between performance and compatibility */
+	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+#endif
 
 	/* Initialize SDL2 */
 	if (0 != SDL_Init(SDL_INIT_VIDEO)) {
@@ -31,7 +55,6 @@ void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 
 	if (!__window) {
 		logerr("Error creating window: %s", SDL_GetError());
-		SDL_Quit();
 		exit(-2);
 	}
 
@@ -42,18 +65,18 @@ void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 										SDL_RENDERER_PRESENTVSYNC);
 	if (!__renderer) {
 		logerr("Error creating renderer: %s", SDL_GetError());
-		SDL_DestroyWindow(__window);
-		SDL_Quit();
 		exit(-3);
 	}
+
+	/* Create a texture for the screen */
+	__vscreen = SDL_CreateTexture(__renderer, COLOR_PIXELFORMAT,
+								  SDL_TEXTUREACCESS_STREAMING, VIEWPORT_WIDTH,
+								  VIEWPORT_HEIGHT);
+	SDL_SetTextureBlendMode(__vscreen, SDL_BLENDMODE_BLEND);
+
+	SDL_SetRenderTarget(__renderer, NULL);
 	SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
-
-	vscreen_ = SDL_CreateTexture(__renderer, SDL_PIXELFORMAT_RGBA8888,
-								 SDL_TEXTUREACCESS_TARGET, VSCREEN_WIDTH,
-								 VSCREEN_HEIGHT);
-
-	SDL_SetTextureBlendMode(vscreen_, SDL_BLENDMODE_BLEND);
-	Render_SetcolorRGBA(0xFF, 0xFF, 0xFF, 0);
+	Render_SetcolorRGBA(0xFF, 0xFF, 0xFF, 0x00);
 	SDL_RenderClear(__renderer);
 }
 
@@ -78,7 +101,6 @@ void Render_Rescale(float scalex, float scaley) {
 void Render_SetPosition(int x, int y) {
 	/* Save user-defined render target */
 	SDL_Texture *__rtex = SDL_GetRenderTarget(__renderer);
-	// SDL_Texture *__rtex = NULL;
 
 	SDL_Rect viewport = {x, y, __windowWidth, __windowHeight};
 	SDL_RenderSetViewport(__renderer, &viewport);
@@ -148,22 +170,22 @@ void Render_Ellipse(int rx, int ry, int xc, int yc) {
 	x = 0;
 	y = ry;
 
-	// Initial decision parameter of region 1
+	/* Initial decision parameter of region 1 */
 	d1 = (ry * ry) - (rx * rx * ry) + (0.25 * rx * rx);
 	dx = 2 * ry * ry * x;
 	dy = 2 * rx * rx * y;
 
-	// For region 1
+	/* For region 1 */
 	while (dx < dy) {
 
-		// Print points based on 4-way symmetry
+		/* Print points based on 4-way symmetry */
 		Render_Pixel(x + xc, y + yc);
 		Render_Pixel(-x + xc, y + yc);
 		Render_Pixel(x + xc, -y + yc);
 		Render_Pixel(-x + xc, -y + yc);
 
-		// Checking and updating value of
-		// decision parameter based on algorithm
+		/* Checking and updating value of decision
+		 * parameter based on algorithm */
 		if (d1 < 0) {
 			x++;
 			dx = dx + (2 * ry * ry);
@@ -177,21 +199,20 @@ void Render_Ellipse(int rx, int ry, int xc, int yc) {
 		}
 	}
 
-	// Decision parameter of region 2
+	/* Decision parameter of region 2 */
 	d2 = ((ry * ry) * ((x + 0.5) * (x + 0.5))) +
 		 ((rx * rx) * ((y - 1) * (y - 1))) - (rx * rx * ry * ry);
 
-	// Plotting points of region 2
+	/* Plotting points of region 2 */
 	while (y >= 0) {
 
-		// Print points based on 4-way symmetry
+		/* Print points based on 4-way symmetry */
 		Render_Pixel(x + xc, y + yc);
 		Render_Pixel(-x + xc, y + yc);
 		Render_Pixel(x + xc, -y + yc);
 		Render_Pixel(-x + xc, -y + yc);
 
-		// Checking and updating parameter
-		// value based on algorithm
+		/* Checking and updating parameter value based on algorithm */
 		if (d2 > 0) {
 			y--;
 			dy = dy - (2 * rx * rx);

@@ -14,7 +14,7 @@ GO_ID GO_SAND;
 GO_ID GO_STONE;
 
 GO_ID register_gameobject(GO_Type type, float density, Color color,
-						  void (*draw)(size_t wx, size_t wy, int vx, int vy)) {
+						  GO_Draw draw) {
 
 	go_table[go_table_size].type	= type;
 	go_table[go_table_size].density = density;
@@ -40,18 +40,17 @@ static void F_draw_sand(size_t wx, size_t wy, int vx, int vy) {
 	size_t noise = noise2(wx, wy, seed);
 
 	/* Map noise value to a specific color */
+	const size_t idx = vscreen_idx(vx, vy);
 	if (noise < 6)
-		Render_Setcolor(C_LTGRAY);
+		vscreen[idx] = C_LTGRAY;
 	else if (noise < 12)
-		Render_Setcolor(C_SAND4);
+		vscreen[idx] = C_SAND4;
 	else if (noise < 64)
-		Render_Setcolor(C_SAND3);
+		vscreen[idx] = C_SAND3;
 	else if (noise < 128)
-		Render_Setcolor(C_SAND2);
+		vscreen[idx] = C_SAND2;
 	else
-		Render_Setcolor(C_SAND);
-
-	Render_Pixel(vx, vy);
+		vscreen[idx] = C_SAND;
 }
 
 static Color C_STONE  = {0x79, 0x7B, 0x7A, 0xFF};
@@ -64,43 +63,43 @@ static void F_draw_stone(size_t wx, size_t wy, int vx, int vy) {
 	size_t noise = noise2(wx, wy, 0);
 
 	/* Map noise value to a specific color */
+	const size_t idx = vscreen_idx(vx, vy);
 	if (noise < 24)
-		Render_Setcolor(C_STONE4);
+		vscreen[idx] = C_STONE4;
 	else if (noise < 48)
-		Render_Setcolor(C_STONE3);
+		vscreen[idx] = C_STONE3;
 	else if (noise < 128)
-		Render_Setcolor(C_STONE2);
+		vscreen[idx] = C_STONE2;
 	else
-		Render_Setcolor(C_STONE);
-
-	Render_Pixel(vx, vy);
+		vscreen[idx] = C_STONE;
 }
 
-#define C_WATER_DATA 0x7F, 0x9D, 0xFF, 0xAF
-static Color C_WATER = {C_WATER_DATA};
+static Color C_WATER = {0x7F, 0x8D, 0xFF, 0xAF};
 
 /* Draw pattern for water */
 static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
-	Color color = {C_WATER_DATA};
-
 	const double frequency = 0.03;
 	const size_t depth	   = 1;
 
+	const size_t mov = frame_cx / 4;
+
 	/* Generate a pseudo-random value based on Perlin noise */
-	double noise_value = perlin2d(0, (double)wx, (double)wy, frequency, depth);
+	double noise_value =
+		perlin2d(0, (double)wx + mov, (double)wy + mov, frequency, depth);
 
 	/* Normalize noise value to a range of 0-12 */
 	noise_value = fmod(noise_value, 1.0);
 	if (noise_value < 0)
 		noise_value += 1.0;
-	noise_value *= 12;
+	noise_value *= 24.0;
 
 	uint8_t nv = (uint8_t)noise_value;
-	color.g += nv;
-	color.b -= nv / 2;
 
-	Render_Setcolor(color);
-	Render_Pixel(vx, vy);
+	Color color = C_WATER;
+	color.g += nv;
+	color.b -= nv;
+
+	vscreen[vscreen_idx(vx, vy)] = color;
 }
 
 void init_gameobjects() {

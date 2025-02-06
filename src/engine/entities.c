@@ -274,12 +274,6 @@ void move_camera(Player *player, SDL_FRect *camera) {
 									  VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 		const int end_cam_y	  = camera->y;
 
-		/* Activate the next to subchunk on the top to draw it
-		 * when entered the camera rect */
-		for (uint_fast16_t j = end_cam_y; j <= start_cam_y; j++)
-			for (uint_fast16_t i = camera->x; i < camera->x + camera->w; i++)
-				set_subchunk_world(1, i, j);
-
 	} else if (player->y > player->prev_y) {
 		/* Apply verifications for moving DOWN */
 
@@ -345,12 +339,6 @@ void move_camera(Player *player, SDL_FRect *camera) {
 		camera->y			  = clamp(player->y - VIEWPORT_HEIGHT_DIV_2, 0,
 									  VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 		const int end_cam_y	  = camera->y + camera->h - 1;
-
-		/* Activate the next to subchunk on the bottom to draw it
-		 * when entered the camera rect */
-		for (uint_fast16_t j = start_cam_y; j < end_cam_y; j++)
-			for (uint_fast16_t i = camera->x; i < camera->x + camera->w; i++)
-				set_subchunk_world(1, i, j);
 	}
 
 	if (player->x < player->prev_x) {
@@ -423,12 +411,6 @@ void move_camera(Player *player, SDL_FRect *camera) {
 									  VSCREEN_WIDTH - VIEWPORT_WIDTH);
 		const int end_cam_x	  = camera->x;
 
-		/* Activate the next to subchunk on the left to draw it
-		 * when entered the camera rect */
-		for (uint_fast16_t i = end_cam_x; i <= start_cam_x; i++)
-			for (uint_fast16_t j = camera->y; j < camera->y + camera->h; j++)
-				set_subchunk_world(1, i, j);
-
 	} else if (player->x > player->prev_x) {
 		/* Apply verifications for moving RIGHT */
 
@@ -500,12 +482,6 @@ void move_camera(Player *player, SDL_FRect *camera) {
 		camera->x			  = clamp(player->x - VIEWPORT_WIDTH_DIV_2, 0,
 									  VSCREEN_WIDTH - VIEWPORT_WIDTH);
 		const int end_cam_x	  = camera->x + camera->w - 1;
-
-		/* Activate the next to subchunk on the right to draw it
-		 * when entered the camera rect */
-		for (uint_fast16_t i = start_cam_x; i <= end_cam_x; i++)
-			for (uint_fast16_t j = camera->y; j < camera->y + camera->h; j++)
-				set_subchunk_world(1, i, j);
 	}
 
 	/* Reposition player->body */

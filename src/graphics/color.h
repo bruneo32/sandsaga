@@ -12,6 +12,7 @@ typedef struct _Color {
 	uint8_t a; /* Alpha */
 } PACKED Color;
 #pragma pack(pop)
+#define COLOR_PIXELFORMAT SDL_PIXELFORMAT_ABGR8888
 
 static const Color C_BLACK	= {0x00, 0x00, 0x00, 0xFF};
 static const Color C_WHITE	= {0xFF, 0xFF, 0xFF, 0xFF};

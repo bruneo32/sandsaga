@@ -70,15 +70,6 @@ int main(int argc, char *argv[]) {
 	/* =============================================================== */
 	/* Init window */
 	Render_init("Sandsaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "0");
-	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-
-#ifdef _WIN32
-	/* In windows, opengl could be suboptimal, d3d11 is the best balance
-	 * between performance and compatibility */
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
-#endif
-
 	SDL_RenderSetLogicalSize(__renderer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_SetWindowSize(__window, VIEWPORT_WIDTH_M2, VIEWPORT_HEIGHT_M2);
 	SDL_SetWindowPosition(__window, SDL_WINDOWPOS_CENTERED,
@@ -364,7 +355,7 @@ int main(int argc, char *argv[]) {
 
 			if (block_size == 1) {
 				gameboard[mouse_wold_y][mouse_wold_x] = current_object;
-				set_subchunk_world(1, mouse_wold_x, mouse_wold_y);
+				subchunk_set_world(mouse_wold_x, mouse_wold_y);
 				/* Mark Chunk at mouse position as modified */
 				vctable[(mouse_wold_x / CHUNK_SIZE)]
 					   [(mouse_wold_y / CHUNK_SIZE)]
@@ -385,7 +376,7 @@ int main(int argc, char *argv[]) {
 						 i < clamp_high(bx + block_size / 2, VSCREEN_WIDTH);
 						 ++i) {
 						gameboard[j][i] = current_object;
-						set_subchunk_world(1, i, j);
+						subchunk_set_world(i, j);
 						/* Mark Chunk at brush size position as modified */
 						vctable[(i / CHUNK_SIZE)][(j / CHUNK_SIZE)].modified =
 							1;
@@ -435,24 +426,20 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Draw game */
+		SDL_SetRenderTarget(__renderer, NULL);
+		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
 		Render_Clearscreen_Color(C_DKGRAY);
 
 		/* Draw player */
 		draw_player(&player, &camera);
 
 		/* Draw gameboard */
-		SDL_SetRenderTarget(__renderer, vscreen_);
-		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
 		draw_gameboard_world(&camera);
 
-		/* Draw gameboard on screen */
-		SDL_SetRenderTarget(__renderer, NULL);
-		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
-		SDL_Rect icamera = {(int)camera.x, (int)camera.y, (int)camera.w,
-							(int)camera.h};
-		SDL_RenderCopy(__renderer, vscreen_, &icamera, NULL);
-
+		/* Debug draw */
 		if (DBGL(e_dbgl_physics)) {
+			SDL_Rect icamera = {(int)camera.x, (int)camera.y, (int)camera.w,
+								(int)camera.h};
 			box2d_debug_draw(b2_world, (Rect *)&icamera);
 		}
 
@@ -462,8 +449,10 @@ int main(int argc, char *argv[]) {
 			memcpy(&color, &(GOBJECT(current_object).color), sizeof(color));
 			color.a = 0xAF;
 
+			Render_Setcolor(color);
+
 			if (block_size == 1) {
-				Render_Pixel_Color(mouse_x, mouse_y, color);
+				Render_Pixel(mouse_x, mouse_y);
 			} else {
 				int_fast16_t bx =
 					(grid_mode ? (GRIDALIGN(mouse_wold_x, block_size) -
@@ -475,16 +464,10 @@ int main(int argc, char *argv[]) {
 								  (int)camera.y) +
 									 block_size / 2
 							   : mouse_y);
+				int y_from = clamp_low((by - block_size / 2), 0);
+				int x_from = clamp_low((bx - block_size / 2), 0);
 
-				for (int_fast16_t j = clamp_low((by - block_size / 2), 0);
-					 j < clamp_high(by + block_size / 2, VIEWPORT_HEIGHT);
-					 ++j) {
-					for (int_fast16_t i = clamp_low((bx - block_size / 2), 0);
-						 i < clamp_high(bx + block_size / 2, VIEWPORT_WIDTH);
-						 ++i) {
-						Render_Pixel_Color(i, j, color);
-					}
-				}
+				Render_FillRect(x_from, y_from, block_size, block_size);
 			}
 		}
 

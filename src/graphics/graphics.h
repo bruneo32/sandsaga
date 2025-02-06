@@ -42,17 +42,11 @@ extern "C" {
 
 extern SDL_Window	*__window;
 extern SDL_Renderer *__renderer;
-extern SDL_Texture	*vscreen_;
+extern SDL_Texture	*__vscreen;
 
 /** Create a window and a renderer */
 void Render_init(const char *WINDOW_TITLE, uint32_t WINDOW_WIDTH,
 				 uint32_t WINDOW_HEIGHT);
-#define Render_end                                                             \
-	{                                                                          \
-		SDL_DestroyRenderer(__renderer);                                       \
-		SDL_DestroyWindow(__window);                                           \
-		SDL_Quit();                                                            \
-	}
 
 void Render_Rescale(float scalex, float scaley);
 void Render_SetPosition(int x, int y);
@@ -101,12 +95,12 @@ void Render_ResizeWindow(int newWidth, int newHeight, bool keepAspectRatio);
 #define Render_Line_Color(x1, y1, x2, y2, c)                                   \
 	Render_Line_RGBA(x1, y1, x2, y2, c.r, c.g, c.b, c.a)
 
-#define Render_Rect(x1, y1, x2, y2)                                            \
-	SDL_RenderDrawRect(__renderer,                                             \
-					   &(SDL_Rect){.x = x1, .y = y1, .w = x2, .h = y2});
-#define Render_FillRect(x1, y1, x2, y2)                                        \
-	SDL_RenderFillRect(__renderer,                                             \
-					   &(SDL_Rect){.x = x1, .y = y1, .w = x2, .h = y2});
+#define Render_Rect(x_, y_, w_, h_)                                            \
+	SDL_RenderDrawRect(                                                        \
+		__renderer, &(SDL_Rect){.x = (x_), .y = (y_), .w = (w_), .h = (h_)});
+#define Render_FillRect(x_, y_, w_, h_)                                        \
+	SDL_RenderFillRect(                                                        \
+		__renderer, &(SDL_Rect){.x = (x_), .y = (y_), .w = (w_), .h = (h_)});
 
 /**
  * Draw an ellipse.

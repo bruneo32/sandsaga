@@ -11,6 +11,8 @@ size_t frame_cx	  = 0;
 
 GO_ID gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
+Color vscreen[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
+
 b2World *b2_world = NULL;
 
 /**
@@ -19,13 +21,6 @@ b2World *b2_world = NULL;
  * The update step is fluent with the current VSCREEN size.
  */
 subchunk_t subchunkopt[SUBCHUNK_SIZE];
-
-void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j) {
-	if (on)
-		subchunkopt[j] = (subchunkopt[j] | BIT(i));
-	else
-		subchunkopt[j] = (subchunkopt[j] & ~BIT(i));
-}
 
 SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
@@ -256,9 +251,9 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 	GO_ID *boardxy = &gameboard[y][x];
 	GO_ID *bottom  = &gameboard[down_y][x];
 
-	GO_ID	   gobjr = *boardxy;
-	GameObject gobj	 = GOBJECT(gobjr);
-	GO_Type	   type	 = gobj.type;
+	GO_ID		gobjr = *boardxy;
+	GameObject *gobj  = &GOBJECT(gobjr);
+	GO_Type		type  = gobj->type;
 
 	switch (type) {
 	case GO_POWDER: {
@@ -270,8 +265,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 				(*bottom).id	  = gobjr.id;
 				(*bottom).updated = 1;
 				(*boardxy).raw	  = GO_NONE.raw;
-				set_subchunk_world(1, x, down_y);
-				set_subchunk_world(1, x, y);
+				subchunk_set_world(x, down_y);
+				subchunk_set_world(x, y);
 				return true;
 			}
 
@@ -279,8 +274,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 				(*bottomleft).id	  = gobjr.id;
 				(*bottomleft).updated = 1;
 				(*boardxy).raw		  = GO_NONE.raw;
-				set_subchunk_world(1, left_x, down_y);
-				set_subchunk_world(1, x, y);
+				subchunk_set_world(left_x, down_y);
+				subchunk_set_world(x, y);
 				return true;
 			}
 
@@ -288,8 +283,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 				(*bottomright).id	   = gobjr.id;
 				(*bottomright).updated = 1;
 				(*boardxy).raw		   = GO_NONE.raw;
-				set_subchunk_world(1, right_x, down_y);
-				set_subchunk_world(1, x, y);
+				subchunk_set_world(right_x, down_y);
+				subchunk_set_world(x, y);
 				return true;
 			}
 		}
@@ -304,8 +299,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 			(*bottom).id	  = gobjr.id;
 			(*bottom).updated = 1;
 			(*boardxy).raw	  = GO_NONE.raw;
-			set_subchunk_world(1, x, down_y);
-			set_subchunk_world(1, x, y);
+			subchunk_set_world(x, down_y);
+			subchunk_set_world(x, y);
 			return true;
 		}
 
@@ -322,8 +317,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 				(*left).id		= gobjr.id;
 				(*left).updated = 1;
 				(*boardxy).raw	= GO_NONE.raw;
-				set_subchunk_world(1, left_x, y);
-				set_subchunk_world(1, x, y);
+				subchunk_set_world(left_x, y);
+				subchunk_set_world(x, y);
 				return true;
 			}
 		}
@@ -341,8 +336,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 				(*right).id		 = gobjr.id;
 				(*right).updated = 1;
 				(*boardxy).raw	 = GO_NONE.raw;
-				set_subchunk_world(1, right_x, y);
-				set_subchunk_world(1, x, y);
+				subchunk_set_world(right_x, y);
+				subchunk_set_world(x, y);
 				return true;
 			}
 		}
@@ -351,8 +346,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 			(*bottomleft).id	  = gobjr.id;
 			(*bottomleft).updated = 1;
 			(*boardxy).raw		  = GO_NONE.raw;
-			set_subchunk_world(1, left_x, down_y);
-			set_subchunk_world(1, x, y);
+			subchunk_set_world(left_x, down_y);
+			subchunk_set_world(x, y);
 			return true;
 		}
 
@@ -361,8 +356,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 			(*bottomright).id	   = gobjr.id;
 			(*bottomright).updated = 1;
 			(*boardxy).raw		   = GO_NONE.raw;
-			set_subchunk_world(1, right_x, down_y);
-			set_subchunk_world(1, x, y);
+			subchunk_set_world(right_x, down_y);
+			subchunk_set_world(x, y);
 			return true;
 		}
 	} break;
@@ -377,8 +372,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 			(*up).id	   = gobjr.id;
 			(*up).updated  = 1;
 			(*boardxy).raw = GO_NONE.raw;
-			set_subchunk_world(1, x, up_y);
-			set_subchunk_world(1, x, y);
+			subchunk_set_world(x, up_y);
+			subchunk_set_world(x, y);
 			return true;
 		}
 
@@ -395,8 +390,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 				(*left).id		= gobjr.id;
 				(*left).updated = 1;
 				(*boardxy).raw	= GO_NONE.raw;
-				set_subchunk_world(1, left_x, y);
-				set_subchunk_world(1, x, y);
+				subchunk_set_world(left_x, y);
+				subchunk_set_world(x, y);
 				return true;
 			}
 		}
@@ -414,8 +409,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 				(*right).id		 = gobjr.id;
 				(*right).updated = 1;
 				(*boardxy).raw	 = GO_NONE.raw;
-				set_subchunk_world(1, right_x, y);
-				set_subchunk_world(1, x, y);
+				subchunk_set_world(right_x, y);
+				subchunk_set_world(x, y);
 				return true;
 			}
 		}
@@ -424,8 +419,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 			(*upleft).id	  = gobjr.id;
 			(*upleft).updated = 1;
 			(*boardxy).raw	  = GO_NONE.raw;
-			set_subchunk_world(1, left_x, up_y);
-			set_subchunk_world(1, x, y);
+			subchunk_set_world(left_x, up_y);
+			subchunk_set_world(x, y);
 			return true;
 		}
 
@@ -433,22 +428,24 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 			(*upright).id	   = gobjr.id;
 			(*upright).updated = 1;
 			(*boardxy).raw	   = GO_NONE.raw;
-			set_subchunk_world(1, right_x, up_y);
-			set_subchunk_world(1, x, y);
+			subchunk_set_world(right_x, up_y);
+			subchunk_set_world(x, y);
 			return true;
 		}
 	} break;
 	}
 
 	/* Flow down in less dense fluids */
-	GameObject go_bottom = GOBJECT(*bottom);
-	if (!(*bottom).updated && type >= GO_POWDER && IS_IN_BOUNDS_V(down_y) &&
-		go_bottom.type >= GO_POWDER && go_bottom.density < gobj.density) {
+	const GO_ID bot		  = *bottom;
+	GameObject *go_bottom = &GOBJECT(bot);
+	if (IS_IN_BOUNDS_V(down_y) && bot.raw && !bot.updated &&
+		GO_IS_FLUID(type) && GO_IS_FLUID(go_bottom->type) &&
+		go_bottom->density < gobj->density) {
 		SWAP((*bottom).raw, (*boardxy).raw);
 		(*bottom).updated  = 1;
 		(*boardxy).updated = 1;
-		set_subchunk_world(1, x, y);
-		set_subchunk_world(1, x, down_y);
+		subchunk_set_world(x, y);
+		subchunk_set_world(x, down_y);
 		return true;
 	}
 
@@ -457,16 +454,8 @@ bool update_object(const size_t x, const size_t y, const bool ltr) {
 
 /* ==== Update gameboard subchunked ==== */
 
-#define inline_update_object_body(__j, __i, __ltr, __p)                        \
-	const GO_ID pixel__ = gameboard[(__j)][(__i)];                             \
-	if (pixel__.raw != GO_NONE.raw && !pixel__.updated)                        \
-		if (update_object((__i), (__j), (__ltr)))                              \
-			__p = true;
-
 void update_gameboard() {
 	static bool left_to_right = false;
-
-	ssize_t start_si = (left_to_right) ? 0 : SUBCHUNK_SIZE - 1;
 
 	for (ssize_t sj = SUBCHUNK_SIZE - 1; sj >= 0; --sj) {
 		/* If the whole line of subchunks is inactive, there's nothing to do */
@@ -477,30 +466,7 @@ void update_gameboard() {
 		ssize_t end_j	= start_j + SUBCHUNK_HEIGHT;
 		end_j			= clamp_high(end_j, VSCREEN_HEIGHT);
 
-		bool odds = sj % 2 != 0;
-
-		/* Optimization, process whole line, since the whole line of subchunks
-		 * is active  */
-		if (subchunkopt[sj] == SUBCHUNK_ROW_COMPLETE) {
-			/* Dummy variable, but required to call inline_update_object_body */
-			static bool p __attribute__((used));
-			repeat(2) {
-				for (ssize_t j = end_j - 1; j >= start_j; --j) {
-					bool ltr = fast_rand() & 1;
-					if (left_to_right)
-						for (ssize_t i = odds; i < VSCREEN_WIDTH; i += 2) {
-							inline_update_object_body(j, i, ltr, p);
-						}
-					else
-						for (ssize_t i = VSCREEN_WIDTH_M1 - odds; i >= 0;
-							 i -= 2) {
-							inline_update_object_body(j, i, ltr, p);
-						}
-				}
-				odds = !odds;
-			}
-			continue;
-		}
+		bool odds = sj & 1;
 
 		/* First active subchunk i */
 		ssize_t fsi = -1;
@@ -510,43 +476,65 @@ void update_gameboard() {
 		 * to the next and this will be revisited. This is weird to say but
 		 * important to make fluids like water to flow consistently. */
 		for (ssize_t j = end_j - 1; j >= start_j; --j) {
+			bool ltr = fast_rand() & 1;
 			/* First odds, then evens (or viceversa) */
 			repeat(2) {
-				bool ltr = fast_rand() & 1;
+				if (left_to_right) {
+					for (ssize_t si = (fsi == -1) ? 0 : fsi; si < SUBCHUNK_SIZE;
+						 ++si) {
+						/* Skip inactive subchunks */
+						if (!is_subchunk_active(si, sj))
+							continue;
 
-				for (ssize_t si = (fsi == -1) ? start_si : fsi;
-					 (left_to_right) ? (si < SUBCHUNK_SIZE) : (si >= 0);
-					 (left_to_right) ? (++si) : (--si)) {
+						if (fsi == -1)
+							fsi = si;
 
-					/* Skip inactive subchunks */
-					if (!is_subchunk_active(si, sj))
-						continue;
+						ssize_t start_i = si * SUBCHUNK_WIDTH;
+						ssize_t end_i	= start_i + SUBCHUNK_WIDTH;
 
-					if (fsi == -1)
-						fsi = si;
-
-					ssize_t start_i = si * SUBCHUNK_WIDTH;
-					ssize_t end_i	= start_i + SUBCHUNK_WIDTH;
-					end_i			= clamp_high(end_i, VSCREEN_WIDTH);
-
-					bool p = false;
-
-					/* Update subchunk */
-					if (left_to_right)
+						bool p = false;
 						for (ssize_t i = start_i + odds; i < end_i; i += 2) {
-							inline_update_object_body(j, i, ltr, p);
+							const GO_ID pixel = gameboard[j][i];
+							if (pixel.raw == GO_NONE.raw || pixel.updated)
+								continue;
+							if (update_object(i, j, ltr))
+								p = true;
 						}
-					else
+						/* Activate top subchunk for gravity */
+						if (p) {
+							subchunk_set(si, sj - 1);
+							subchunk_set(si - 1, sj);
+							subchunk_set(si + 1, sj);
+						}
+					}
+				} else {
+					for (ssize_t si = (fsi == -1) ? SUBCHUNK_SIZE - 1 : fsi;
+						 (si >= 0); --si) {
+						/* Skip inactive subchunks */
+						if (!is_subchunk_active(si, sj))
+							continue;
+
+						if (fsi == -1)
+							fsi = si;
+
+						ssize_t start_i = si * SUBCHUNK_WIDTH;
+						ssize_t end_i	= start_i + SUBCHUNK_WIDTH;
+
+						bool p = false;
 						for (ssize_t i = end_i - 1 - odds; i >= start_i;
 							 i -= 2) {
-							inline_update_object_body(j, i, ltr, p);
+							const GO_ID pixel = gameboard[j][i];
+							if (pixel.raw == GO_NONE.raw || pixel.updated)
+								continue;
+							if (update_object(i, j, ltr))
+								p = true;
 						}
-
-					/* Activate adjacent subchunk for gravity and fluids */
-					if (p) {
-						set_subchunk(1, si, sj - 1);
-						set_subchunk(1, si - 1, sj);
-						set_subchunk(1, si + 1, sj);
+						/* Activate top subchunk for gravity */
+						if (p) {
+							subchunk_set(si, sj - 1);
+							subchunk_set(si - 1, sj);
+							subchunk_set(si + 1, sj);
+						}
 					}
 				}
 
@@ -557,127 +545,119 @@ void update_gameboard() {
 		}
 	}
 
-	left_to_right = !left_to_right;
-}
+	/* Reset gameobjects updated bit of this frame,
+	 * and select which subchunks will keep alive in the next frame. */
+	for (size_t sj = 0; sj < SUBCHUNK_SIZE; ++sj) {
+		/* If the whole line of subchunks is inactive, there's nothing to do */
+		if (subchunkopt[sj] == 0)
+			continue;
 
-void draw_subchunk_pos(size_t start_i, size_t end_i, size_t start_j,
-					   size_t end_j, const SDL_FRect *camera) {
-
-	/* Draw block */
-	for (size_t j = end_j - 1;; --j) {
-		for (size_t i = end_i - 1;; --i) {
-			/* Keep subchunk alive for the next frame if it was GUPDATED */
-			const bool u = gameboard[j][i].updated;
-			if (u) {
-				set_subchunk_world(1, i, j);
-				/* Remove updated bit */
-				gameboard[j][i].updated = 0;
-			}
-
-			/* If is in camera bounds, draw it */
-			if (!camera ||
-				((i >= camera->x - 1 && i <= camera->x + camera->w) &&
-				 (j >= camera->y - 1 && j <= camera->y + camera->h))) {
-				if (gameboard[j][i].raw == GO_NONE.raw) {
-					Render_Pixel_Color(i, j, C_TRANS);
-				} else if (DBGL(e_dbgl_engine) && u) {
-					/* Invert color for e_dbgl_engine */
-
-					Color CUSTOM_COL;
-					memcpy(&CUSTOM_COL, &(GOBJECT(gameboard[j][i]).color),
-						   sizeof(Color));
-					CUSTOM_COL.r = 0xFF - CUSTOM_COL.r;
-					CUSTOM_COL.g = 0xFF - CUSTOM_COL.g;
-					CUSTOM_COL.b = 0xFF - CUSTOM_COL.b;
-
-					Render_Pixel_Color(i, j, CUSTOM_COL);
-				} else if (GOBJECT(gameboard[j][i]).draw == NULL) {
-					Render_Pixel_Color(i, j, GOBJECT(gameboard[j][i]).color);
-				} else {
-					/* Get world coordinates */
-					const size_t wx = vctable[0][0].x * CHUNK_SIZE + i;
-					const size_t wy = vctable[0][0].y * CHUNK_SIZE + j;
-					GOBJECT(gameboard[j][i]).draw(wx, wy, (int)i, (int)j);
-				}
-			}
-
-			if (i == start_i)
-				break;
-		}
-
-		if (j == start_j)
-			break;
-	}
-}
-
-void draw_gameboard_world(const SDL_FRect *camera) {
-
-	/* Traverse all subchunks */
-	for (uint_fast8_t sj = SUBCHUNK_SIZE - 1;; --sj) {
 		size_t start_j = sj * SUBCHUNK_HEIGHT;
 		size_t end_j   = start_j + SUBCHUNK_HEIGHT;
 		if (end_j >= VSCREEN_HEIGHT)
-			end_j = VSCREEN_HEIGHT - 1;
+			end_j = VSCREEN_HEIGHT;
 
-		if (subchunkopt[sj] == SUBCHUNK_ROW_COMPLETE) {
-			/* The whole line of subchunks is active */
-			subchunkopt[sj] = 0;
-			draw_subchunk_pos(0, VSCREEN_WIDTH_M1, start_j, end_j, camera);
-			if (sj == 0)
-				break;
-			continue;
-		}
-
-		for (uint_fast8_t si = SUBCHUNK_SIZE - 1;; --si) {
-
+		for (size_t si = 0; si < SUBCHUNK_SIZE; ++si) {
 			/* Skip inactive subchunks */
-			const bool is_active = is_subchunk_active(si, sj);
-			if (!is_active) {
-				if (si == 0)
-					break;
+			if (!is_subchunk_active(si, sj))
 				continue;
-			}
 
 			size_t start_i = si * SUBCHUNK_WIDTH;
 			size_t end_i   = start_i + SUBCHUNK_WIDTH;
 			if (end_i >= VSCREEN_WIDTH)
-				end_i = VSCREEN_WIDTH - 1;
+				end_i = VSCREEN_WIDTH;
 
-			set_subchunk(0, si, sj);
-			draw_subchunk_pos(start_i, end_i, start_j, end_j, camera);
-
-			if (si == 0)
-				break;
+			/* Initial assumption: subchunk will be inactive */
+			subchunk_unset(si, sj);
+			for (size_t j = start_j; j < end_j; ++j) {
+				for (size_t i = start_i; i < end_i; ++i) {
+					const GO_ID go = gameboard[j][i];
+					if (go.updated) {
+						/* Set subchunk active for the next frame */
+						subchunk_set(si, sj);
+						/* Reset gameobject updated bit */
+						gameboard[j][i].updated = 0;
+					}
+				}
+			}
 		}
-
-		if (sj == 0)
-			break;
 	}
 
-	if (DBGL(e_dbgl_ui)) {
-		/* Draw chunk lines */
-		for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += 2) {
-			Render_Pixel_RGBA(CHUNK_SIZE, _j, 0, 127, 255, 64);
-			Render_Pixel_RGBA(CHUNK_SIZE_M2, _j, 255, 127, 0, 64);
+	left_to_right = !left_to_right;
+}
+
+void draw_gameboard_world(const SDL_FRect *camera) {
+	size_t cam_x = (size_t)(camera->x);
+	size_t cam_y = (size_t)(camera->y);
+
+	/* Plot pixels inside camera to buffer */
+	for (size_t j = 0; j < VIEWPORT_HEIGHT; ++j) {
+		for (size_t i = 0; i < VIEWPORT_WIDTH; ++i) {
+			const size_t x = i + cam_x;
+			const size_t y = j + cam_y;
+
+			const GO_ID go = gameboard[y][x];
+
+			if (go.raw == GO_NONE.raw) {
+				vscreen[vscreen_idx(i, j)] = (Color){0x00, 0x00, 0x00, 0x00};
+				continue;
+			}
+
+			const GameObject *gobj = &GOBJECT(go);
+			if (gobj->draw == NULL) {
+				vscreen[vscreen_idx(i, j)] = gobj->color;
+			} else {
+				/* Get world coordinates */
+				const size_t wx = vctable[0][0].x * CHUNK_SIZE + x;
+				const size_t wy = vctable[0][0].y * CHUNK_SIZE + y;
+				gobj->draw(wx, wy, (int)i, (int)j);
+			}
 		}
-		for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += 2) {
-			Render_Pixel_RGBA(_i, CHUNK_SIZE, 0, 127, 255, 64);
-			Render_Pixel_RGBA(_i, CHUNK_SIZE_M2, 255, 127, 0, 64);
+	}
+
+	/* Render pixels to vscreen and copy to renderer */
+	SDL_UpdateTexture(__vscreen, NULL, vscreen, vscreen_line_size);
+	SDL_RenderCopy(__renderer, __vscreen, NULL, NULL);
+
+	/* Debug draw */
+	if (DBGL(e_dbgl_ui)) {
+		Color c_debug1 = {0, 127, 255, 64};
+		Color c_debug2 = {255, 127, 0, 64};
+
+		/* Draw chunk lines */
+		if (cam_x < CHUNK_SIZE) {
+			for (size_t _j = 0; _j < VIEWPORT_HEIGHT; _j += 2)
+				Render_Pixel_Color(CHUNK_SIZE + 1 - cam_x, _j, c_debug1);
+		} else if (cam_x >= CHUNK_SIZE) {
+			for (size_t _j = 0; _j < VIEWPORT_HEIGHT; _j += 2)
+				Render_Pixel_Color(CHUNK_SIZE_M2 + 1 - cam_x, _j, c_debug2);
 		}
 
-		/* Draw test points */
-		for (size_t _j = 0; _j < VSCREEN_HEIGHT; _j += SUBCHUNK_HEIGHT)
-			for (size_t _i = 0; _i < VSCREEN_WIDTH; _i += SUBCHUNK_WIDTH)
+		if (cam_y < CHUNK_SIZE) {
+			for (size_t _i = 0; _i < VIEWPORT_WIDTH; _i += 2)
+				Render_Pixel_Color(_i, CHUNK_SIZE + 1 - cam_y, c_debug1);
+		} else if (cam_y >= CHUNK_SIZE) {
+			for (size_t _i = 0; _i < VIEWPORT_WIDTH; _i += 2)
+				Render_Pixel_Color(_i, CHUNK_SIZE_M2 + 1 - cam_y, c_debug2);
+		}
+
+		/* Draw subchunk active points */
+		for (size_t _j = (cam_y / SUBCHUNK_HEIGHT) * SUBCHUNK_HEIGHT;
+			 _j < cam_y + VSCREEN_HEIGHT; _j += SUBCHUNK_HEIGHT) {
+			for (size_t _i = (cam_x / SUBCHUNK_WIDTH) * SUBCHUNK_WIDTH;
+				 _i < cam_x + VSCREEN_WIDTH; _i += SUBCHUNK_WIDTH) {
 				Render_Pixel_Color(
-					_i, _j,
+					_i - cam_x, _j - cam_y,
 					((!is_subchunk_active_world(_i, _j)) ? C_RED : C_GREEN));
+			}
+		}
 	}
 }
 
 bool F_IS_FLOOR(ssize_t y, ssize_t x) {
 	return gameboard[y][x].raw != GO_NONE.raw &&
-		   ((GOBJECT(gameboard[y][x])).type == GO_STATIC ||
-			(GOBJECT(gameboard[y][x])).type == GO_POWDER);
+		   ((&GOBJECT(gameboard[y][x]))->type == GO_STATIC ||
+			(&GOBJECT(gameboard[y][x]))->type == GO_POWDER);
 }
 
 void deactivate_soil(size_t si, size_t sj) {

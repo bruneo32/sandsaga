@@ -27,6 +27,10 @@ extern int DEBUG_LEVEL;
 
 extern GO_ID gameboard[VSCREEN_HEIGHT][VSCREEN_WIDTH];
 
+extern Color vscreen[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
+#define vscreen_idx(x, y) (((y) * VIEWPORT_WIDTH) + (x))
+#define vscreen_line_size (VIEWPORT_WIDTH * sizeof(Color))
+
 /* 16-bit subchunk_t means 16x16 subchunks filling VSCREEN */
 typedef uint16_t subchunk_t;
 
@@ -42,7 +46,17 @@ typedef struct _SoilData {
 } SoilData;
 extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
-void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
+#define subchunk_set(_i, _j)   (subchunkopt[(_j)] |= BIT(_i))
+#define subchunk_unset(_i, _j) (subchunkopt[(_j)] &= ~BIT(_i))
+
+#define subchunk_set_world(_x, _y)                                             \
+	subchunk_set((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
+#define subchunk_unset_world(_x, _y)                                           \
+	subchunk_unset((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
+
+#define is_subchunk_active(_i, _j) (0 != (subchunkopt[(_j)] & BIT(_i)))
+#define is_subchunk_active_world(_x, _y)                                       \
+	is_subchunk_active((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
 
 #define ResetSubchunks                                                         \
 	for (uint_fast8_t __j = 0; __j < SUBCHUNK_SIZE; ++__j) {                   \
@@ -50,11 +64,6 @@ void set_subchunk(bool on, uint_fast8_t i, uint_fast8_t j);
 		for (uint_fast8_t __i = 0; __i < SUBCHUNK_SIZE; ++__i)                 \
 			soil_body[__j][__i].body = NULL;                                   \
 	}
-#define set_subchunk_world(_on, _x, _y)                                        \
-	set_subchunk(_on, (_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
-#define is_subchunk_active(_i, _j) (0 != (subchunkopt[(_j)] & BIT(_i)))
-#define is_subchunk_active_world(_x, _y)                                       \
-	is_subchunk_active((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT)
 
 /** Returns true if any object was updated, false otherwise */
 void update_gameboard();

@@ -11,6 +11,10 @@ typedef enum GO_Type {
 } GO_Type;
 #define GO_Type uint8_t
 
+#define GO_IS_FLUID(gtype_) ((gtype_) >= GO_POWDER)
+
+typedef void (*GO_Draw)(size_t wx, size_t wy, int vx, int vy);
+
 #pragma pack(push, 1)
 typedef union GO_ID {
 	uint8_t raw;
@@ -24,7 +28,7 @@ typedef struct GameObject {
 	GO_Type type;
 	float	density;
 	Color	color;
-	void (*draw)(size_t wx, size_t wy, int vx, int vy);
+	GO_Draw draw;
 } PACKED GameObject;
 #pragma pack(pop)
 
@@ -54,7 +58,7 @@ extern GO_ID GO_STONE;
  * \return The id of the gameobject [1-127]. Zero is reserved for GO_NONE
  */
 GO_ID register_gameobject(GO_Type type, float density, Color color,
-						  void (*draw)(size_t wx, size_t wy, int vx, int vy));
+						  GO_Draw draw);
 
 void init_gameobjects();
 

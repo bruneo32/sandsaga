@@ -4,9 +4,9 @@ cmake_policy(SET CMP0079 NEW)
 set(CMAKE_C_STANDARD 99)
 
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
-	set(PFLAGS "-march=x86-64 -m64 -mfma -mavx2 -mabm")
+	set(PFLAGS "-march=x86-64 -m64 -mfma -mavx -mavx2 -mabm -msse4.2")
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-	set(PFLAGS "-march=armv8-a -mfix-cortex-a53-835769")
+	set(PFLAGS "-march=armv8-a -mfix-cortex-a53-835769 -mfpu=neon-fp-armv8")
 endif()
 
 # Box2D somehow does not work with less than -O2 level
