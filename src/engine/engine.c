@@ -661,7 +661,8 @@ bool F_IS_FLOOR(ssize_t y, ssize_t x) {
 }
 
 void deactivate_soil(size_t si, size_t sj) {
-	if (!soil_body[sj][si].body)
+	/* Check if soil is invalid */
+	if ((((size_t)soil_body[sj][si].body) & 0x0000FFFFFFFFFFFF) == 0)
 		return;
 
 	box2d_body_destroy(soil_body[sj][si].body);

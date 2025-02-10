@@ -5,22 +5,27 @@ _CWD=$(pwd)
 
 # Show help
 if [[ -z "$1" ]]; then
-	echo "Usage: $(basename $0) [all|amd64|arm64|mingw]"
+	echo "Usage: $(basename $0) [all|clean|amd64|arm64|mingw]"
 	exit 1
 fi
 
+# Initialize TARGETS array with provided arguments
+TARGETS=("$@")
+
 # Select targets
-if [[ "$1" == "all" ]]; then
-	TARGETS=(amd64 arm64 mingw)
-else TARGETS=${@}; fi
+if [[ " ${TARGETS[@]} " =~ " all " ]]; then
+	# Append all targets
+	TARGETS+=( "amd64" "arm64" "mingw" )
+fi
 echo "Building for targets: ${TARGETS[*]}"
 
 # Define global flags
-AMD64_FLAGS="-march=x86-64 -m64 -mfma -mavx2 -mabm"
+AMD64_FLAGS="-march=x86-64 -m64 -mfma -mavx -mavx2 -mabm -msse4.2"
 ARM64_FLAGS="-march=armv8-a -mfix-cortex-a53-835769"
 
-COMMON_FLAGS="-O2 -mtune=generic -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer \
-	-fopenmp -falign-functions=32 -ftree-vectorize -funroll-loops -ffast-math"
+COMMON_FLAGS="-mtune=generic -funroll-loops -ffast-math \
+	-fopenmp -ftree-vectorize -falign-functions=32 \
+	-O2 -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer"
 COMMON_FLAGS_WIN="$COMMON_FLAGS -mno-ms-bitfields"
 
 FLAGS_AMD64=(
@@ -70,10 +75,10 @@ fi
 # Build functions
 build_sdl() {
 	local build_dir="$_CWD/libs/SDL/$1"
-	local install_dir="$build_dir/../$2"
+	local install_dir="$_CWD/libs/SDL/$2"
 	local flags=("${!3}")
 
-	if [[ $2 == "install_mingw" ]]; then
+	if [[ "$2" == "install_mingw" ]]; then
 		# Windows libs are DLL, not static
 		local ISDLL=ON
 		local ISNDLL=OFF
@@ -82,7 +87,10 @@ build_sdl() {
 		local ISNDLL=ON
 	fi
 
-	if [[ ! -d "$build_dir" ]]; then
+	if [[ " ${TARGETS[@]} " =~ " clean " ]]; then
+		echo "rm -rf $build_dir $install_dir"
+		rm -rf "$build_dir" "$install_dir"
+	elif [[ ! -d "$build_dir" ]]; then
 		TFLAGS="-DSDL_STATIC=$ISNDLL -DSDL_SHARED=$ISDLL -DBUILD_SHARED_LIBS=$ISDLL -DSDL_DYNAMIC_API=$ISDLL"
 		mkdir -p "$build_dir" && cd "$build_dir"
 		cmake "${flags[@]}" $TFLAGS -DCMAKE_INSTALL_PREFIX="$install_dir" ..
@@ -94,16 +102,11 @@ build_sdl() {
 
 # Requires SDL built
 build_sdl_image() {
-	if [[ ! -d "$_CWD/libs/SDL/$2" ]]; then
-		echo "SDL not built" >&2
-		exit 1
-	fi
-
 	local build_dir="$_CWD/libs/SDL_image/$1"
-	local install_dir="$build_dir/../$2"
+	local install_dir="$_CWD/libs/SDL_image/$2"
 	local flags=("${!3}")
 
-	if [[ $2 == "install_mingw" ]]; then
+	if [[ "$2" == "install_mingw" ]]; then
 		# Windows libs are DLL, not static
 		local ISDLL=ON
 		local ISNDLL=OFF
@@ -112,7 +115,15 @@ build_sdl_image() {
 		local ISNDLL=ON
 	fi
 
-	if [[ ! -d "$build_dir" ]]; then
+	if [[ " ${TARGETS[@]} " =~ " clean " ]]; then
+		echo "rm -rf $build_dir $install_dir"
+		rm -Rf "$build_dir" "$install_dir"
+	elif [[ ! -d "$build_dir" ]]; then
+		if [[ ! -d "$_CWD/libs/SDL/$2" ]]; then
+			echo "SDL_image error: SDL not built" >&2
+			exit 1
+		fi
+
 		TFLAGS="-DSDL_STATIC=$ISNDLL -DBUILD_SHARED_LIBS=$ISDLL -DSDL_DYNAMIC_API=$ISDLL"
 		mkdir -p "$build_dir" && cd "$build_dir"
 		cmake "${flags[@]}" $TFLAGS \
@@ -127,17 +138,20 @@ build_sdl_image() {
 
 build_box2d() {
 	local build_dir="$_CWD/libs/box2d/$1"
-	local install_dir="$build_dir/../$2"
+	local install_dir="$_CWD/libs/box2d/$2"
 	local flags=("${!3}")
 
-	if [[ $2 == "install_mingw" ]]; then
+	if [[ "$2" == "install_mingw" ]]; then
 		# Windows libs are DLL, not static
 		local ISDLL=ON
 	else
 		local ISDLL=OFF
 	fi
 
-	if [[ ! -d "$build_dir" ]]; then
+	if [[ " ${TARGETS[@]} " =~ " clean " ]]; then
+		echo "rm -rf $build_dir $install_dir"
+		rm -rf "$build_dir" "$install_dir"
+	elif [[ ! -d "$build_dir" ]]; then
 		TFLAGS="-DBUILD_SHARED_LIBS=$ISDLL -DBOX2D_BUILD_UNIT_TESTS=OFF -DBOX2D_BUILD_DOCS=OFF"
 		mkdir -p "$build_dir" && cd "$build_dir"
 		cmake "${flags[@]}" $TFLAGS -DCMAKE_INSTALL_PREFIX="$install_dir" ..

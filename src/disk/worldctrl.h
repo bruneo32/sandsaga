@@ -28,7 +28,7 @@
 
 /** World Control Chunk Addresser */
 #define INVALID_CATABLE ((catable_t)~0)
-#define CATABLE_SIZE (CHUNK_MAX_X * CHUNK_MAX_Y)
+#define CATABLE_SIZE	((CHUNK_MAX_X + 1) * (CHUNK_MAX_Y + 1))
 typedef uint32_t catable_t;
 
 #pragma pack(push, 1)

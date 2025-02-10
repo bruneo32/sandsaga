@@ -269,10 +269,8 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			ResetSubchunks;
 		}
 
-		const int start_cam_y = camera->y;
-		camera->y			  = clamp(player->y - VIEWPORT_HEIGHT_DIV_2, 0,
-									  VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
-		const int end_cam_y	  = camera->y;
+		camera->y = clamp(player->y - VIEWPORT_HEIGHT_DIV_2, 0,
+						  VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 
 	} else if (player->y > player->prev_y) {
 		/* Apply verifications for moving DOWN */
@@ -335,10 +333,8 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			ResetSubchunks;
 		}
 
-		const int start_cam_y = camera->y + camera->h - 1;
-		camera->y			  = clamp(player->y - VIEWPORT_HEIGHT_DIV_2, 0,
-									  VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
-		const int end_cam_y	  = camera->y + camera->h - 1;
+		camera->y = clamp(player->y - VIEWPORT_HEIGHT_DIV_2, 0,
+						  VSCREEN_HEIGHT - VIEWPORT_HEIGHT);
 	}
 
 	if (player->x < player->prev_x) {
@@ -406,10 +402,8 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			ResetSubchunks;
 		}
 
-		const int start_cam_x = camera->x;
-		camera->x			  = clamp(player->x - VIEWPORT_WIDTH_DIV_2, 0,
-									  VSCREEN_WIDTH - VIEWPORT_WIDTH);
-		const int end_cam_x	  = camera->x;
+		camera->x = clamp(player->x - VIEWPORT_WIDTH_DIV_2, 0,
+						  VSCREEN_WIDTH - VIEWPORT_WIDTH);
 
 	} else if (player->x > player->prev_x) {
 		/* Apply verifications for moving RIGHT */
@@ -478,10 +472,8 @@ void move_camera(Player *player, SDL_FRect *camera) {
 			ResetSubchunks;
 		}
 
-		const int start_cam_x = camera->x + camera->w - 1;
-		camera->x			  = clamp(player->x - VIEWPORT_WIDTH_DIV_2, 0,
-									  VSCREEN_WIDTH - VIEWPORT_WIDTH);
-		const int end_cam_x	  = camera->x + camera->w - 1;
+		camera->x = clamp(player->x - VIEWPORT_WIDTH_DIV_2, 0,
+						  VSCREEN_WIDTH - VIEWPORT_WIDTH);
 	}
 
 	/* Reposition player->body */

@@ -62,7 +62,7 @@ extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 	for (uint_fast8_t __j = 0; __j < SUBCHUNK_SIZE; ++__j) {                   \
 		subchunkopt[__j] = SUBCHUNK_ROW_COMPLETE;                              \
 		for (uint_fast8_t __i = 0; __i < SUBCHUNK_SIZE; ++__i)                 \
-			soil_body[__j][__i].body = NULL;                                   \
+			deactivate_soil(__i, __j);                                         \
 	}
 
 /** Returns true if any object was updated, false otherwise */

@@ -87,6 +87,13 @@ int main(int argc, char *argv[]) {
 	atexit(F_PANIC_SAVE);
 	init_gameobjects();
 
+	/* Initialize soil */
+	for (uint_fast8_t __j = 0; __j < SUBCHUNK_SIZE; ++__j) {
+		for (uint_fast8_t __i = 0; __i < SUBCHUNK_SIZE; ++__i) {
+			soil_body[__j][__i].body = NULL;
+		}
+	}
+
 	/* =============================================================== */
 	/* Load resources */
 	load_player_sprite(&player, res_player_body_png, res_player_body_png_len);

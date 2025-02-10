@@ -6,15 +6,14 @@ set(CMAKE_C_STANDARD 99)
 if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 	set(PFLAGS "-march=x86-64 -m64 -mfma -mavx -mavx2 -mabm -msse4.2")
 elseif (CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-	set(PFLAGS "-march=armv8-a -mfix-cortex-a53-835769 -mfpu=neon-fp-armv8")
+	set(PFLAGS "-march=armv8-a -mfix-cortex-a53-835769")
 endif()
 
-# Box2D somehow does not work with less than -O2 level
-set(COMMON_FLAGS "-O2 -mtune=generic ${PFLAGS} \
-	-fopenmp -falign-functions=32 -ftree-vectorize -funroll-loops -ffast-math")
+set(COMMON_FLAGS "${PFLAGS} -mtune=generic -funroll-loops -ffast-math \
+	-fopenmp -ftree-vectorize -falign-functions=32")
 
-set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
-set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -g -Wall -Wno-switch -Wno-format-truncation -Wno-unused-but-set-variable")
+set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} -O2 -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
+set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -O0 -g -Wall -Wno-switch -Wno-format-truncation -Wno-unused-but-set-variable")
 set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 
