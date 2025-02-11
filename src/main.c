@@ -59,6 +59,102 @@ void F_RESUME() {
 /** Handle `CTRL + C` to quit the game */
 void sigkillHandler(int signum) { GAME_ON = false; }
 
+void draw_sky(SDL_FRect *camera) {
+	const size_t y0 = 0;
+	const size_t y1 = GEN_SKY_Y * 384;
+	const size_t y2 = GEN_TOP_LAYER_Y * 384;
+	const size_t y3 = (GEN_TOP_LAYER_Y + 4) * 384;
+	const size_t y4 = CHUNK_MAX_Y * 384;
+
+	const size_t y1_clouds_dense = (GEN_SKY_Y + 4) * 384;
+
+	const Color color0 = C_WHITE;
+	const Color color1 = {000, 191, 255}; /* Sky top */
+	const Color color2 = {135, 206, 250}; /* Sky bottom */
+	const Color color3 = {105, 126, 140}; /* Rock top */
+	const Color color4 = C_BLACK;
+
+	const Chunk tlchunk = vctable[0][0];
+
+	const size_t cam_wy = tlchunk.y * CHUNK_SIZE + ((size_t)camera->y);
+	const size_t cam_wx = tlchunk.x * CHUNK_SIZE + ((size_t)camera->x);
+
+	/* Don't allow transparency to clear the screen from the previous frame */
+	SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
+
+	/* Draw color gradient */
+	for (size_t y = 0; y < VIEWPORT_HEIGHT; ++y) {
+		const size_t world_y = cam_wy + y;
+
+		/* Calculate color line depending on the camera y */
+		Color color;
+		color.a = 0xFF;
+
+		float t;
+
+		if (world_y <= y1) {
+			t		= (float)world_y / (float)y1;
+			color.r = (uint8_t)(color0.r + t * (color1.r - color0.r));
+			color.g = (uint8_t)(color0.g + t * (color1.g - color0.g));
+			color.b = (uint8_t)(color0.b + t * (color1.b - color0.b));
+		} else if (world_y <= y2) {
+			t		= (float)(world_y - y1) / (float)(y2 - y1);
+			color.r = (uint8_t)(color1.r + t * (color2.r - color1.r));
+			color.g = (uint8_t)(color1.g + t * (color2.g - color1.g));
+			color.b = (uint8_t)(color1.b + t * (color2.b - color1.b));
+		} else if (world_y <= y3) {
+			t		= (float)(world_y - y2) / (float)(y3 - y2);
+			color.r = (uint8_t)(color2.r + t * (color3.r - color2.r));
+			color.g = (uint8_t)(color2.g + t * (color3.g - color2.g));
+			color.b = (uint8_t)(color2.b + t * (color3.b - color2.b));
+		} else {
+			t		= (float)(world_y - y3) / (float)(y4 - y3);
+			color.r = (uint8_t)(color3.r + t * (color4.r - color3.r));
+			color.g = (uint8_t)(color3.g + t * (color4.g - color3.g));
+			color.b = (uint8_t)(color3.b + t * (color4.b - color3.b));
+		}
+
+		Render_Line_Color(0, y, VIEWPORT_WIDTH_M1, y, color);
+	}
+
+	/* Allow transparency for clouds */
+	SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
+
+	/* Draw clouds */
+	for (size_t y = 0; y < VIEWPORT_HEIGHT; ++y) {
+		const size_t world_y = cam_wy + y;
+
+		/* Do not calculate for invalid heights */
+		if (world_y < y1 || world_y > y2)
+			continue;
+
+		for (size_t x = 0; x < VIEWPORT_WIDTH; ++x) {
+			const size_t world_x = cam_wx + x;
+
+			double nv = perlin2d(WORLD_SEED, (double)(world_x + frame_cx),
+								 (double)(world_y + frame_cx), 0.01, 2);
+
+			/* Make clouds smaller with height */
+			if (world_y > y1_clouds_dense)
+				nv -= ((double)world_y - y1_clouds_dense) /
+					  (double)(y3 - y1_clouds_dense);
+
+			/* Threshold to contrast clouds with sky */
+			if (nv < 0.5)
+				continue;
+			else if (nv < 0.7) {
+				/* Create halo effect so clouds don't look like bricks */
+				/* Linearly map nv from [0.5, 0.7] to [0, 0.7] */
+				nv = (nv - 0.5) * 3.5;
+			}
+
+			Color cloud_point_color = {0xFF, 0xFF, 0xFF, 0x00};
+			cloud_point_color.a += (uint8_t)(nv * 0xBC);
+			Render_Pixel_Color(x, y, cloud_point_color);
+		}
+	}
+}
+
 int main(int argc, char *argv[]) {
 	signal(SIGINT, sigkillHandler);
 
@@ -71,7 +167,7 @@ int main(int argc, char *argv[]) {
 	/* Init window */
 	Render_init("Sandsaga", VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 	SDL_RenderSetLogicalSize(__renderer, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-	SDL_SetWindowSize(__window, VIEWPORT_WIDTH_M2, VIEWPORT_HEIGHT_M2);
+	SDL_SetWindowSize(__window, VIEWPORT_WIDTH2, VIEWPORT_HEIGHT2);
 	SDL_SetWindowPosition(__window, SDL_WINDOWPOS_CENTERED,
 						  SDL_WINDOWPOS_CENTERED);
 
@@ -433,9 +529,7 @@ int main(int argc, char *argv[]) {
 
 		/* =============================================================== */
 		/* Draw game */
-		SDL_SetRenderTarget(__renderer, NULL);
-		SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
-		Render_Clearscreen_Color(C_DKGRAY);
+		draw_sky(&camera);
 
 		/* Draw player */
 		draw_player(&player, &camera);
