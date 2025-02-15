@@ -38,7 +38,7 @@ SkinRig player_skin_rig[] = {
 	/* Left upper arm */
 	{&player_bone_rig[1], {0, 24, 8, 38}, {1.0f, 1.0f}},
 	/* Head */
-	{&player_bone_rig[5], {19, 0, 24, 21}, {24.0f / PSF_2, 21.0f / PSF_2}},
+	{&player_bone_rig[5], {19, 0, 25, 21}, {25.0f / PSF_2, 21.0f / PSF_2}},
 };
 const size_t player_skin_count =
 	sizeof(player_skin_rig) / sizeof(*player_skin_rig);

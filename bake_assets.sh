@@ -12,8 +12,11 @@ font_files=$(find "$source_dir" -type f -iname "*.F08")
 
 # Loop through each image file and generate a header file
 for file in $img_files; do
-    # Optimize image to reduce binary size
-    optipng -o7 -strip all $file -out $file -backup -clobber
+    # Check if file starts with '_', this means that doesn't want to optimize
+    if [[ "$file" != $_* ]]; then
+        # Optimize image to reduce binary size
+        optipng -o7 -strip all $file -out $file -backup -clobber
+    fi
 
     filename=$(basename "$file")
 

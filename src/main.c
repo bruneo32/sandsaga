@@ -10,7 +10,7 @@
 #include <SDL.h>
 
 #include "assets/res/VGA-ROM.F08.h"
-#include "assets/res/player_body.png.h"
+#include "assets/res/_player_body.png.h"
 
 #include "physics/physics.h"
 
@@ -60,7 +60,6 @@ void F_RESUME() {
 void sigkillHandler(int signum) { GAME_ON = false; }
 
 void draw_sky(SDL_FRect *camera) {
-	const size_t y0 = 0;
 	const size_t y1 = GEN_SKY_Y * 384;
 	const size_t y2 = GEN_TOP_LAYER_Y * 384;
 	const size_t y3 = (GEN_TOP_LAYER_Y + 4) * 384;
@@ -192,7 +191,7 @@ int main(int argc, char *argv[]) {
 
 	/* =============================================================== */
 	/* Load resources */
-	load_player_sprite(&player, res_player_body_png, res_player_body_png_len);
+	load_player_sprite(&player, res__player_body_png, res__player_body_png_len);
 
 	/* =============================================================== */
 	/* Init gameloop variables */
