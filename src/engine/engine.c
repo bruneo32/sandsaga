@@ -652,9 +652,42 @@ void draw_gameboard_world(const SDL_FRect *camera) {
 			}
 		}
 	}
+
+	if (DBGL(e_dbgl_engine)) {
+		for (size_t _j = (cam_y / SUBCHUNK_HEIGHT) * SUBCHUNK_HEIGHT;
+			 _j < cam_y + VSCREEN_HEIGHT; _j += SUBCHUNK_HEIGHT) {
+			for (size_t _i = (cam_x / SUBCHUNK_WIDTH) * SUBCHUNK_WIDTH;
+				 _i < cam_x + VSCREEN_WIDTH; _i += SUBCHUNK_WIDTH) {
+				const size_t si = _i / SUBCHUNK_WIDTH;
+				const size_t sj = _j / SUBCHUNK_HEIGHT;
+				if (si > 15 || sj > 15)
+					continue;
+
+				if (soil_body[sj][si].debug_plist != NULL) {
+					const size_t x = _i - cam_x;
+					const size_t y = _j - cam_y;
+
+					const ssize_t list_width  = SUBCHUNK_WIDTH + 1;
+					const ssize_t list_height = SUBCHUNK_HEIGHT + 1;
+#define plist_idx(i_, j_) ((j_) * list_width + (i_))
+					for (size_t j = 0; j < list_height; ++j) {
+						for (size_t i = 0; i < list_width; ++i) {
+							const uint8_t p =
+								soil_body[sj][si].debug_plist[plist_idx(i, j)];
+							if (p != 0) {
+								Render_Pixel_RGBA(x + i, y + j, 0xFF, 0x00,
+												  p * 64, 255);
+							}
+						}
+					}
+#undef plist_idx
+				}
+			}
+		}
+	}
 }
 
-bool F_IS_FLOOR(ssize_t y, ssize_t x) {
+static bool F_IS_FLOOR(ssize_t x, ssize_t y) {
 	return gameboard[y][x].raw != GO_NONE.raw &&
 		   ((&GOBJECT(gameboard[y][x]))->type == GO_STATIC ||
 			(&GOBJECT(gameboard[y][x]))->type == GO_POWDER);
@@ -667,6 +700,11 @@ void deactivate_soil(size_t si, size_t sj) {
 
 	box2d_body_destroy(soil_body[sj][si].body);
 	soil_body[sj][si].body = NULL;
+
+	if ((((size_t)soil_body[sj][si].debug_plist) & 0x0000FFFFFFFFFFFF) == 0)
+		return;
+	free(soil_body[sj][si].debug_plist);
+	soil_body[sj][si].debug_plist = NULL;
 }
 
 void activate_soil(size_t si, size_t sj) {
@@ -681,22 +719,24 @@ void activate_soil(size_t si, size_t sj) {
 	const size_t end_j =
 		clamp(start_j + SUBCHUNK_HEIGHT + 1, 0, VSCREEN_HEIGHT);
 
-	CList *chains =
-		loopchain_from_contour(start_i, end_i, start_j, end_j, F_IS_FLOOR);
+	CList *polygons =
+		polygonlist_from_contour(&soil_body[sj][si].debug_plist, start_i, end_i,
+								 start_j, end_j, F_IS_FLOOR);
 
-	if (chains != NULL && chains->count > 0) {
-		double cx = SUBCHUNK_WIDTH / 2.0;
-		double cy = SUBCHUNK_HEIGHT / 2.0;
-
+	if (polygons != NULL && polygons->count > 0) {
 		b2Body *body = box2d_body_create(
 			b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
 			X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0), b2_staticBody, true, true);
 
-		for (size_t i = 0; i < chains->count; ++i) {
-			PointList *mesh = (PointList *)chains->data[i];
+		for (size_t i = 0; i < polygons->count; ++i) {
+			PointList *mesh = (PointList *)polygons->data[i];
 			if (!mesh || mesh->count == 0 || !mesh->points)
 				continue;
-			convert_pointlist_to_box2d_units(mesh, &cx, &cy);
+
+			/* Center pointlist to the center of the subchunk */
+			double cx = X_TO_U(SUBCHUNK_WIDTH / 2.0);
+			double cy = X_TO_U(SUBCHUNK_HEIGHT / 2.0);
+			center_pointlist(mesh, cx, cy);
 
 			b2ChainShape *loopchain =
 				box2d_shape_loop(mesh->points, mesh->count);
@@ -709,8 +749,8 @@ void activate_soil(size_t si, size_t sj) {
 			free(mesh);
 		}
 
-		free(chains->data);
-		free(chains);
+		free(polygons->data);
+		free(polygons);
 
 		soil_body[sj][si].body = body;
 	}

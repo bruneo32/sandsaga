@@ -4,8 +4,10 @@
 #include "RamerDouglasPeucker.hpp"
 #include "earcut.hpp"
 
+#include <algorithm>
 #include <array>
 #include <iostream>
+#include <queue>
 #include <vector>
 
 using mbPoint = std::array<double, 2>;
@@ -25,682 +27,481 @@ typedef struct _PolyList {
 #define VERTEX_IS_IN_BOUNDS(__x, __y)                                          \
 	(VERTEX_IS_IN_BOUNDS_H(__x) && VERTEX_IS_IN_BOUNDS_V(__y))
 
-typedef struct _CloudPoint {
-	ssize_t i;
-	ssize_t j;
-	size_t	order;
-} CloudPoint;
+#define plist_idx(i_, j_) ((j_) * list_width + (i_))
 
-/* The following LookUpTables are used to encode the surrounding vertices of a
- * vertex (x) in the following bit pattern.
- * (0b76543210)
- *     765
- *     4x3
- *     210
- */
-
-const uint8_t LUT_MSQ_VALID_VERTEX[] = {
-	/* Tiny incisions */
-	0b10111111,
-	0b11101111,
-	0b11110111,
-	0b11111101,
-	/* Inside vertices */
-	0b01111111,
-	0b11011111,
-	0b11111011,
-	0b11111110,
-};
-const uint8_t LUT_MSQR_VALID[] = {
-	/* 90deg corners */
-	0b01010000,
-	0b01001000,
-	0b00010010,
-	0b00001010,
-	/* Semi-corners */
-	0b11001000,
-	0b01110000,
-	0b00001110,
-	0b00010011,
-	0b10010010,
-	0b00101010,
-	0b01010100,
-	0b01001001,
-	/* Tiny outlets */
-	0b01011000,
-	0b00011010,
-	0b01001010,
-	0b01010010,
-};
-
-std::vector<mbPoint> traverse_contour(uint8_t *plist, const ssize_t list_width,
-									  const ssize_t list_height,
-									  const ssize_t start_j,
-									  const ssize_t start_i,
-									  uint8_t	   polygon_index) {
-
-	std::vector<mbPoint>	result = std::vector<mbPoint>();
-	std::vector<CloudPoint> revisit_stack;
-
-	/* Define directions clockwise */
-	enum e_cwdir {
-		cw_first		 = 1,
-		cw_startfrom_top = 1,
-		cw_startfrom_right,
-		cw_startfrom_bottom,
-		cw_startfrom_left,
-		/* If it does not encounter a valid "+" vertex,
-		 * go try for "x" vertex. */
-		cw_first_x			 = 10,
-		cw_startfrom_topleft = 10,
-		cw_startfrom_topright,
-		cw_startfrom_botright,
-		cw_startfrom_botleft,
+#pragma pack(push, 1)
+typedef union MSQ {
+	uint8_t raw;
+	struct {
+		bit top_left	 : 1;
+		bit top_right	 : 1;
+		bit bottom_left	 : 1;
+		bit bottom_right : 1;
+		bit __padding	 : 4; /* Alignment */
 	};
+} MSQ;
+#pragma pack(pop)
 
-	ssize_t j = start_j;
-	ssize_t i = start_i;
+static inline MSQ getSquareValue(uint8_t *plist, const ssize_t list_width,
+								 const ssize_t list_height, ssize_t pX,
+								 ssize_t pY, uint8_t current_index) {
+	/* Checking the 2x2 pixel grid, assigning these values to each pixel, if
+	they are the same as `current_index`.
+	+---+---+
+	| 1 | 2 |
+	+---+---+
+	| 4 | 8 | <- current pixel (pX,pY)
+	+---+---+
+	*/
 
-	/* First iter comes from right, so start searching clockwise from
-	 * top-left */
-	size_t order		  = cw_startfrom_top;
-	bool   already_passed = false;
-	bool   first_time	  = true;
-	while (!(!first_time && i == start_i && j == start_j)) {
-		/* Closing polygon, break */
+	MSQ msq;
 
-		/* Save point (do not add double points when not needed) */
-		if (!already_passed) {
-			if (!first_time)
-				plist[j * list_width + i] = polygon_index;
+	msq.top_left = VERTEX_IS_IN_BOUNDS(pX - 1, pY - 1) &&
+				   plist[plist_idx(pX - 1, pY - 1)] == current_index;
+	msq.top_right = VERTEX_IS_IN_BOUNDS(pX, pY - 1) &&
+					plist[plist_idx(pX, pY - 1)] == current_index;
+	msq.bottom_left = VERTEX_IS_IN_BOUNDS(pX - 1, pY) &&
+					  plist[plist_idx(pX - 1, pY)] == current_index;
+	msq.bottom_right = VERTEX_IS_IN_BOUNDS(pX, pY) &&
+					   plist[plist_idx(pX, pY)] == current_index;
 
-			/* Do not unset the first vertex, because we have to detect it at
-			 * the end */
-			result.push_back((mbPoint){
-				static_cast<double>(i),
-				static_cast<double>(j),
-			});
-
-			if (!first_time) {
-				/* Save checkpoint if there is a crosspath */
-				uint8_t plus_neighbours = 0, x_neighbours = 0;
-
-				/* Define "+" and "x" direction offsets */
-				const ssize_t plus_offsets[4][2] = {
-					{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-				const ssize_t cross_offsets[4][2] = {
-					{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
-				/* Check "+" neighbors */
-				for (const auto &offset : plus_offsets) {
-					ssize_t ni = i + offset[1], nj = j + offset[0];
-					if (VERTEX_IS_IN_BOUNDS(ni, nj) &&
-						Get_plist(plist, ni, nj) == INVALID_VERTEX) {
-						plus_neighbours++;
-					}
-				}
-				/* Check "x" neighbors */
-				for (const auto &offset : cross_offsets) {
-					ssize_t ni = i + offset[1], nj = j + offset[0];
-					if (VERTEX_IS_IN_BOUNDS(ni, nj) &&
-						Get_plist(plist, ni, nj) == INVALID_VERTEX) {
-						x_neighbours++;
-					}
-				}
-
-				/* Validate crosspath, it should not save a point that has two
-				 * neighbours but one on each side, the neighbour count should
-				 * be on each side independently */
-				if (plus_neighbours > 1 || x_neighbours > 1)
-					revisit_stack.push_back((CloudPoint){i, j, order});
-			}
-
-			first_time = false;
-		}
-
-		/* Iter neighbours in order */
-		switch (order) {
-		case cw_startfrom_top:
-			/* Check top */
-			if (VERTEX_IS_IN_BOUNDS_V(j - 1) &&
-				Get_plist(plist, i, j - 1) == INVALID_VERTEX) {
-				j--;
-				order		   = cw_startfrom_left;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_right:
-			/* Check right */
-			if (VERTEX_IS_IN_BOUNDS_H(i + 1) &&
-				Get_plist(plist, i + 1, j) == INVALID_VERTEX) {
-				i++;
-				order		   = cw_startfrom_top;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_bottom:
-			/* Check bottom */
-			if (VERTEX_IS_IN_BOUNDS_V(j + 1) &&
-				Get_plist(plist, i, j + 1) == INVALID_VERTEX) {
-				j++;
-				order		   = cw_startfrom_right;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_left:
-			if (VERTEX_IS_IN_BOUNDS_H(i - 1) &&
-				Get_plist(plist, i - 1, j) == INVALID_VERTEX) {
-				/* Check left */
-				i--;
-				order		   = cw_startfrom_bottom;
-				already_passed = false;
-				continue;
-			}
-
-			/* Check if cross is already visited */
-			if (!already_passed) {
-				already_passed = true;
-				order		   = cw_first;
-				continue;
-			}
-
-			/* Turn for the X shape */
-		case cw_startfrom_topleft:
-			if (VERTEX_IS_IN_BOUNDS(i - 1, j - 1) &&
-				Get_plist(plist, i - 1, j - 1) == INVALID_VERTEX) {
-				/* Check top-left */
-				i--;
-				j--;
-				order		   = cw_startfrom_bottom;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_topright:
-			if (VERTEX_IS_IN_BOUNDS(i + 1, j - 1) &&
-				Get_plist(plist, i + 1, j - 1) == INVALID_VERTEX) {
-				/* Check top-right */
-				i++;
-				j--;
-				order		   = cw_startfrom_left;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_botright:
-			if (VERTEX_IS_IN_BOUNDS(i + 1, j + 1) &&
-				Get_plist(plist, i + 1, j + 1) == INVALID_VERTEX) {
-				/* Check bottom-right */
-				i++;
-				j++;
-				order		   = cw_startfrom_top;
-				already_passed = false;
-				continue;
-			}
-		case cw_startfrom_botleft:
-			if (VERTEX_IS_IN_BOUNDS(i - 1, j + 1) &&
-				Get_plist(plist, i - 1, j + 1) == INVALID_VERTEX) {
-				/* Check bottom-left */
-				i--;
-				j++;
-				order		   = cw_startfrom_right;
-				already_passed = false;
-				continue;
-			}
-		default:
-			/* If no shape was able to find a valid vertex, then go for a
-			 * revisit, or shut it down */
-			if (!revisit_stack.empty()) {
-				CloudPoint revisit = revisit_stack.back();
-
-				i	  = revisit.i;
-				j	  = revisit.j;
-				order = revisit.order;
-
-				already_passed = false;
-				revisit_stack.pop_back();
-				continue;
-			}
-
-			/* So, polygon not closed, kill */
-			i = start_i;
-			j = start_j;
-			break;
-		}
-	}
-
-	revisit_stack.clear();
-	result.shrink_to_fit();
-
-	return result;
+	return msq;
 }
 
-std::vector<PolyList>
-create_pointlist_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
-							  ssize_t end_j,
-							  bool (*is_valid)(ssize_t y, ssize_t x)) {
-
-	const ssize_t list_width	 = end_i - start_i;
+CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
+								ssize_t end_i, ssize_t start_j, ssize_t end_j,
+								bool (*is_valid)(ssize_t x, ssize_t y)) {
+	const ssize_t list_width  = end_i - start_i;
 	const ssize_t list_height = end_j - start_j;
 
 	uint8_t *plist =
 		(uint8_t *)calloc(list_height * list_width, sizeof(uint8_t));
 
+	/* == Separate polygons == */
+	uint8_t current_index = 1;
 	for (ssize_t j = 0; j < list_height; ++j) {
 		for (ssize_t i = 0; i < list_width; ++i) {
-			const ssize_t centerv = j + start_j;
-			const ssize_t centerh = i + start_i;
-
-			if (!is_valid(centerv, centerh)) {
-				plist[j * list_width + i] = 0;
+			/* Continue until we find a valid not visited cell */
+			if (plist[plist_idx(i, j)] != 0 ||
+				!is_valid(i + start_i, j + start_j))
 				continue;
-			}
 
-			const ssize_t top	= centerv - 1;
-			const ssize_t bottom = centerv + 1;
-			const ssize_t left	= centerh - 1;
-			const ssize_t right	= centerh + 1;
+			/* New polygon */
 
-			uint8_t checksum =
-				(VERTEX_IS_IN_BOUNDS(i - 1, j - 1) ? is_valid(top, left) << 7
-												   : 0) |
-				(VERTEX_IS_IN_BOUNDS(i, j - 1) ? is_valid(top, centerh) << 6
-											   : 0) |
-				(VERTEX_IS_IN_BOUNDS(i + 1, j - 1) ? is_valid(top, right) << 5
-												   : 0) |
-				(VERTEX_IS_IN_BOUNDS(i - 1, j) ? is_valid(centerv, left) << 4
-											   : 0) |
-				(VERTEX_IS_IN_BOUNDS(i + 1, j) ? is_valid(centerv, right) << 3
-											   : 0) |
-				(VERTEX_IS_IN_BOUNDS(i - 1, j + 1) ? is_valid(bottom, left) << 2
-												   : 0) |
-				(VERTEX_IS_IN_BOUNDS(i, j + 1) ? is_valid(bottom, centerh) << 1
-											   : 0) |
-				(VERTEX_IS_IN_BOUNDS(i + 1, j + 1) ? is_valid(bottom, right)
-												   : 0);
+			/* Flood fill using BFS */
+			std::queue<Point> Q;
+			Q.push((Point){(int)i, (int)j});
 
-			size_t sumup = 0;
-			for (size_t bi = 0; bi < sizeof(checksum) * 8; bi++) {
-				if (checksum & BIT(bi))
-					sumup++;
-			}
+			while (!Q.empty()) {
+				/* Pop from the queue */
+				const Point p = Q.front();
+				Q.pop();
 
-			if (VERTEX_IS_IN_BOUNDS_V(j - 1) && VERTEX_IS_IN_BOUNDS_V(j + 1) &&
-				VERTEX_IS_IN_BOUNDS_H(i - 1) && VERTEX_IS_IN_BOUNDS_H(i + 1) &&
-				sumup > 6) {
-				uint8_t matched = 0;
-				for (uint8_t lookupItem : LUT_MSQ_VALID_VERTEX) {
-					if (checksum == lookupItem) {
-						matched = INVALID_VERTEX;
-						break;
-					}
-				}
-
-				plist[j * list_width + i] = matched;
-				continue;
-			}
-
-			/* Only mark as border if one of the surroundings is not solid
-			 */
-			plist[j * list_width + i] = INVALID_VERTEX;
-		}
-	}
-
-	/* Separate each polygon inside the cloud */
-
-	std::vector<PolyList> result;
-
-	size_t	prev		 = 0;
-	uint8_t curr_idx	 = 0;
-	uint8_t outside_poly = 0;
-	for (ssize_t j = 0; j < (ssize_t)list_height; ++j) {
-		/* Ray as line from 0 to i */
-		size_t h_vertex_count = 0;
-
-		for (ssize_t i = 0; i < (ssize_t)list_width; ++i) {
-			uint8_t current = Get_plist(plist, i, j);
-
-			if (current == 0) {
-				prev = current;
-				continue;
-			}
-			if (current != INVALID_VERTEX) {
-				if (prev != current)
-					h_vertex_count++;
-				prev		 = current;
-				outside_poly = prev;
-				continue;
-			}
-
-			/* Vertices inside polygon are vertices of that polygon */
-			/* Given a ray in any direction towards the border, if the count
-			 * of intersections is odd, it is inside another polygon */
-			if (h_vertex_count % 2 != 0) {
-				/* Append new list to polylist with index outside_poly */
-				for (PolyList pl : result) {
-
-					if (pl.index == outside_poly) {
-						std::vector<mbPoint> newHole = traverse_contour(
-							plist, list_width, list_height, j, i, outside_poly);
-
-						pl.polygon.push_back(newHole);
-
-						break;
-					}
-				}
-
-				prev = 0;
-				continue;
-			}
-
-			/* Iterate polygon */
-			++curr_idx;
-
-			std::vector<mbPoint> mainContour = traverse_contour(
-				plist, list_width, list_height, j, i, curr_idx);
-
-			/* The first array of a polygon it's the contour, and the
-			 * following are holes */
-			result.push_back((PolyList){
-				curr_idx,
-				mbPolygon{mainContour},
-			});
-
-			h_vertex_count++;
-			prev = curr_idx;
-		}
-	}
-
-	/* Select important vertices */
-	for (PolyList &poly : result)
-		for (std::vector<mbPoint> &path : poly.polygon) {
-			for (auto it = path.begin(); it != path.end();) {
-				const ssize_t i = static_cast<ssize_t>(it->at(0));
-				const ssize_t j = static_cast<ssize_t>(it->at(1));
-
-				/* Don't erase subchunk edges */
-				if (i == 0 || j == 0 || i == list_width - 1 ||
-					j == list_height - 1) {
-					++it;
+				/* Skip invalid or already visited cells */
+				if (!VERTEX_IS_IN_BOUNDS(p.x, p.y) ||
+					plist[plist_idx(p.x, p.y)] != 0 ||
+					!is_valid(p.x + start_i, p.y + start_j))
 					continue;
-				}
 
-				const ssize_t top	= j - 1;
-				const ssize_t bottom = j + 1;
-				const ssize_t left	= i - 1;
-				const ssize_t right	= i + 1;
+				/* Set self */
+				plist[plist_idx(p.x, p.y)] = current_index;
 
-				uint8_t checksum =
-					(VERTEX_IS_IN_BOUNDS(left, top)
-						 ? (Get_plist(plist, left, top) == poly.index) << 7
-						 : 0) |
-					(VERTEX_IS_IN_BOUNDS(i, top)
-						 ? (Get_plist(plist, i, top) == poly.index) << 6
-						 : 0) |
-					(VERTEX_IS_IN_BOUNDS(right, top)
-						 ? (Get_plist(plist, right, top) == poly.index) << 5
-						 : 0) |
-					(VERTEX_IS_IN_BOUNDS(left, j)
-						 ? (Get_plist(plist, left, j) == poly.index) << 4
-						 : 0) |
-					(VERTEX_IS_IN_BOUNDS(right, j)
-						 ? (Get_plist(plist, right, j) == poly.index) << 3
-						 : 0) |
-					(VERTEX_IS_IN_BOUNDS(left, bottom)
-						 ? (Get_plist(plist, left, bottom) == poly.index) << 2
-						 : 0) |
-					(VERTEX_IS_IN_BOUNDS(i, bottom)
-						 ? (Get_plist(plist, i, bottom) == poly.index) << 1
-						 : 0) |
-					(VERTEX_IS_IN_BOUNDS(right, bottom)
-						 ? (Get_plist(plist, right, bottom) == poly.index)
-						 : 0);
+				/* Queue neighbours */
+				if (p.x < list_width - 1)
+					Q.push((Point){p.x + 1, p.y});
+				if (p.x > 0)
+					Q.push((Point){p.x - 1, p.y});
+				if (p.y < list_height - 1)
+					Q.push((Point){p.x, p.y + 1});
+				if (p.y > 0)
+					Q.push((Point){p.x, p.y - 1});
+			}
 
-				size_t sumup = 0;
-				for (size_t bi = 0; bi < sizeof(checksum) * 8; bi++) {
-					if (checksum & BIT(bi))
+			if (current_index++ == UINT8_MAX) {
+				/* Overflow! It was 255 and now it's 0,
+				 * so we have to stop, we cannot have more than 255 polygons */
+				i = list_width;
+				j = list_height;
+			}
+		}
+	}
+
+	/* == Discard little vertices == */
+	for (ssize_t j = 0; j < list_height; ++j) {
+		for (ssize_t i = 0; i < list_width; ++i) {
+			uint8_t mindex = plist[plist_idx(i, j)];
+			if (mindex == 0)
+				continue;
+
+			uint8_t sumup = 0;
+
+			for (ssize_t jj = j - 1; jj <= j + 1; ++jj) {
+				for (ssize_t ii = i - 1; ii <= i + 1; ++ii) {
+					if (VERTEX_IS_IN_BOUNDS(ii, jj) &&
+						plist[plist_idx(ii, jj)] == mindex)
 						sumup++;
 				}
+			}
 
-				if (sumup < 2 || sumup > 4) {
-					/* All narrow lines, or a lot of intersections are valid */
-					++it;
+			/* Disable little vertex */
+			if (sumup <= 4)
+				plist[plist_idx(i, j)] = 0;
+		}
+	}
+
+	/* == Get countour of every polygon using marching squares == */
+	std::vector<PolyList> polylist;
+
+	bool passed_idx[current_index] = {0};
+
+	size_t total_paths = 0;
+
+	for (ssize_t j = 0; j < list_height; ++j) {
+		for (ssize_t i = 0; i < list_width; ++i) {
+			uint8_t poly_idx = plist[plist_idx(i, j)];
+
+			bool is_hole = false;
+			if (poly_idx == 0) {
+				/* Skip on the border, a valid hole should be fully enclosed */
+				if (i == 0 || j == 0 || i == list_width - 1 ||
+					j == list_height - 1)
 					continue;
-				}
 
-				/* Verify corner */
-				bool valid_corner = false;
-				for (uint8 lut : LUT_MSQR_VALID) {
-					if (checksum == lut) {
-						valid_corner = true;
-						break;
+				/* Check if it's a hole inside another polygon */
+				if (plist[plist_idx(i - 1, j)] != 0) {
+					uint8_t parent_idx = plist[plist_idx(i - 1, j)];
+
+					/* Throw ray: up */
+					size_t cx_up = 0;
+					for (ssize_t jj = j - 1; jj >= 0; --jj)
+						if (plist[plist_idx(i, jj)] == parent_idx &&
+							plist[plist_idx(i, jj + 1)] != parent_idx)
+							cx_up++;
+
+					/* Throw ray: right */
+					size_t cx_right = 0;
+					for (ssize_t ii = i + 1; ii < list_width; ++ii)
+						if (plist[plist_idx(ii, j)] == parent_idx &&
+							plist[plist_idx(ii - 1, j)] != parent_idx)
+							cx_right++;
+
+					/* Throw ray: down */
+					size_t cx_down = 0;
+					for (ssize_t jj = j + 1; jj < list_height; ++jj)
+						if (plist[plist_idx(i, jj)] == parent_idx &&
+							plist[plist_idx(i, jj - 1)] != parent_idx)
+							cx_down++;
+
+					/* Throw ray: left */
+					size_t cx_left = 0;
+					for (ssize_t ii = i - 1; ii >= 0; --ii)
+						if (plist[plist_idx(ii, j)] == parent_idx &&
+							plist[plist_idx(ii + 1, j)] != parent_idx)
+							cx_left++;
+
+					/* If all the rays counted an even number of vertices, then
+					 * it is a hole incarcerated inside it's parent polygon,
+					 * otherwise there is an open spot in the hole. */
+					if ((cx_up & 1) && (cx_right & 1) && (cx_down & 1) &&
+						(cx_left & 1)) {
+						/* It's a hole, trace it's contour */
+						is_hole	 = true;
+						poly_idx = parent_idx;
 					}
 				}
 
-				if (valid_corner) {
-					++it;
+				/* If it's not a hole, continue */
+				if (!is_hole)
 					continue;
+			}
+
+			/* If this is already visited, continue looking */
+			if (!is_hole && passed_idx[poly_idx - 1])
+				continue;
+
+			/* New polygon */
+			PolyList *pl = NULL;
+
+			/* The first path in a polygon list is the main contour, the next
+			 * ones are holes */
+			if (!is_hole) {
+				/* Create a new polygon list */
+				pl		  = new PolyList();
+				pl->index = poly_idx;
+				pl->polygon.clear();
+			} else {
+				/* Find the polygon list to append the hole */
+				for (PolyList &p : polylist) {
+					if (p.index == poly_idx) {
+						pl = &p;
+						break;
+					}
+				}
+			}
+
+			if (!pl)
+				continue;
+
+			if (is_hole) {
+				/* Watch out! We could be adding a hole that already
+				 * exists! */
+				bool hole_exists = false;
+				for (size_t p = 1 /* Skip main contour */;
+					 !hole_exists && p < pl->polygon.size(); ++p) {
+					for (mbPoint &point : pl->polygon[p]) {
+						if (point[0] == X_TO_U((double)i - 0.5) &&
+							point[1] == X_TO_U((double)j - 0.5)) {
+							hole_exists = true;
+							break;
+						}
+					}
+				}
+				/* Do not trace a new contour if the hole already exists */
+				if (hole_exists)
+					continue;
+			}
+
+			/* Create new path */
+			pl->polygon.push_back(std::vector<mbPoint>());
+			std::vector<mbPoint> &contourVector = pl->polygon.back();
+			total_paths++; /* Save counting for later */
+
+			ssize_t startX = i;
+			ssize_t startY = j;
+			ssize_t pX	   = startX;
+			ssize_t pY	   = startY;
+			ssize_t stepX  = 0;
+			ssize_t stepY  = 0;
+			ssize_t prevX  = 0;
+			ssize_t prevY  = 0;
+
+			bool closedLoop = false;
+			while (!closedLoop) {
+				const MSQ squareValue =
+					getSquareValue(plist, list_width, list_height, pX, pY,
+								   (!is_hole) ? poly_idx : 0);
+
+				switch (squareValue.raw) {
+					/* Going UP with these cases:
+						+---+---+   +---+---+   +---+---+
+						| 1 |   |   | 1 |   |   | 1 |   |
+						+---+---+   +---+---+   +---+---+
+						|   |   |   | 4 |   |   | 4 | 8 |
+						+---+---+  	+---+---+  	+---+---+
+					*/
+				case 1:
+				case 5:
+				case 13:
+					stepX = 0;
+					stepY = -1;
+					break;
+
+					/* Going DOWN with these cases:
+						+---+---+   +---+---+   +---+---+
+						|   |   |   |   | 2 |   | 1 | 2 |
+						+---+---+   +---+---+   +---+---+
+						|   | 8 |   |   | 8 |   |   | 8 |
+						+---+---+  	+---+---+  	+---+---+
+					*/
+				case 8:
+				case 10:
+				case 11:
+					stepX = 0;
+					stepY = 1;
+					break;
+
+					/* Going LEFT with these cases:
+						+---+---+   +---+---+   +---+---+
+						|   |   |   |   |   |   |   | 2 |
+						+---+---+   +---+---+   +---+---+
+						| 4 |   |   | 4 | 8 |   | 4 | 8 |
+						+---+---+  	+---+---+  	+---+---+
+					*/
+				case 4:
+				case 12:
+				case 14:
+					stepX = -1;
+					stepY = 0;
+					break;
+
+					/* Going RIGHT with these cases:
+						+---+---+   +---+---+   +---+---+
+						|   | 2 |   | 1 | 2 |   | 1 | 2 |
+						+---+---+   +---+---+   +---+---+
+						|   |   |   |   |   |   | 4 |   |
+						+---+---+  	+---+---+  	+---+---+
+					*/
+				case 2:
+				case 3:
+				case 7:
+					stepX = 1;
+					stepY = 0;
+					break;
+
+				case 6:
+					/* Special saddle point case 1:
+						+---+---+
+						|   | 2 |
+						+---+---+
+						| 4 |   |
+						+---+---+
+						going LEFT if coming from UP
+						else going RIGHT
+					*/
+					if (prevX == 0 && prevY == -1) {
+						stepX = -1;
+						stepY = 0;
+					} else {
+						stepX = 1;
+						stepY = 0;
+					}
+					break;
+
+				case 9:
+					/* Special saddle point case 2:
+						+---+---+
+						| 1 |   |
+						+---+---+
+						|   | 8 |
+						+---+---+
+						going UP if coming from RIGHT
+						else going DOWN
+						*/
+					if (prevX == 1 && prevY == 0) {
+						stepX = 0;
+						stepY = -1;
+					} else {
+						stepX = 0;
+						stepY = 1;
+					}
+					break;
 				}
 
-				/* Invalid, destroy */
-				it = path.erase(it);
+				/* Moving onto next point */
+				pX += stepX;
+				pY += stepY;
+				/* Save contour point */
+				/* This point should be (P-0.5) to match the desired grid */
+				contourVector.push_back((mbPoint){
+					X_TO_U((double)pX - 0.5),
+					X_TO_U((double)pY - 0.5),
+				});
+
+				/* If we returned to the first point visited, the loop has
+				 * finished */
+				if (pX == startX && pY == startY)
+					closedLoop = true;
+
+				/* Set previous direction */
+				prevX = stepX;
+				prevY = stepY;
+			}
+
+			/* Contour over, set passed to true and save it */
+			if (!is_hole && contourVector.size() > 2) {
+				/* Reverse the order of the points is important, because the
+				 * Emanuele's code generates a counter-clockwise polygon, which
+				 * has its normals pointing inside the polygon, this is cool for
+				 * holes, but for the main contour we want the order of the
+				 * points clockwise. */
+				std::reverse(contourVector.begin(), contourVector.end());
+				passed_idx[poly_idx - 1] = true;
+				polylist.push_back(*pl);
 			}
 		}
+	}
 
-	/* Draw */
-	memset(plist, 0, list_width * list_height);
-
-	for (PolyList &polygon : result)
-		for (std::vector<mbPoint> &path : polygon.polygon) {
-			for (mbPoint &point : path) {
-				const ssize_t i = static_cast<ssize_t>(point.at(0));
-				const ssize_t j = static_cast<ssize_t>(point.at(1));
-
-				plist[j * list_width + i] = polygon.index;
-			}
-		}
-
-	free(plist);
-
-	return result;
-}
-
-std::vector<PolyList>
-rdp_simplify_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
-						  ssize_t end_j, bool (*is_valid)(ssize_t x, ssize_t y)) {
-
-	std::vector<PolyList> inputPoints =
-		create_pointlist_from_contour(start_i, end_i, start_j, end_j, is_valid);
-
-	std::vector<PolyList> result;
-
-	/* Apply RDP to each path of each polylist */
-	for (PolyList plist : inputPoints) {
-		mbPolygon polyIn  = plist.polygon;
-		mbPolygon polyOut = std::vector<std::vector<mbPoint>>();
-
-		for (std::vector<mbPoint> path : polyIn) {
+	/* Reduce number of points in each polygon */
+	for (PolyList &poly : polylist) {
+		for (std::vector<mbPoint> &path : poly.polygon) {
 			std::vector<RDP::Point> vIn;
 			std::vector<RDP::Point> vOut;
 
-			for (mbPoint point : path)
+			for (mbPoint &point : path)
 				vIn.push_back(RDP::Point(point[0], point[1]));
 
-			RDP::RamerDouglasPeucker(vIn, M_PI_2, vOut);
+			RDP::RamerDouglasPeucker(vIn, 0.24, vOut);
 
-			if (vOut.empty())
-				continue;
-
-			std::vector<mbPoint> rOut;
-			for (RDP::Point p : vOut) {
-				rOut.push_back(mbPoint{p.first, p.second});
-			}
-
-			polyOut.push_back(rOut);
-		}
-
-		result.push_back((PolyList){plist.index, polyOut});
-	}
-
-	return result;
-}
-
-TriangleMesh *triangulate(ssize_t start_i, ssize_t end_i, ssize_t start_j,
-						  ssize_t end_j, bool (*is_valid)(ssize_t x, ssize_t y)) {
-
-	std::vector<PolyList> polylist = rdp_simplify_from_contour(
-		start_i, end_i, start_j, end_j, is_valid);
-
-	if (polylist.empty())
-		return NULL;
-
-	TriangleMesh *mesh = (TriangleMesh *)malloc(sizeof(TriangleMesh));
-	mesh->triangles	   = (Triangle *)malloc(1024 * sizeof(Triangle));
-	mesh->count		   = 0;
-
-	for (PolyList plist : polylist) {
-		if (plist.polygon.empty() || plist.polygon[0].size() < 3) {
-			continue; // Skip invalid polygons
-		}
-
-		// Run tessellation
-		// Returns array of indices that refer to the vertices of the input
-		// polygon.
-		// Three subsequent indices form a triangle. Output triangles are
-		// clockwise.
-		std::vector<uint32_t> indices = mapbox::earcut<uint32_t>(plist.polygon);
-
-		/* Flatten the polygon into a single vector for easy indexing */
-		std::vector<mbPoint> flattened;
-		for (std::vector<mbPoint> path : plist.polygon) {
-			flattened.insert(flattened.end(), path.begin(), path.end());
 			path.clear();
+			for (RDP::Point &point : vOut)
+				path.push_back(mbPoint{point.first, point.second});
 		}
-
-		for (size_t j = 0; j < indices.size(); j += 3) {
-			Triangle *t = &mesh->triangles[mesh->count++];
-
-			mbPoint p1 = flattened[indices[j]];
-			mbPoint p2 = flattened[indices[j + 1]];
-			mbPoint p3 = flattened[indices[j + 2]];
-
-			t->p1.x = p1[0];
-			t->p1.y = p1[1];
-			t->p2.x = p2[0];
-			t->p2.y = p2[1];
-			t->p3.x = p3[0];
-			t->p3.y = p3[1];
-		}
-
-		flattened.clear();
-		indices.clear();
-		plist.polygon.clear();
 	}
 
-	polylist.clear();
-
-	return mesh;
-}
-
-CList *loopchain_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
-							  ssize_t end_j,
-							  bool (*is_valid)(ssize_t x, ssize_t y)) {
-
-	std::vector<PolyList> inputPoints =
-		rdp_simplify_from_contour(start_i, end_i, start_j, end_j, is_valid);
-
-	if (inputPoints.empty())
-		return NULL;
-
+	/* Prepare result */
 	CList *result = (CList *)malloc(sizeof(CList));
 	result->count = 0;
-	result->data  = (void **)malloc(inputPoints.size() * sizeof(void *));
 
-	for (PolyList plist : inputPoints) {
-		if (plist.polygon.empty() || plist.polygon[0].empty())
-			continue;
+	result->data = (void **)malloc(total_paths * sizeof(void *));
 
-		/* Only take the first path, which is the main contour ignoring
-		 * holes */
-		std::vector<mbPoint> firstPath = plist.polygon[0];
-		if (firstPath.empty())
-			continue;
+	for (const PolyList &poly : polylist) {
+		/* Append holes as separate polygons, since this is a chain of vertices
+		 * and not a triangulation, it doesn't matter */
+		for (const std::vector<mbPoint> &path : poly.polygon) {
+			if (path.empty())
+				continue;
 
-		PointList *pointlist = (PointList *)malloc(sizeof(PointList));
-		pointlist->count	 = 0;
-		pointlist->points =
-			(Point2D *)malloc(firstPath.size() * sizeof(Point2D));
+			/* Only take the first path, which is the main contour ignoring
+			 * holes */
 
-		for (mbPoint point : firstPath) {
-			pointlist->points[pointlist->count].x	= point[0];
-			pointlist->points[pointlist->count++].y = point[1];
+			PointList *pointlist = (PointList *)malloc(sizeof(PointList));
+			pointlist->count	 = 0;
+			pointlist->points =
+				(Point2D *)malloc(path.size() * sizeof(Point2D));
+
+			for (const mbPoint &point : path) {
+				pointlist->points[pointlist->count].x	= point[0];
+				pointlist->points[pointlist->count++].y = point[1];
+			}
+
+			result->data[result->count++] = pointlist;
 		}
-
-		result->data[result->count++] = pointlist;
 	}
+
+	/* Free stuff */
+	if (debug_plist)
+		/* FIXME: Remove debug_plist */
+		*debug_plist = plist;
+	else
+		free(plist);
 
 	return result;
 }
 
-void convert_triangle_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
-									 double *centroid_y) {
-	if (!mesh || mesh->count == 0 || !mesh->triangles)
+void center_pointlist(PointList *mesh, double centroid_u, double centroid_v) {
+	if (!mesh || mesh->count == 0 || !mesh->points)
 		return;
 
-	/* Calculate centroid */
-	double c_x = 0;
-	double c_y = 0;
-	if (!centroid_x || !centroid_y) {
-		for (size_t i = 0; i < mesh->count; ++i) {
-			Triangle *t = &mesh->triangles[i];
-			c_x += (t->p1.x + t->p2.x + t->p3.x) / 3;
-			c_y += (t->p1.y + t->p2.y + t->p3.y) / 3;
-		}
-		c_x /= mesh->count;
-		c_y /= mesh->count;
-	} else {
-		c_x = *centroid_x;
-		c_y = *centroid_y;
-	}
-
-	/* Map triangle coordinates to centroid based coordinates, converted to
-	 * box2d units */
+	/* Map vertex coordinates to centroid based coordinates */
 	for (size_t i = 0; i < mesh->count; ++i) {
-		Triangle *t = &mesh->triangles[i];
+		Point2D *t = &mesh->points[i];
 
-		t->p1.x = X_TO_U(t->p1.x - c_x);
-		t->p1.y = X_TO_U(t->p1.y - c_y);
-		t->p2.x = X_TO_U(t->p2.x - c_x);
-		t->p2.y = X_TO_U(t->p2.y - c_y);
-		t->p3.x = X_TO_U(t->p3.x - c_x);
-		t->p3.y = X_TO_U(t->p3.y - c_y);
+		t->x = t->x - centroid_u;
+		t->y = t->y - centroid_v;
 	}
 }
 
-void convert_pointlist_to_box2d_units(PointList *mesh, double *centroid_x,
-									  double *centroid_y) {
+void center_pointlist_auto(PointList *mesh, double *centroid_u,
+						   double *centroid_v) {
 	if (!mesh || mesh->count == 0 || !mesh->points)
 		return;
 
 	/* Calculate centroid */
 	double c_x = 0;
 	double c_y = 0;
-	if (!centroid_x || !centroid_y) {
-		for (size_t i = 0; i < mesh->count; ++i) {
-			Point2D *p = &mesh->points[i];
-			c_x += p->x;
-			c_y += p->y;
-		}
-		c_x /= mesh->count;
-		c_y /= mesh->count;
-	} else {
-		c_x = *centroid_x;
-		c_y = *centroid_y;
-	}
-
-	/* Map triangle coordinates to centroid based coordinates, converted to
-	 * box2d units */
 	for (size_t i = 0; i < mesh->count; ++i) {
-		Point2D *t = &mesh->points[i];
-
-		t->x = X_TO_U(t->x - c_x);
-		t->y = X_TO_U(t->y - c_y);
+		Point2D *p = &mesh->points[i];
+		c_x += p->x;
+		c_y += p->y;
 	}
+	c_x /= mesh->count;
+	c_y /= mesh->count;
+
+	if (centroid_u) {
+		*centroid_u = c_x;
+	}
+	if (centroid_v)
+		*centroid_v = c_y;
+
+	center_pointlist(mesh, c_x, c_y);
 }

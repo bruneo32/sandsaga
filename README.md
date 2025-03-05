@@ -64,6 +64,8 @@ The following table repesents the worst hardware where the game has been tested 
 - These fonts come from http://ftp.lanet.lv/ftp/mirror/x2ftp/msdos/programming/misc/fntcol16.zip
 - The package is (c) by Joseph Gil
 - The individual fonts are public domain
+### Emanuele Feronato
+- https://emanueleferonato.com/2013/03/01/using-marching-squares-algorithm-to-trace-the-contour-of-an-image/
 ### Third-party algorithms implemented
 - https://github.com/Lecanyu/RDPSimplify
 - https://github.com/mapbox/earcut.hpp/

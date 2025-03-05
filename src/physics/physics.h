@@ -116,7 +116,8 @@ b2Shape		   *box2d_shape_circle(float radius, float x, float y);
 b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3);
 b2ChainShape   *box2d_shape_loop(Point2D *points, unsigned int count);
 b2Fixture	   *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
-										  float density, float friction, float restitution);
+										  float density, float friction,
+										  float restitution);
 
 /* Box2D Raycasts */
 typedef struct _RaycastData {
@@ -135,17 +136,30 @@ void box2d_sweep_raycast(b2Body *body, RaycastData *output, int numRays,
 
 /* =============================================================== */
 /* Meshgen functions */
-TriangleMesh *triangulate(ssize_t start_i, ssize_t end_i, ssize_t start_j,
-						  ssize_t end_j, bool (*is_valid)(ssize_t x, ssize_t y));
 
-CList *loopchain_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
-							  ssize_t end_j,
-							  bool (*is_valid)(ssize_t x, ssize_t y));
+/**
+ * \brief Generate a list of polygons from a point cloud in `gameboard`
+ */
+CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
+								ssize_t end_i, ssize_t start_j, ssize_t end_j,
+								bool (*is_valid)(ssize_t x, ssize_t y));
 
-void convert_triangle_to_box2d_units(TriangleMesh *mesh, double *centroid_x,
-									 double *centroid_y);
-void convert_pointlist_to_box2d_units(PointList *mesh, double *centroid_x,
-									  double *centroid_y);
+/**
+ * \brief Map pointlist coordinates to centroid based coordinates
+ * \param mesh Pointlist to be mapped
+ * \param centroid_u X coordinate of the centroid
+ * \param centroid_v Y coordinate of the centroid
+ */
+void center_pointlist(PointList *mesh, double centroid_u, double centroid_v);
+
+/**
+ * \brief Map pointlist to automatically calculate centroid
+ * \param mesh Pointlist to be mapped
+ * \param centroid_u Ptr to output the x coordinate of the centroid
+ * \param centroid_v Ptr to output the y coordinate of the centroid
+ */
+void center_pointlist_auto(PointList *mesh, double *centroid_u,
+						   double *centroid_v);
 
 #ifdef __cplusplus
 }
