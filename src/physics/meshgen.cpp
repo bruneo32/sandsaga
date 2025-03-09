@@ -29,18 +29,7 @@ typedef struct _PolyList {
 
 #define plist_idx(i_, j_) ((j_) * list_width + (i_))
 
-#pragma pack(push, 1)
-typedef union MSQ {
-	uint8_t raw;
-	struct {
-		bit top_left	 : 1;
-		bit top_right	 : 1;
-		bit bottom_left	 : 1;
-		bit bottom_right : 1;
-		bit __padding	 : 4; /* Alignment */
-	};
-} MSQ;
-#pragma pack(pop)
+typedef uint8_t MSQ;
 
 static inline MSQ getSquareValue(uint8_t *plist, const ssize_t list_width,
 								 const ssize_t list_height, ssize_t pX,
@@ -54,16 +43,20 @@ static inline MSQ getSquareValue(uint8_t *plist, const ssize_t list_width,
 	+---+---+
 	*/
 
-	MSQ msq;
+	MSQ msq = VERTEX_IS_IN_BOUNDS(pX, pY) &&
+			  plist[plist_idx(pX, pY)] == current_index;
 
-	msq.top_left = VERTEX_IS_IN_BOUNDS(pX - 1, pY - 1) &&
-				   plist[plist_idx(pX - 1, pY - 1)] == current_index;
-	msq.top_right = VERTEX_IS_IN_BOUNDS(pX, pY - 1) &&
-					plist[plist_idx(pX, pY - 1)] == current_index;
-	msq.bottom_left = VERTEX_IS_IN_BOUNDS(pX - 1, pY) &&
-					  plist[plist_idx(pX - 1, pY)] == current_index;
-	msq.bottom_right = VERTEX_IS_IN_BOUNDS(pX, pY) &&
-					   plist[plist_idx(pX, pY)] == current_index;
+	msq <<= 1;
+	msq |= VERTEX_IS_IN_BOUNDS(pX - 1, pY) &&
+		   plist[plist_idx(pX - 1, pY)] == current_index;
+
+	msq <<= 1;
+	msq |= VERTEX_IS_IN_BOUNDS(pX, pY - 1) &&
+		   plist[plist_idx(pX, pY - 1)] == current_index;
+
+	msq <<= 1;
+	msq |= VERTEX_IS_IN_BOUNDS(pX - 1, pY - 1) &&
+		   plist[plist_idx(pX - 1, pY - 1)] == current_index;
 
 	return msq;
 }
@@ -281,7 +274,7 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 					getSquareValue(plist, list_width, list_height, pX, pY,
 								   (!is_hole) ? poly_idx : 0);
 
-				switch (squareValue.raw) {
+				switch (squareValue) {
 					/* Going UP with these cases:
 						+---+---+   +---+---+   +---+---+
 						| 1 |   |   | 1 |   |   | 1 |   |
