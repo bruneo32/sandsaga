@@ -78,9 +78,6 @@ void draw_sky(SDL_FRect *camera) {
 	const size_t cam_wy = tlchunk.y * CHUNK_SIZE + ((size_t)camera->y);
 	const size_t cam_wx = tlchunk.x * CHUNK_SIZE + ((size_t)camera->x);
 
-	/* Don't allow transparency to clear the screen from the previous frame */
-	SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_NONE);
-
 	/* Draw color gradient */
 	for (size_t y = 0; y < VIEWPORT_HEIGHT; ++y) {
 		const size_t world_y = cam_wy + y;
@@ -113,11 +110,10 @@ void draw_sky(SDL_FRect *camera) {
 			color.b = (uint8_t)(color3.b + t * (color4.b - color3.b));
 		}
 
-		Render_Line_Color(0, y, VIEWPORT_WIDTH_M1, y, color);
+		/* Render line */
+		for (size_t x = 0; x < VIEWPORT_WIDTH; ++x)
+			vscreen[vscreen_idx(x, y)] = color;
 	}
-
-	/* Allow transparency for clouds */
-	SDL_SetRenderDrawBlendMode(__renderer, SDL_BLENDMODE_BLEND);
 
 	/* Draw clouds */
 	for (size_t y = 0; y < VIEWPORT_HEIGHT; ++y) {
@@ -149,9 +145,15 @@ void draw_sky(SDL_FRect *camera) {
 
 			Color cloud_point_color = {0xFF, 0xFF, 0xFF, 0x00};
 			cloud_point_color.a += (uint8_t)(nv * 0xBC);
-			Render_Pixel_Color(x, y, cloud_point_color);
+			/* Blend cloud point */
+			vscreen[vscreen_idx(x, y)] =
+				Color_blend(cloud_point_color, vscreen[vscreen_idx(x, y)]);
 		}
 	}
+
+	/* Render pixels to vscreen and copy to renderer */
+	SDL_UpdateTexture(__vscreen, NULL, vscreen, vscreen_line_size);
+	SDL_RenderCopy(__renderer, __vscreen, NULL, NULL);
 }
 
 int main(int argc, char *argv[]) {

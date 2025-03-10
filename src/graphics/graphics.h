@@ -140,6 +140,11 @@ void Render_subimage_ext(SDL_Texture *texture, int image_x, int image_y, int w,
 	Render_subimage_ext(texture, image_x, image_y, w, h, renderX, renderY, 0,  \
 						NULL, SDL_FLIP_NONE)
 
+/**
+ * \brief Blend color src into color dst
+ */
+Color Color_blend(Color src, Color dst);
+
 #ifdef __cplusplus
 }
 #endif

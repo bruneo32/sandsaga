@@ -243,3 +243,19 @@ void Render_subimage_ext(SDL_Texture *texture, int image_x, int image_y, int w,
 	SDL_RenderCopyEx(__renderer, texture, &srcRect, &destRect, angle, center,
 					 flip);
 }
+
+Color Color_blend(Color src, Color dst) {
+	/* Normalize alpha */
+	float alpha		= src.a / 255.0f;
+	float inv_alpha = 1.0f - alpha;
+
+	Color out = {0};
+
+	/* Blend each channel */
+	out.r = (uint8_t)(src.r * alpha + dst.r * inv_alpha);
+	out.g = (uint8_t)(src.g * alpha + dst.g * inv_alpha);
+	out.b = (uint8_t)(src.b * alpha + dst.b * inv_alpha);
+	out.a = src.a + (dst.a * inv_alpha);
+
+	return out;
+}
