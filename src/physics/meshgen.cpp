@@ -70,6 +70,27 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 	uint8_t *plist =
 		(uint8_t *)calloc(list_height * list_width, sizeof(uint8_t));
 
+	/* == Transform `is_valid` into a cache friendly function to speed up the
+	 * millions of callbacks to `is_valid` == */
+
+	/* Round up list_width to the next multiple of 8 */
+	const size_t validMask_bytes_per_row = (list_width + 7) / 8;
+	/* Cache of validMask  */
+	std::vector<uint8_t> validMask(list_height * validMask_bytes_per_row, 0);
+
+#define setValid(i_, j_)                                                       \
+	validMask[(j_) * validMask_bytes_per_row + ((i_) / 8)] |= (1 << ((i_) % 8))
+#define getValid(i_, j_)                                                       \
+	((validMask[(j_) * validMask_bytes_per_row + ((i_) / 8)] >> ((i_) % 8)) & 1)
+
+	/* == Populate validMask == */
+	for (ssize_t j = 0; j < list_height; ++j) {
+		for (ssize_t i = 0; i < list_width; ++i) {
+			if (is_valid(i + start_i, j + start_j))
+				setValid(i, j);
+		}
+	}
+
 	/* == Separate polygons == */
 	uint8_t current_index = 1;
 	for (ssize_t j = 0; j < list_height; ++j) {
@@ -81,7 +102,7 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 			bool do_background = false;
 
 			/* Check if it's a background to fill or not */
-			if (!is_valid(i + start_i, j + start_j)) {
+			if (!getValid(i, j)) {
 				if (i == 0 || j == 0 || i == list_width - 1 ||
 					j == list_height - 1)
 					do_background = true;
@@ -96,13 +117,66 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 			std::stack<Point> stack;
 			stack.push((Point){(int)i, (int)j});
 
-			/*  lambda to check if a cell qualifies for filling */
-			auto qualifies =
-				[&](int x_, int y_) -> bool __attribute__((__always_inline__)) {
-				/* Do not qualify already visited cells, or cells that do
-				 * not match our background/foreground criteria */
-				return (plist[plist_idx(x_, y_)] == 0) &&
-					   (do_background != is_valid(x_ + start_i, y_ + start_j));
+			/* Lambda to check if a cell qualifies for filling */
+			auto qualifies = [&](int x_, int y_) -> bool {
+				/* Discard already visited cells */
+				if (plist[plist_idx(x_, y_)] != 0)
+					return false;
+
+				/* Discard cells that do not match our bg/fg criteria */
+				if (do_background == getValid(x_, y_))
+					return false;
+
+				/* Background do not discard little vertices */
+				if (do_background)
+					return true;
+
+				/* == Discard little vertices == */
+
+				/** Count of valid neighbours in the plus pattern (+)
+				 * +---+---+---+
+				 * |   | + |   |
+				 * +---+---+---+
+				 * | + | O | + |
+				 * +---+---+---+
+				 * |   | + |   |
+				 * +---+---+---+
+				 */
+				uint_fast8_t su_tplus = 0;
+
+				/** Count of valid neighbours in the cross pattern (x)
+				 * +---+---+---+
+				 * | x |   | x |
+				 * +---+---+---+
+				 * |   | O |   |
+				 * +---+---+---+
+				 * | x |   | x |
+				 * +---+---+---+
+				 */
+				uint_fast8_t su_xross = 0;
+
+				/** Neighbour offsets length */
+				constexpr size_t nbo_len = 4;
+
+				static const Point t_offsets[nbo_len] = {
+					{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+
+				static const Point x_offsets[nbo_len] = {
+					{-1, -1}, {1, -1}, {1, 1}, {-1, 1}};
+
+				/* Iterate over the neighbours to count them */
+				for (uint_fast8_t k = 0; k < nbo_len; k++) {
+					if (getValid(x_ + t_offsets[k].x, y_ + t_offsets[k].y))
+						su_tplus++;
+					if (getValid(x_ + x_offsets[k].x, y_ + x_offsets[k].y))
+						su_xross++;
+				}
+
+				/* A valid vertex has to have at least 2 neighbours in the plus
+				 * pattern (+) and another 2 in the cross pattern (x).
+				 * Otherwise, it's considered that has not enough neighbours to
+				 * conform a valid polygon */
+				return su_tplus > 1 && su_xross > 1;
 			};
 
 			while (!stack.empty()) {
@@ -144,29 +218,6 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 				i = list_width;
 				j = list_height;
 			}
-		}
-	}
-
-	/* == Discard little vertices == */
-	for (ssize_t j = 0; j < list_height; ++j) {
-		for (ssize_t i = 0; i < list_width; ++i) {
-			uint8_t mindex = plist[plist_idx(i, j)];
-			if (mindex == 0)
-				continue;
-
-			uint8_t sumup = 0;
-
-			for (ssize_t jj = j - 1; jj <= j + 1; ++jj) {
-				for (ssize_t ii = i - 1; ii <= i + 1; ++ii) {
-					if (VERTEX_IS_IN_BOUNDS(ii, jj) &&
-						plist[plist_idx(ii, jj)] == mindex)
-						sumup++;
-				}
-			}
-
-			/* Disable little vertex */
-			if (sumup <= 4)
-				plist[plist_idx(i, j)] = 0;
 		}
 	}
 
@@ -442,6 +493,9 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 		*debug_plist = plist;
 	else
 		free(plist);
+
+#undef getValid
+#undef setValid
 
 	return result;
 }
