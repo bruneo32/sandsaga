@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
-#include <queue>
+#include <stack>
 #include <vector>
 
 using mbPoint = std::array<double, 2>;
@@ -75,44 +75,72 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 	for (ssize_t j = 0; j < list_height; ++j) {
 		for (ssize_t i = 0; i < list_width; ++i) {
 			/* Continue until we find a valid not visited cell */
-			if (plist[plist_idx(i, j)] != 0 ||
-				!is_valid(i + start_i, j + start_j))
+			if (plist[plist_idx(i, j)] != 0)
 				continue;
+
+			bool do_background = false;
+
+			/* Check if it's a background to fill or not */
+			if (!is_valid(i + start_i, j + start_j)) {
+				if (i == 0 || j == 0 || i == list_width - 1 ||
+					j == list_height - 1)
+					do_background = true;
+				else
+					/* If it's not on the edge, it's not a background */
+					continue;
+			}
 
 			/* New polygon */
 
-			/* Flood fill using BFS */
-			std::queue<Point> Q;
-			Q.push((Point){(int)i, (int)j});
+			/* Flood fill using Scanline algorithm */
+			std::stack<Point> stack;
+			stack.push((Point){(int)i, (int)j});
 
-			while (!Q.empty()) {
-				/* Pop from the queue */
-				const Point p = Q.front();
-				Q.pop();
+			/*  lambda to check if a cell qualifies for filling */
+			auto qualifies =
+				[&](int x_, int y_) -> bool __attribute__((__always_inline__)) {
+				/* Do not qualify already visited cells, or cells that do
+				 * not match our background/foreground criteria */
+				return (plist[plist_idx(x_, y_)] == 0) &&
+					   (do_background != is_valid(x_ + start_i, y_ + start_j));
+			};
 
-				/* Skip invalid or already visited cells */
-				if (!VERTEX_IS_IN_BOUNDS(p.x, p.y) ||
-					plist[plist_idx(p.x, p.y)] != 0 ||
-					!is_valid(p.x + start_i, p.y + start_j))
-					continue;
+			while (!stack.empty()) {
+				Point p = stack.top();
+				stack.pop();
 
-				/* Set self */
-				plist[plist_idx(p.x, p.y)] = current_index;
+				/* Find the left boundary of the segment */
+				int x_left = p.x;
+				while (x_left >= 0 && qualifies(x_left, p.y))
+					x_left--;
+				x_left++; /* x_left now is the first pixel in this row */
 
-				/* Queue neighbours */
-				if (p.x < list_width - 1)
-					Q.push((Point){p.x + 1, p.y});
-				if (p.x > 0)
-					Q.push((Point){p.x - 1, p.y});
-				if (p.y < list_height - 1)
-					Q.push((Point){p.x, p.y + 1});
-				if (p.y > 0)
-					Q.push((Point){p.x, p.y - 1});
+				/* Find the right boundary of the segment */
+				int x_right = p.x;
+				while (x_right < list_width && qualifies(x_right, p.y))
+					x_right++;
+
+				/* Fill the horizontal segment [x_left, x_right) */
+				for (int xi = x_left; xi < x_right; xi++) {
+					plist[plist_idx(xi, p.y)] =
+						(!do_background) ? current_index : INVALID_VERTEX;
+				}
+
+				/* Check the row above and below for new segments to fill */
+				for (int xi = x_left; xi < x_right; xi++) {
+					/* Check one row above */
+					if (p.y > 0 && qualifies(xi, p.y - 1))
+						stack.push((Point){xi, p.y - 1});
+					/* Check one row below */
+					if (p.y < list_height - 1 && qualifies(xi, p.y + 1))
+						stack.push((Point){xi, p.y + 1});
+				}
 			}
 
-			if (current_index++ == UINT8_MAX) {
-				/* Overflow! It was 255 and now it's 0,
-				 * so we have to stop, we cannot have more than 255 polygons */
+			/* Increment current index when it's not background */
+			if (!do_background && current_index++ == (UINT8_MAX - 1)) {
+				/* Overflow! It was 254 and now it's 255 (INVALID_VERTEX),
+				 * so we have to stop, we cannot have more than 254 polygons */
 				i = list_width;
 				j = list_height;
 			}
@@ -153,59 +181,17 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 		for (ssize_t i = 0; i < list_width; ++i) {
 			uint8_t poly_idx = plist[plist_idx(i, j)];
 
+			/* Skip background */
+			if (poly_idx == INVALID_VERTEX)
+				continue;
+
 			bool is_hole = false;
+			/* Hole detected */
 			if (poly_idx == 0) {
-				/* Skip on the border, a valid hole should be fully enclosed */
-				if (i == 0 || j == 0 || i == list_width - 1 ||
-					j == list_height - 1)
-					continue;
-
-				/* Check if it's a hole inside another polygon */
-				if (plist[plist_idx(i - 1, j)] != 0) {
-					uint8_t parent_idx = plist[plist_idx(i - 1, j)];
-
-					/* Throw ray: up */
-					size_t cx_up = 0;
-					for (ssize_t jj = j - 1; jj >= 0; --jj)
-						if (plist[plist_idx(i, jj)] == parent_idx &&
-							plist[plist_idx(i, jj + 1)] != parent_idx)
-							cx_up++;
-
-					/* Throw ray: right */
-					size_t cx_right = 0;
-					for (ssize_t ii = i + 1; ii < list_width; ++ii)
-						if (plist[plist_idx(ii, j)] == parent_idx &&
-							plist[plist_idx(ii - 1, j)] != parent_idx)
-							cx_right++;
-
-					/* Throw ray: down */
-					size_t cx_down = 0;
-					for (ssize_t jj = j + 1; jj < list_height; ++jj)
-						if (plist[plist_idx(i, jj)] == parent_idx &&
-							plist[plist_idx(i, jj - 1)] != parent_idx)
-							cx_down++;
-
-					/* Throw ray: left */
-					size_t cx_left = 0;
-					for (ssize_t ii = i - 1; ii >= 0; --ii)
-						if (plist[plist_idx(ii, j)] == parent_idx &&
-							plist[plist_idx(ii + 1, j)] != parent_idx)
-							cx_left++;
-
-					/* If all the rays counted an even number of vertices, then
-					 * it is a hole incarcerated inside it's parent polygon,
-					 * otherwise there is an open spot in the hole. */
-					if ((cx_up & 1) && (cx_right & 1) && (cx_down & 1) &&
-						(cx_left & 1)) {
-						/* It's a hole, trace it's contour */
-						is_hole	 = true;
-						poly_idx = parent_idx;
-					}
-				}
-
-				/* If it's not a hole, continue */
-				if (!is_hole)
-					continue;
+				/* Set the parent index to search. NOTE: No hole will spawn at
+				 * the border, so it's safe to use `i - 1` */
+				poly_idx = plist[plist_idx(i - 1, j)];
+				is_hole	 = true;
 			}
 
 			/* If this is already visited, continue looking */
@@ -235,9 +221,8 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 			if (!pl)
 				continue;
 
+			/* Watch out! Stop adding the same hole multiple times */
 			if (is_hole) {
-				/* Watch out! We could be adding a hole that already
-				 * exists! */
 				bool hole_exists = false;
 				for (size_t p = 1 /* Skip main contour */;
 					 !hole_exists && p < pl->polygon.size(); ++p) {
