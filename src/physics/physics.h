@@ -140,8 +140,8 @@ void box2d_sweep_raycast(b2Body *body, RaycastData *output, int numRays,
 /**
  * \brief Generate a list of polygons from a point cloud in `gameboard`
  */
-CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
-								ssize_t end_i, ssize_t start_j, ssize_t end_j,
+CList *polygonlist_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+								ssize_t end_j,
 								bool (*is_valid)(ssize_t x, ssize_t y));
 
 /**

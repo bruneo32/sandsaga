@@ -61,8 +61,8 @@ static inline MSQ getSquareValue(uint8_t *plist, const ssize_t list_width,
 	return msq;
 }
 
-CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
-								ssize_t end_i, ssize_t start_j, ssize_t end_j,
+CList *polygonlist_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
+								ssize_t end_j,
 								bool (*is_valid)(ssize_t x, ssize_t y)) {
 	const ssize_t list_width  = end_i - start_i;
 	const ssize_t list_height = end_j - start_j;
@@ -488,11 +488,7 @@ CList *polygonlist_from_contour(uint8_t **debug_plist, ssize_t start_i,
 	}
 
 	/* Free stuff */
-	if (debug_plist)
-		/* FIXME: Remove debug_plist */
-		*debug_plist = plist;
-	else
-		free(plist);
+	free(plist);
 
 #undef getValid
 #undef setValid

@@ -652,39 +652,6 @@ void draw_gameboard_world(const SDL_FRect *camera) {
 			}
 		}
 	}
-
-	if (DBGL(e_dbgl_engine)) {
-		for (size_t _j = (cam_y / SUBCHUNK_HEIGHT) * SUBCHUNK_HEIGHT;
-			 _j < cam_y + VSCREEN_HEIGHT; _j += SUBCHUNK_HEIGHT) {
-			for (size_t _i = (cam_x / SUBCHUNK_WIDTH) * SUBCHUNK_WIDTH;
-				 _i < cam_x + VSCREEN_WIDTH; _i += SUBCHUNK_WIDTH) {
-				const size_t si = _i / SUBCHUNK_WIDTH;
-				const size_t sj = _j / SUBCHUNK_HEIGHT;
-				if (si > 15 || sj > 15)
-					continue;
-
-				if (soil_body[sj][si].debug_plist != NULL) {
-					const size_t x = _i - cam_x;
-					const size_t y = _j - cam_y;
-
-					const ssize_t list_width  = SUBCHUNK_WIDTH + 1;
-					const ssize_t list_height = SUBCHUNK_HEIGHT + 1;
-#define plist_idx(i_, j_) ((j_) * list_width + (i_))
-					for (size_t j = 0; j < list_height; ++j) {
-						for (size_t i = 0; i < list_width; ++i) {
-							const uint8_t p =
-								soil_body[sj][si].debug_plist[plist_idx(i, j)];
-							if (p != 0) {
-								Render_Pixel_RGBA(x + i, y + j, 0xFF, 0x00,
-												  p * 64, 255);
-							}
-						}
-					}
-#undef plist_idx
-				}
-			}
-		}
-	}
 }
 
 static bool F_IS_FLOOR(ssize_t x, ssize_t y) {
@@ -700,11 +667,6 @@ void deactivate_soil(size_t si, size_t sj) {
 
 	box2d_body_destroy(soil_body[sj][si].body);
 	soil_body[sj][si].body = NULL;
-
-	if ((((size_t)soil_body[sj][si].debug_plist) & 0x0000FFFFFFFFFFFF) == 0)
-		return;
-	free(soil_body[sj][si].debug_plist);
-	soil_body[sj][si].debug_plist = NULL;
 }
 
 void activate_soil(size_t si, size_t sj) {
@@ -720,7 +682,7 @@ void activate_soil(size_t si, size_t sj) {
 		clamp(start_j + SUBCHUNK_HEIGHT + 1, 0, VSCREEN_HEIGHT);
 
 	CList *polygons =
-		polygonlist_from_contour(&soil_body[sj][si].debug_plist, start_i, end_i,
+		polygonlist_from_contour(start_i, end_i,
 								 start_j, end_j, F_IS_FLOOR);
 
 	if (polygons != NULL && polygons->count > 0) {

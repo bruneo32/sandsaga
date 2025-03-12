@@ -42,8 +42,7 @@ extern subchunk_t subchunkopt[SUBCHUNK_SIZE];
 #define SUBCHUNK_ROW_COMPLETE ((subchunk_t)~0)
 
 typedef struct _SoilData {
-	b2Body	*body;
-	uint8_t *debug_plist;
+	b2Body *body;
 } SoilData;
 extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
