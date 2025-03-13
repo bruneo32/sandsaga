@@ -345,6 +345,7 @@ int main(int argc, char *argv[]) {
 				case SDL_SCANCODE_F4:
 					Render_TogleFullscreen;
 					ResetSubchunks; /* Redraw */
+					Render_Clearscreen_Color(C_BLACK);
 					break;
 				case SDL_SCANCODE_F9:
 					/* Toggle debug level UI */
@@ -431,6 +432,7 @@ int main(int argc, char *argv[]) {
 					SDL_RenderGetViewport(__renderer, &window_viewport);
 					SDL_RenderGetScale(__renderer, &window_scale.x,
 									   &window_scale.y);
+					Render_Clearscreen_Color(C_BLACK);
 					break;
 				}
 				break;
