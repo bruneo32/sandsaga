@@ -11,6 +11,7 @@ GameObject go_table[MAX_GO_ID];
 GO_ID GO_VAPOR;
 GO_ID GO_WATER;
 GO_ID GO_SAND;
+GO_ID GO_DIRT;
 GO_ID GO_STONE;
 
 GO_ID register_gameobject(GO_Type type, float density, Color color,
@@ -51,6 +52,34 @@ static void F_draw_sand(size_t wx, size_t wy, int vx, int vy) {
 		vscreen[idx] = C_SAND2;
 	else
 		vscreen[idx] = C_SAND;
+}
+
+static Color C_DIRT	 = {0x54, 0x43, 0x39, 0xFF};
+static Color C_DIRT3 = {0x3B, 0x28, 0x1A, 0xFF};
+static Color C_DIRT2 = {0x4D, 0x3C, 0x32, 0xFF};
+static Color C_DIRT4 = {0x26, 0x14, 0x0A, 0xFF};
+static Color C_DIRT5 = {0x80, 0x6A, 0x5F, 0xFF};
+
+/* Draw pattern for dirt */
+static void F_draw_dirt(size_t wx, size_t wy, int vx, int vy) {
+	/* Pseudo-random seed based only on world coordinates */
+	const size_t seed = wy - (wx ^ -wy);
+
+	/* noise2 is way faster than perlin2d, and is very good for this case */
+	size_t noise = noise2(wx, wy, seed);
+
+	/* Map noise value to a specific color */
+	const size_t idx = vscreen_idx(vx, vy);
+	if (noise < 12)
+		vscreen[idx] = C_DIRT5;
+	else if (noise < 32)
+		vscreen[idx] = C_DIRT4;
+	else if (noise < 96)
+		vscreen[idx] = C_DIRT3;
+	else if (noise < 192)
+		vscreen[idx] = C_DIRT2;
+	else
+		vscreen[idx] = C_DIRT;
 }
 
 static Color C_STONE  = {0x79, 0x7B, 0x7A, 0xFF};
@@ -107,4 +136,5 @@ void init_gameobjects() {
 	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, C_WATER, F_draw_water);
 	GO_SAND	 = register_gameobject(GO_POWDER, 2.0f, C_SAND, F_draw_sand);
 	GO_STONE = register_gameobject(GO_STATIC, 3.0f, C_STONE, F_draw_stone);
+	GO_DIRT	 = register_gameobject(GO_POWDER, 2.0f, C_DIRT, F_draw_dirt);
 }
