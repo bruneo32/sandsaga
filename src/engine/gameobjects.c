@@ -11,8 +11,9 @@ GameObject go_table[MAX_GO_ID];
 GO_ID GO_VAPOR;
 GO_ID GO_WATER;
 GO_ID GO_SAND;
-GO_ID GO_DIRT;
 GO_ID GO_STONE;
+GO_ID GO_DIRT;
+GO_ID GO_OIL;
 
 GO_ID register_gameobject(GO_Type type, float density, Color color,
 						  GO_Draw draw) {
@@ -132,10 +133,41 @@ static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
 	vscreen[vscreen_idx(vx, vy)] = color;
 }
 
+static Color C_OIL = {0x92, 0x32, 0x1D, 0xCD};
+
+/* Draw pattern for oil */
+static void F_draw_oil(size_t wx, size_t wy, int vx, int vy) {
+	const double frequency = 0.02;
+	const size_t depth	   = 2;
+
+	const size_t mov = frame_cx >> 2;
+
+	/* Generate a pseudo-random value based on Perlin noise */
+	double noise_value = perlin2d(420, (double)wx + mov, (double)wy + mov,
+								  frequency, depth + (1.0 / mov));
+
+	/* Normalize noise value to a range of 0-12 */
+	noise_value = fmod(noise_value, 1.0);
+	if (noise_value < 0)
+		noise_value += 1.0;
+	noise_value *= 24.0;
+
+	uint8_t nv = (uint8_t)noise_value;
+
+	Color color = C_OIL;
+	color.r -= nv;
+	color.g += nv;
+	color.b += nv;
+	color.a -= nv;
+
+	vscreen[vscreen_idx(vx, vy)] = color;
+}
+
 void init_gameobjects() {
 	GO_VAPOR = register_gameobject(GO_GAS, 0.0f, C_VAPOR, NULL);
 	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, C_WATER, F_draw_water);
 	GO_SAND	 = register_gameobject(GO_POWDER, 2.0f, C_SAND, F_draw_sand);
 	GO_STONE = register_gameobject(GO_STATIC, 3.0f, C_STONE, F_draw_stone);
 	GO_DIRT	 = register_gameobject(GO_POWDER, 2.0f, C_DIRT, F_draw_dirt);
+	GO_OIL	 = register_gameobject(GO_LIQUID, 0.5f, C_OIL, F_draw_oil);
 }
