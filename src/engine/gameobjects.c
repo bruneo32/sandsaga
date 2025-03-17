@@ -103,14 +103,14 @@ static void F_draw_stone(size_t wx, size_t wy, int vx, int vy) {
 		vscreen[idx] = C_STONE;
 }
 
-static Color C_WATER = {0x7F, 0x8D, 0xFF, 0xAF};
+static Color C_WATER = {0x27, 0x77, 0xF7, 0x96};
 
 /* Draw pattern for water */
 static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
-	const double frequency = 0.03;
-	const size_t depth	   = 1;
+	const double frequency = 0.02;
+	const size_t depth	   = 2;
 
-	const size_t mov = frame_cx / 4;
+	const size_t mov = frame_cx >> 1;
 
 	/* Generate a pseudo-random value based on Perlin noise */
 	double noise_value =
@@ -127,6 +127,7 @@ static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
 	Color color = C_WATER;
 	color.g += nv;
 	color.b -= nv;
+	color.a += nv;
 
 	vscreen[vscreen_idx(vx, vy)] = color;
 }
