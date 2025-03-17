@@ -120,6 +120,11 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	player->prev_x = player->x;
 	player->prev_y = player->y;
 
+	const short player_w2 = player->width / 2;
+	const short player_w4 = player_w2 / 2;
+	const short player_h2 = player->height / 2;
+	const short player_h4 = player_h2 / 2;
+
 	float bx, by;
 	box2d_body_get_position(player->body, &bx, &by);
 	player->x = clamp(U_TO_X(bx), CHUNK_SIZE_DIV_2 + 1,
@@ -130,17 +135,9 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	short facing = player->fliph ? -1 : 1;
 
 	RaycastData ray_bottom;
-	RaycastData ray_forward;
-
-	box2d_sweep_raycast(player->body, &ray_bottom, 4,
-						X_TO_U(player->width / 2 - 2), 0,
-						X_TO_U(player->height / 2), true);
-	box2d_sweep_raycast(player->body, &ray_forward, 8,
-						X_TO_U(player->height - SLOPE * 2),
-						X_TO_U(facing * (player->width / 4 + 1)), 0, false);
-
-	bool player_is_on_floor = ray_bottom.hit;
-	bool player_is_on_wall	= ray_forward.hit;
+	box2d_sweep_raycast(player->body, &ray_bottom, 3, X_TO_U(player_w2 - 2), 0,
+						X_TO_U(player_h2), true);
+	const bool player_is_on_floor = ray_bottom.hit;
 
 	/* Move down / Jump */
 	if (keyboard[SDL_SCANCODE_W] && (player->flying || player_is_on_floor)) {
@@ -160,24 +157,52 @@ void move_player(Player *player, const Uint8 *keyboard) {
 	if (hspeed != 0) {
 		player->fliph = (hspeed < 0) ? true : false;
 		hspeed *= player->flying ? PLAYER_FLYING_SPEED : PLAYER_SPEED;
-		if (!player->flying) {
-			if (player_is_on_floor) {
-				play_animation(&player->animation, &anim_player_walk, false);
-			} else {
-				play_animation(&player->animation, &anim_player_idle, false);
-			}
 
-			if (player_is_on_wall && SIGN(hspeed) == SIGN(facing)) {
-				hspeed *= (float)facing * fabsf(ray_forward.normal_y);
-				if (player_is_on_floor)
-					box2d_body_add_velocity(player->body, 0,
-											-fabsf(ray_forward.normal_x));
-			} else if (player_is_on_floor) {
-				box2d_body_add_velocity(player->body, 0, 0.8f);
+		if (!player->flying) {
+			/* Throw raycast forward to check if there is a step to climb */
+			RaycastData ray_forward;
+
+			const float ray_y = X_TO_U(player->y + player_h2 - 2);
+			const float ray_x =
+				X_TO_U(player->x + facing + (facing * player_w4));
+
+			box2d_raycast(b2_world, &ray_forward, ray_x, X_TO_U(player->y),
+						  ray_x, ray_y, player->body);
+
+			/* Glide over terrain */
+			if (ray_forward.hit) {
+				if (!player_is_on_floor) {
+					/* Did you just bang your head with a wall? */
+					hspeed = 0;
+				} else {
+					/* Construct a vector from feet to the ray target */
+					const float player_bottom_y = X_TO_U(player->y + player_h2);
+					const float dist_x =
+						ray_forward.point_x - X_TO_U(player->x);
+					const float dist_y = ray_forward.point_y - player_bottom_y;
+
+					/* Calculate angle of ray */
+					float angle = atan2f(-dist_y, dist_x);
+
+					if (angle > degtorad(60.0f) && angle < degtorad(120.0f)) {
+						/* Stop, you cannot climb this */
+						hspeed = 0;
+					} else {
+						/* Calculate new velocity */
+						hspeed *= cosf(angle);
+						float vspeed = -sinf(angle) * PLAYER_SPEED;
+						box2d_body_set_velocity_v(player->body, vspeed);
+					}
+				}
 			}
-		} else {
-			play_animation(&player->animation, &anim_player_idle, false);
 		}
+
+		if (hspeed == 0 || !player_is_on_floor) {
+			play_animation(&player->animation, &anim_player_idle, false);
+		} else {
+			play_animation(&player->animation, &anim_player_walk, false);
+		}
+
 		box2d_body_set_velocity_h(player->body, hspeed);
 	} else if (player->flying || player_is_on_floor) {
 		play_animation(&player->animation, &anim_player_idle, false);

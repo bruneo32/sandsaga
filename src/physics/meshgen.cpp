@@ -441,6 +441,7 @@ CList *polygonlist_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
 	}
 
 	/* Reduce number of points in each polygon */
+	constexpr double RDP_FACTOR = 0.163264;
 	for (PolyList &poly : polylist) {
 		for (std::vector<mbPoint> &path : poly.polygon) {
 			std::vector<RDP::Point> vIn;
@@ -449,7 +450,7 @@ CList *polygonlist_from_contour(ssize_t start_i, ssize_t end_i, ssize_t start_j,
 			for (mbPoint &point : path)
 				vIn.push_back(RDP::Point(point[0], point[1]));
 
-			RDP::RamerDouglasPeucker(vIn, 0.24, vOut);
+			RDP::RamerDouglasPeucker(vIn, RDP_FACTOR, vOut);
 
 			path.clear();
 			for (RDP::Point &point : vOut)

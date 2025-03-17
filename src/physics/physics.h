@@ -44,6 +44,8 @@ enum {
 
 /** Box2D world pixels per unit */
 #define B2D_WORLD_SCALE 8
+/** Box2D world units per pixel */
+#define B2D_UPP (1.0f / B2D_WORLD_SCALE)
 
 /** Convert Box2D units to pixels. UV->XY */
 #define U_TO_X(__u) ((__u) * ((double)B2D_WORLD_SCALE))
