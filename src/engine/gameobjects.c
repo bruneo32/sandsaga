@@ -104,60 +104,68 @@ static void F_draw_stone(size_t wx, size_t wy, int vx, int vy) {
 		vscreen[idx] = C_STONE;
 }
 
-static Color C_WATER = {0x27, 0x77, 0xF7, 0x96};
+static Color C_WATER = {0x47, 0x77, 0xDC, 0xA4};
 
 /* Draw pattern for water */
 static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
-	const double frequency = 0.02;
-	const size_t depth	   = 2;
+#define WATER_SEED 0
+	const double freq	= 0.02;
+	const double freq2	= 0.005;
+	const size_t depth	= 3;
+	const double o_time = frame_cx >> 1;
 
-	const size_t mov = frame_cx >> 1;
+	const double px = 49.0 * perlin2d(WATER_SEED, (double)(wx + o_time),
+									  (double)(wy + o_time), freq2, 1);
+	const double py = 47.0 * perlin2d(WATER_SEED, (double)(wx - o_time),
+									  (double)(wy - o_time), freq2, 1);
 
-	/* Generate a pseudo-random value based on Perlin noise */
 	double noise_value =
-		perlin2d(0, (double)wx + mov, (double)wy + mov, frequency, depth);
+		perlin2d(WATER_SEED, (double)wx + px, (double)wy + py, freq, depth);
 
-	/* Normalize noise value to a range of 0-12 */
-	noise_value = fmod(noise_value, 1.0);
-	if (noise_value < 0)
-		noise_value += 1.0;
-	noise_value *= 24.0;
+	/* Normalize noise value to [-1, 1], make rings using absolute value [0,1],
+	 * then increase contrast between ring line and it's center using pow^2, and
+	 * scale to 32.0 */
+	noise_value = 32.0 * pow((fabs(fmod(noise_value + 1.5, 2.0) - 1.0)), 2.0);
 
 	uint8_t nv = (uint8_t)noise_value;
 
 	Color color = C_WATER;
+	color.r += nv;
 	color.g += nv;
-	color.b -= nv;
+	color.b += nv;
 	color.a += nv;
 
 	vscreen[vscreen_idx(vx, vy)] = color;
 }
 
-static Color C_OIL = {0x92, 0x32, 0x1D, 0xCD};
+static Color C_OIL = {0x92, 0x32, 0x23, 0xCD};
 
 /* Draw pattern for oil */
 static void F_draw_oil(size_t wx, size_t wy, int vx, int vy) {
-	const double frequency = 0.02;
-	const size_t depth	   = 2;
+#define OIL_SEED 420
+	const double freq  = 0.08;
+	const double freq2 = 0.02;
+	const size_t depth = 1;
 
-	const size_t mov = frame_cx >> 2;
+	const size_t o_time = frame_cx >> 2;
+
+	const double px = 49.0 * perlin2d(OIL_SEED, (double)(wx - o_time),
+									  (double)(wy + o_time), freq2 / 2.0, 1);
+	const double py = 23.0 * perlin2d(OIL_SEED, (double)(wx + o_time),
+									  (double)(wy - o_time), freq2, 1);
 
 	/* Generate a pseudo-random value based on Perlin noise */
-	double noise_value = perlin2d(420, (double)wx + mov, (double)wy + mov,
-								  frequency, depth + (1.0 / mov));
+	double noise_value =
+		perlin2d(OIL_SEED, (double)wx + px, (double)wy + py, freq, depth);
 
-	/* Normalize noise value to a range of 0-12 */
-	noise_value = fmod(noise_value, 1.0);
-	if (noise_value < 0)
-		noise_value += 1.0;
-	noise_value *= 24.0;
+	/* Normalize noise value to [-1, 1] and scale to 18.0 */
+	noise_value = 18.0 * (fabs(fmod(noise_value + 1.5, 2.0) - 1.0));
 
 	uint8_t nv = (uint8_t)noise_value;
 
 	Color color = C_OIL;
-	color.r -= nv;
-	color.g += nv;
-	color.b += nv;
+	color.r += nv;
+	color.g += nv >> 1;
 	color.a -= nv;
 
 	vscreen[vscreen_idx(vx, vy)] = color;
