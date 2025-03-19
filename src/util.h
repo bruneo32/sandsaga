@@ -101,6 +101,18 @@ typedef struct FRect {
 #define UINT64_WIDTH 64
 #endif
 
+/**
+ * \brief Returns a random float between 0 and 1 using the given rand() function
+ * \param __rand_f__ The random function to use
+ * \param __rand_max__ The maximum value of the random function
+ */
+#define RAND_FLOAT_IMPL(__rand_f__, __rand_max__)                              \
+	((float)__rand_f__() / (float)(__rand_max__))
+
+/** Returns a random float between 0 and 1.
+ * Using default rand() function from stdlib.h */
+#define RAND_FLOAT RAND_FLOAT_IMPL(rand, RAND_MAX)
+
 /** Big Endian single bitmask */
 #define BIT(_i) (1 << (_i))
 
@@ -108,7 +120,7 @@ typedef struct FRect {
 #define BITL(_bits, _i) (1 << (((_bits) - 1) - (_i)))
 
 typedef uint8_t byte;
-typedef int8_t sbyte;
+typedef int8_t	sbyte;
 /** Intended for use in bitfields */
 typedef unsigned int bit;
 

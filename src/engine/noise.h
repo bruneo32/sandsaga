@@ -18,6 +18,8 @@ size_t fast_rand();
 /** fast_rand implementation for external seed manipulation */
 size_t fast_rand_impl(size_t *seed);
 
+#define FAST_RAND_FLOAT RAND_FLOAT_IMPL(fast_rand, SIZE_MAX)
+
 /** Set the seed for mt_rand */
 void mt_seed(size_t seed);
 
