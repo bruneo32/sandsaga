@@ -13,7 +13,7 @@ set(COMMON_FLAGS "${PFLAGS} -mtune=generic -funroll-loops -ffast-math \
 	-fopenmp -ftree-vectorize -falign-functions=32")
 
 set(CMAKE_C_FLAGS_RELEASE "${COMMON_FLAGS} -O2 -s -DNDEBUG -fno-stack-protector -fomit-frame-pointer")
-set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -O0 -g -Wall -Wno-switch -Wno-format-truncation -Wno-unused-but-set-variable")
+set(CMAKE_C_FLAGS_DEBUG "${COMMON_FLAGS} -O2 -g -Wall -Wno-switch -Wno-format-truncation -Wno-unused-but-set-variable")
 set(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 set(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 
