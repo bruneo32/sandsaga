@@ -16,12 +16,13 @@ GO_ID GO_DIRT;
 GO_ID GO_OIL;
 
 GO_ID register_gameobject(GO_Type type, float density, Color color,
-						  GO_Draw draw) {
+						  GO_Draw draw, GO_Update update) {
 
 	go_table[go_table_size].type	= type;
 	go_table[go_table_size].density = density;
 	go_table[go_table_size].color	= color;
 	go_table[go_table_size].draw	= draw;
+	go_table[go_table_size].update	= update;
 
 	return (GO_ID){.raw = ++go_table_size};
 }
@@ -55,6 +56,73 @@ static void F_draw_sand(size_t wx, size_t wy, int vx, int vy) {
 		vscreen[idx] = C_SAND;
 }
 
+static bool F_update_sand(size_t x, size_t y, const bool ltr) {
+	ssize_t left_or_right = (ltr ? 1 : -1);
+
+	GO_ID *boardxy	   = &gameboard[y][x];
+	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+
+	GO_ID gobj_id = *boardxy;
+
+	size_t down_y = y + 1;
+
+	if (!IS_IN_BOUNDS(x, down_y))
+		return false;
+
+	/* Move down if possible */
+	GO_ID *bottom = &gameboard[down_y][x];
+	if ((*bottom).raw == GO_NONE.raw) {
+		(*bottom).id	  = gobj_id.id;
+		(*bottom).updated = 1;
+		(*boardxy).raw	  = GO_NONE.raw;
+		subchunk_set_world(x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* 50% chance to stop and don't move, note that this is for sink too */
+	if (FAST_RAND_FLOAT < 0.5f)
+		return false;
+
+	/* Move bottom-left if possible (or right if ltr is false) */
+	size_t left_x	  = x - left_or_right;
+	GO_ID *bottomleft = &gameboard[down_y][left_x];
+	if (IS_IN_BOUNDS_H(left_x) && (*bottomleft).raw == GO_NONE.raw) {
+		(*bottomleft).id	  = gobj_id.id;
+		(*bottomleft).updated = 1;
+		(*boardxy).raw		  = GO_NONE.raw;
+		subchunk_set_world(left_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-right if possible (or left if ltr is false) */
+	size_t right_x	   = x + left_or_right;
+	GO_ID *bottomright = &gameboard[down_y][right_x];
+	if (IS_IN_BOUNDS_H(right_x) && (*bottomright).raw == GO_NONE.raw) {
+		(*bottomright).id	   = gobj_id.id;
+		(*bottomright).updated = 1;
+		(*boardxy).raw		   = GO_NONE.raw;
+		subchunk_set_world(right_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Sink: Flow down in less dense fluids */
+	GameObject *gobj	  = &GOBJECT(gobj_id);
+	GameObject *go_bottom = &GOBJECT(*bottom);
+	if (GO_IS_FLUID(go_bottom->type) && go_bottom->density < gobj->density) {
+		SWAP((*bottom).raw, (*boardxy).raw);
+		(*bottom).updated  = 1;
+		(*boardxy).updated = 1;
+		subchunk_set_world(x, y);
+		subchunk_set_world(x, down_y);
+		return true;
+	}
+
+	return false;
+}
+
 static Color C_DIRT	 = {0x54, 0x43, 0x39, 0xFF};
 static Color C_DIRT3 = {0x3B, 0x28, 0x1A, 0xFF};
 static Color C_DIRT2 = {0x4D, 0x3C, 0x32, 0xFF};
@@ -81,6 +149,73 @@ static void F_draw_dirt(size_t wx, size_t wy, int vx, int vy) {
 		vscreen[idx] = C_DIRT2;
 	else
 		vscreen[idx] = C_DIRT;
+}
+
+static bool F_update_dirt(size_t x, size_t y, const bool ltr) {
+	ssize_t left_or_right = (ltr ? 1 : -1);
+
+	GO_ID *boardxy	   = &gameboard[y][x];
+	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+
+	GO_ID gobj_id = *boardxy;
+
+	size_t down_y = y + 1;
+
+	if (!IS_IN_BOUNDS(x, down_y))
+		return false;
+
+	/* Move down if possible */
+	GO_ID *bottom = &gameboard[down_y][x];
+	if ((*bottom).raw == GO_NONE.raw) {
+		(*bottom).id	  = gobj_id.id;
+		(*bottom).updated = 1;
+		(*boardxy).raw	  = GO_NONE.raw;
+		subchunk_set_world(x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-left if possible (or right if ltr is false) */
+	size_t left_x	  = x - left_or_right;
+	GO_ID *bottomleft = &gameboard[down_y][left_x];
+	if (IS_IN_BOUNDS_H(left_x) && (*bottomleft).raw == GO_NONE.raw) {
+		(*bottomleft).id	  = gobj_id.id;
+		(*bottomleft).updated = 1;
+		(*boardxy).raw		  = GO_NONE.raw;
+		subchunk_set_world(left_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-right if possible (or left if ltr is false) */
+	size_t right_x	   = x + left_or_right;
+	GO_ID *bottomright = &gameboard[down_y][right_x];
+	if (IS_IN_BOUNDS_H(right_x) && (*bottomright).raw == GO_NONE.raw) {
+		(*bottomright).id	   = gobj_id.id;
+		(*bottomright).updated = 1;
+		(*boardxy).raw		   = GO_NONE.raw;
+		subchunk_set_world(right_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* 30% chance to stop and don't sink */
+	if (FAST_RAND_FLOAT < 0.3f)
+		return false;
+
+	/* Sink: Flow down in less dense fluids */
+	GameObject *gobj	  = &GOBJECT(gobj_id);
+	GameObject *go_bottom = &GOBJECT(*bottom);
+	if (GO_IS_FLUID(go_bottom->type) && go_bottom->density < gobj->density) {
+		SWAP((*bottom).raw, (*boardxy).raw);
+		(*bottom).updated  = 1;
+		(*boardxy).updated = 1;
+		subchunk_set_world(x, y);
+		subchunk_set_world(x, down_y);
+		return true;
+	}
+
+	return false;
 }
 
 static Color C_STONE  = {0x79, 0x7B, 0x7A, 0xFF};
@@ -138,6 +273,131 @@ static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
 	vscreen[vscreen_idx(vx, vy)] = color;
 }
 
+static bool F_update_water(size_t x, size_t y, const bool ltr) {
+	ssize_t left_or_right = (ltr ? 1 : -1);
+
+	GO_ID *boardxy	   = &gameboard[y][x];
+	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+
+	GO_ID	   gobj_id = *boardxy;
+	GameObject gobj	   = GOBJECT(gobj_id);
+
+	/* Move down if possible */
+	size_t down_y = y + 1;
+	GO_ID *bottom = &gameboard[down_y][x];
+	if (IS_IN_BOUNDS_V(down_y) && (*bottom).raw == GO_NONE.raw) {
+		(*bottom).id	  = gobj_id.id;
+		(*bottom).updated = 1;
+		(*boardxy).raw	  = GO_NONE.raw;
+		subchunk_set_world(x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Random dispersion from 1 to 3 */
+	const size_t dispersion = (fast_rand() % 3) + 1;
+
+	/* Move left if possible (or right if ltr is false) */
+	ssize_t left_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_left_x = left_x - left_or_right;
+		if (!IS_IN_BOUNDS_H(new_left_x))
+			break;
+
+		GO_ID left = gameboard[y][new_left_x];
+		if (left.updated)
+			break;
+
+		if (left.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_left = &GOBJECT(left);
+			if (!go_left->update || go_left->density > gobj.density)
+				break;
+
+			go_left->update(new_left_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_left_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		left_x = new_left_x;
+	}
+
+	if (left_x != x) {
+		GO_ID *left		= &gameboard[y][left_x];
+		(*left).id		= gobj_id.id;
+		(*left).updated = 1;
+		(*boardxy).raw	= GO_NONE.raw;
+		subchunk_set_world(left_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move right if possible (or left if ltr is false) */
+	ssize_t right_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_right_x = right_x + left_or_right;
+		if (!IS_IN_BOUNDS_H(new_right_x))
+			break;
+
+		GO_ID right = gameboard[y][new_right_x];
+		if (right.updated)
+			break;
+
+		if (right.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_right = &GOBJECT(right);
+			if (!go_right->update || go_right->density > gobj.density)
+				break;
+
+			go_right->update(new_right_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_right_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		right_x = new_right_x;
+	}
+
+	if (right_x != x) {
+		GO_ID *right	 = &gameboard[y][right_x];
+		(*right).id		 = gobj_id.id;
+		(*right).updated = 1;
+		(*boardxy).raw	 = GO_NONE.raw;
+		subchunk_set_world(right_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-left if possible (or right if ltr is false) */
+	GO_ID *bottomleft = &gameboard[down_y][left_x];
+	if (IS_IN_BOUNDS(left_x, down_y) && (*bottomleft).raw == GO_NONE.raw) {
+		(*bottomleft).id	  = gobj_id.id;
+		(*bottomleft).updated = 1;
+		(*boardxy).raw		  = GO_NONE.raw;
+		subchunk_set_world(left_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-right if possible (or left if ltr is false) */
+	GO_ID *bottomright = &gameboard[down_y][right_x];
+	if (IS_IN_BOUNDS(right_x, down_y) && (*bottomright).raw == GO_NONE.raw) {
+		(*bottomright).id	   = gobj_id.id;
+		(*bottomright).updated = 1;
+		(*boardxy).raw		   = GO_NONE.raw;
+		subchunk_set_world(right_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* TODO: Sink */
+
+	return false;
+}
+
 static Color C_OIL = {0x92, 0x32, 0x23, 0xCD};
 
 /* Draw pattern for oil */
@@ -171,11 +431,141 @@ static void F_draw_oil(size_t wx, size_t wy, int vx, int vy) {
 	vscreen[vscreen_idx(vx, vy)] = color;
 }
 
+static bool F_update_oil(size_t x, size_t y, const bool ltr) {
+	ssize_t left_or_right = (ltr ? 1 : -1);
+
+	GO_ID *boardxy	   = &gameboard[y][x];
+	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+
+	GO_ID	   gobj_id = *boardxy;
+	GameObject gobj	   = GOBJECT(gobj_id);
+
+	/* Move down if possible */
+	size_t down_y = y + 1;
+	GO_ID *bottom = &gameboard[down_y][x];
+	if (IS_IN_BOUNDS_V(down_y) && (*bottom).raw == GO_NONE.raw) {
+		(*bottom).id	  = gobj_id.id;
+		(*bottom).updated = 1;
+		(*boardxy).raw	  = GO_NONE.raw;
+		subchunk_set_world(x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Random dispersion from 0 to 2 */
+	const size_t dispersion = (fast_rand() % 2);
+
+	/* Move left if possible (or right if ltr is false) */
+	ssize_t left_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_left_x = left_x - left_or_right;
+		if (!IS_IN_BOUNDS_H(new_left_x))
+			break;
+
+		GO_ID left = gameboard[y][new_left_x];
+		if (left.updated)
+			break;
+
+		if (left.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_left = &GOBJECT(left);
+			if (!go_left->update || go_left->density > gobj.density)
+				break;
+
+			go_left->update(new_left_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_left_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		left_x = new_left_x;
+	}
+
+	if (left_x != x) {
+		GO_ID *left		= &gameboard[y][left_x];
+		(*left).id		= gobj_id.id;
+		(*left).updated = 1;
+		(*boardxy).raw	= GO_NONE.raw;
+		subchunk_set_world(left_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move right if possible (or left if ltr is false) */
+	ssize_t right_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_right_x = right_x + left_or_right;
+		if (!IS_IN_BOUNDS_H(new_right_x))
+			break;
+
+		GO_ID right = gameboard[y][new_right_x];
+		if (right.updated)
+			break;
+
+		if (right.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_right = &GOBJECT(right);
+			if (!go_right->update || go_right->density > gobj.density)
+				break;
+
+			go_right->update(new_right_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_right_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		right_x = new_right_x;
+	}
+
+	if (right_x != x) {
+		GO_ID *right	 = &gameboard[y][right_x];
+		(*right).id		 = gobj_id.id;
+		(*right).updated = 1;
+		(*boardxy).raw	 = GO_NONE.raw;
+		subchunk_set_world(right_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-left if possible (or right if ltr is false) */
+	GO_ID *bottomleft = &gameboard[down_y][left_x];
+	if (IS_IN_BOUNDS(left_x, down_y) && (*bottomleft).raw == GO_NONE.raw) {
+		(*bottomleft).id	  = gobj_id.id;
+		(*bottomleft).updated = 1;
+		(*boardxy).raw		  = GO_NONE.raw;
+		subchunk_set_world(left_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-right if possible (or left if ltr is false) */
+	GO_ID *bottomright = &gameboard[down_y][right_x];
+	if (IS_IN_BOUNDS(right_x, down_y) && (*bottomright).raw == GO_NONE.raw) {
+		(*bottomright).id	   = gobj_id.id;
+		(*bottomright).updated = 1;
+		(*boardxy).raw		   = GO_NONE.raw;
+		subchunk_set_world(right_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* TODO: Sink */
+
+	return false;
+}
+
 void init_gameobjects() {
-	GO_VAPOR = register_gameobject(GO_GAS, 0.0f, C_VAPOR, NULL);
-	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, C_WATER, F_draw_water);
-	GO_SAND	 = register_gameobject(GO_POWDER, 2.0f, C_SAND, F_draw_sand);
-	GO_STONE = register_gameobject(GO_STATIC, 3.0f, C_STONE, F_draw_stone);
-	GO_DIRT	 = register_gameobject(GO_POWDER, 2.0f, C_DIRT, F_draw_dirt);
-	GO_OIL	 = register_gameobject(GO_LIQUID, 0.5f, C_OIL, F_draw_oil);
+	GO_VAPOR = register_gameobject(GO_GAS, 0.0f, C_VAPOR, NULL, NULL);
+	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, C_WATER, F_draw_water,
+								   F_update_water);
+	GO_SAND	 = register_gameobject(GO_POWDER, 2.0f, C_SAND, F_draw_sand,
+								   F_update_sand);
+	GO_STONE =
+		register_gameobject(GO_STATIC, 3.0f, C_STONE, F_draw_stone, NULL);
+	GO_DIRT = register_gameobject(GO_POWDER, 2.0f, C_DIRT, F_draw_dirt,
+								  F_update_dirt);
+	GO_OIL =
+		register_gameobject(GO_LIQUID, 0.5f, C_OIL, F_draw_oil, F_update_oil);
 }

@@ -3,6 +3,8 @@
 
 #include "../graphics/color.h"
 
+#include <stdbool.h>
+
 typedef enum GO_Type {
 	GO_STATIC = 0,
 	GO_POWDER,
@@ -14,6 +16,7 @@ typedef enum GO_Type {
 #define GO_IS_FLUID(gtype_) ((gtype_) >= GO_POWDER)
 
 typedef void (*GO_Draw)(size_t wx, size_t wy, int vx, int vy);
+typedef bool (*GO_Update)(size_t x, size_t y, const bool ltr);
 
 #pragma pack(push, 1)
 typedef union GO_ID {
@@ -25,10 +28,11 @@ typedef union GO_ID {
 } GO_ID;
 
 typedef struct GameObject {
-	GO_Type type;
-	float	density;
-	Color	color;
-	GO_Draw draw;
+	GO_Type	  type;
+	float	  density;
+	Color	  color;
+	GO_Draw	  draw;
+	GO_Update update;
 } PACKED GameObject;
 #pragma pack(pop)
 
@@ -60,7 +64,7 @@ extern GO_ID GO_OIL;
  * \return The id of the gameobject [1-127]. Zero is reserved for GO_NONE
  */
 GO_ID register_gameobject(GO_Type type, float density, Color color,
-						  GO_Draw draw);
+						  GO_Draw draw, GO_Update update);
 
 void init_gameobjects();
 

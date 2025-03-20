@@ -65,7 +65,6 @@ extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 			deactivate_soil(__i, __j);                                         \
 	}
 
-/** Returns true if any object was updated, false otherwise */
 void update_gameboard();
 void draw_gameboard_world(const SDL_FRect *camera);
 

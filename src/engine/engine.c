@@ -238,220 +238,6 @@ GO_ID *cache_get_chunk(Chunk chunk_id) {
 	return NULL;
 }
 
-bool update_object(const size_t x, const size_t y, const bool ltr) {
-	size_t left_or_right = (ltr ? 1 : -1);
-
-	size_t up_y		= y - 1;
-	size_t down_y	= y + 1;
-	size_t left_x	= x - left_or_right;
-	size_t left_x2	= x - left_or_right - left_or_right;
-	size_t right_x	= x + left_or_right;
-	size_t right_x2 = x + left_or_right + left_or_right;
-
-	GO_ID *boardxy = &gameboard[y][x];
-	GO_ID *bottom  = &gameboard[down_y][x];
-
-	GO_ID		gobjr = *boardxy;
-	GameObject *gobj  = &GOBJECT(gobjr);
-	GO_Type		type  = gobj->type;
-
-	switch (type) {
-	case GO_POWDER: {
-		GO_ID *bottomleft  = &gameboard[down_y][left_x];
-		GO_ID *bottomright = &gameboard[down_y][right_x];
-
-		if (IS_IN_BOUNDS(x, down_y)) {
-			if ((*bottom).raw == GO_NONE.raw) {
-				(*bottom).id	  = gobjr.id;
-				(*bottom).updated = 1;
-				(*boardxy).raw	  = GO_NONE.raw;
-				subchunk_set_world(x, down_y);
-				subchunk_set_world(x, y);
-				return true;
-			}
-
-			if (IS_IN_BOUNDS_H(left_x) && (*bottomleft).raw == GO_NONE.raw) {
-				(*bottomleft).id	  = gobjr.id;
-				(*bottomleft).updated = 1;
-				(*boardxy).raw		  = GO_NONE.raw;
-				subchunk_set_world(left_x, down_y);
-				subchunk_set_world(x, y);
-				return true;
-			}
-
-			if (IS_IN_BOUNDS_H(right_x) && (*bottomright).raw == GO_NONE.raw) {
-				(*bottomright).id	   = gobjr.id;
-				(*bottomright).updated = 1;
-				(*boardxy).raw		   = GO_NONE.raw;
-				subchunk_set_world(right_x, down_y);
-				subchunk_set_world(x, y);
-				return true;
-			}
-		}
-	} break;
-	case GO_LIQUID: {
-		GO_ID *bottomleft  = &gameboard[down_y][left_x];
-		GO_ID *bottomright = &gameboard[down_y][right_x];
-		GO_ID *left		   = &gameboard[y][left_x];
-		GO_ID *right	   = &gameboard[y][right_x];
-
-		if (IS_IN_BOUNDS_V(down_y) && (*bottom).raw == GO_NONE.raw) {
-			(*bottom).id	  = gobjr.id;
-			(*bottom).updated = 1;
-			(*boardxy).raw	  = GO_NONE.raw;
-			subchunk_set_world(x, down_y);
-			subchunk_set_world(x, y);
-			return true;
-		}
-
-		if (IS_IN_BOUNDS_H(left_x)) {
-			/* If there is a blocking fluid try to move it when its density
-			 * is lower, this makes the water look more fluent */
-			if (IS_IN_BOUNDS_H(left_x2) && (*left).raw == gobjr.raw &&
-				(gameboard[y][left_x2]).raw < gobjr.raw) {
-				if (update_object(left_x2, y, ltr))
-					update_object(left_x, y, ltr);
-			}
-
-			if ((*left).raw == GO_NONE.raw) {
-				(*left).id		= gobjr.id;
-				(*left).updated = 1;
-				(*boardxy).raw	= GO_NONE.raw;
-				subchunk_set_world(left_x, y);
-				subchunk_set_world(x, y);
-				return true;
-			}
-		}
-
-		if (IS_IN_BOUNDS_H(right_x)) {
-			/* If there is a blocking fluid try to move it when its density
-			 * is lower, this makes the water look more fluent */
-			if (IS_IN_BOUNDS_H(right_x2) && (*right).raw == gobjr.raw &&
-				(gameboard[y][right_x2]).raw < gobjr.raw) {
-				if (update_object(right_x2, y, ltr))
-					update_object(right_x, y, ltr);
-			}
-
-			if ((*right).raw == GO_NONE.raw) {
-				(*right).id		 = gobjr.id;
-				(*right).updated = 1;
-				(*boardxy).raw	 = GO_NONE.raw;
-				subchunk_set_world(right_x, y);
-				subchunk_set_world(x, y);
-				return true;
-			}
-		}
-
-		if (IS_IN_BOUNDS(left_x, down_y) && (*bottomleft).raw == GO_NONE.raw) {
-			(*bottomleft).id	  = gobjr.id;
-			(*bottomleft).updated = 1;
-			(*boardxy).raw		  = GO_NONE.raw;
-			subchunk_set_world(left_x, down_y);
-			subchunk_set_world(x, y);
-			return true;
-		}
-
-		if (IS_IN_BOUNDS(right_x, down_y) &&
-			(*bottomright).raw == GO_NONE.raw) {
-			(*bottomright).id	   = gobjr.id;
-			(*bottomright).updated = 1;
-			(*boardxy).raw		   = GO_NONE.raw;
-			subchunk_set_world(right_x, down_y);
-			subchunk_set_world(x, y);
-			return true;
-		}
-	} break;
-	case GO_GAS: {
-		GO_ID *up	   = &gameboard[up_y][x];
-		GO_ID *upleft  = &gameboard[up_y][left_x];
-		GO_ID *upright = &gameboard[up_y][right_x];
-		GO_ID *left	   = &gameboard[y][left_x];
-		GO_ID *right   = &gameboard[y][right_x];
-
-		if (IS_IN_BOUNDS_V(up_y) && (*up).raw == GO_NONE.raw) {
-			(*up).id	   = gobjr.id;
-			(*up).updated  = 1;
-			(*boardxy).raw = GO_NONE.raw;
-			subchunk_set_world(x, up_y);
-			subchunk_set_world(x, y);
-			return true;
-		}
-
-		if (IS_IN_BOUNDS_H(left_x)) {
-			/* If there is a blocking fluid try to move it when its density
-			 * is lower, this makes the water look more fluent */
-			if (IS_IN_BOUNDS_H(left_x2) && (*left).raw == gobjr.raw &&
-				(gameboard[y][left_x2]).raw < gobjr.raw) {
-				if (update_object(left_x2, y, ltr))
-					update_object(left_x, y, ltr);
-			}
-
-			if ((*left).raw == GO_NONE.raw) {
-				(*left).id		= gobjr.id;
-				(*left).updated = 1;
-				(*boardxy).raw	= GO_NONE.raw;
-				subchunk_set_world(left_x, y);
-				subchunk_set_world(x, y);
-				return true;
-			}
-		}
-
-		if (IS_IN_BOUNDS_H(right_x)) {
-			/* If there is a blocking fluid try to move it when its density
-			 * is lower, this makes the water look more fluent */
-			if (IS_IN_BOUNDS_H(right_x2) && (*right).raw == gobjr.raw &&
-				(gameboard[y][right_x2]).raw < gobjr.raw) {
-				if (update_object(right_x2, y, ltr))
-					update_object(right_x, y, ltr);
-			}
-
-			if ((*right).raw == GO_NONE.raw) {
-				(*right).id		 = gobjr.id;
-				(*right).updated = 1;
-				(*boardxy).raw	 = GO_NONE.raw;
-				subchunk_set_world(right_x, y);
-				subchunk_set_world(x, y);
-				return true;
-			}
-		}
-
-		if (IS_IN_BOUNDS(left_x, up_y) && (*upleft).raw == GO_NONE.raw) {
-			(*upleft).id	  = gobjr.id;
-			(*upleft).updated = 1;
-			(*boardxy).raw	  = GO_NONE.raw;
-			subchunk_set_world(left_x, up_y);
-			subchunk_set_world(x, y);
-			return true;
-		}
-
-		if (IS_IN_BOUNDS(right_x, up_y) && (*upright).raw == GO_NONE.raw) {
-			(*upright).id	   = gobjr.id;
-			(*upright).updated = 1;
-			(*boardxy).raw	   = GO_NONE.raw;
-			subchunk_set_world(right_x, up_y);
-			subchunk_set_world(x, y);
-			return true;
-		}
-	} break;
-	}
-
-	/* Flow down in less dense fluids */
-	const GO_ID bot		  = *bottom;
-	GameObject *go_bottom = &GOBJECT(bot);
-	if (IS_IN_BOUNDS_V(down_y) && bot.raw && !bot.updated &&
-		GO_IS_FLUID(type) && GO_IS_FLUID(go_bottom->type) &&
-		go_bottom->density < gobj->density) {
-		SWAP((*bottom).raw, (*boardxy).raw);
-		(*bottom).updated  = 1;
-		(*boardxy).updated = 1;
-		subchunk_set_world(x, y);
-		subchunk_set_world(x, down_y);
-		return true;
-	}
-
-	return false;
-}
-
 /* ==== Update gameboard subchunked ==== */
 
 void update_gameboard() {
@@ -497,7 +283,8 @@ void update_gameboard() {
 							const GO_ID pixel = gameboard[j][i];
 							if (pixel.raw == GO_NONE.raw || pixel.updated)
 								continue;
-							if (update_object(i, j, ltr))
+							const GameObject gobj = GOBJECT(pixel);
+							if (gobj.update && gobj.update(i, j, ltr))
 								p = true;
 						}
 						/* Activate top subchunk for gravity */
@@ -526,7 +313,8 @@ void update_gameboard() {
 							const GO_ID pixel = gameboard[j][i];
 							if (pixel.raw == GO_NONE.raw || pixel.updated)
 								continue;
-							if (update_object(i, j, ltr))
+							const GameObject gobj = GOBJECT(pixel);
+							if (gobj.update && gobj.update(i, j, ltr))
 								p = true;
 						}
 						/* Activate top subchunk for gravity */
@@ -682,8 +470,7 @@ void activate_soil(size_t si, size_t sj) {
 		clamp(start_j + SUBCHUNK_HEIGHT + 1, 0, VSCREEN_HEIGHT);
 
 	CList *polygons =
-		polygonlist_from_contour(start_i, end_i,
-								 start_j, end_j, F_IS_FLOOR);
+		polygonlist_from_contour(start_i, end_i, start_j, end_j, F_IS_FLOOR);
 
 	if (polygons != NULL && polygons->count > 0) {
 		b2Body *body = box2d_body_create(
