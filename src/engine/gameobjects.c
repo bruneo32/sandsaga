@@ -29,6 +29,292 @@ GO_ID register_gameobject(GO_Type type, float density, Color color,
 
 static Color C_VAPOR = {0x7F, 0xFF, 0xFF, 0x69};
 
+static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
+								   const size_t dispersion,
+								   const size_t mixability) {
+	ssize_t left_or_right = (ltr ? 1 : -1);
+
+	GO_ID *boardxy	   = &gameboard[y][x];
+	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+
+	GO_ID	   gobj_id = *boardxy;
+	GameObject gobj	   = GOBJECT(gobj_id);
+
+	/* Move down if possible */
+	size_t down_y = y + 1;
+	GO_ID *bottom = &gameboard[down_y][x];
+	if (IS_IN_BOUNDS_V(down_y) && (*bottom).raw == GO_NONE.raw) {
+		(*bottom).id	  = gobj_id.id;
+		(*bottom).updated = 1;
+		(*boardxy).raw	  = GO_NONE.raw;
+		subchunk_set_world(x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move left if possible (or right if ltr is false) */
+	ssize_t left_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_left_x = left_x - left_or_right;
+		if (!IS_IN_BOUNDS_H(new_left_x))
+			break;
+
+		GO_ID left = gameboard[y][new_left_x];
+		if (left.updated)
+			break;
+
+		if (left.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_left = &GOBJECT(left);
+			if (!go_left->update || go_left->density > gobj.density)
+				break;
+
+			go_left->update(new_left_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_left_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		left_x = new_left_x;
+	}
+
+	if (left_x != x) {
+		GO_ID *left = &gameboard[y][left_x];
+		SWAP((*left).raw, (*boardxy).raw);
+		subchunk_set_world(left_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Probability to mix with other objects */
+	ssize_t left_x2 = x - left_or_right;
+	GO_ID  *left	= &gameboard[y][left_x2];
+	if (left->id != GO_NONE.id && left->updated &&
+		(fast_rand() % mixability) == 0 &&
+		GOBJECT(*left).density < gobj.density) {
+		SWAP((*left).raw, (*boardxy).raw);
+		subchunk_set_world(left_x2, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move right if possible (or left if ltr is false) */
+	ssize_t right_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_right_x = right_x + left_or_right;
+		if (!IS_IN_BOUNDS_H(new_right_x))
+			break;
+
+		GO_ID right = gameboard[y][new_right_x];
+		if (right.updated)
+			break;
+
+		if (right.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_right = &GOBJECT(right);
+			if (!go_right->update || go_right->density > gobj.density)
+				break;
+
+			go_right->update(new_right_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_right_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		right_x = new_right_x;
+	}
+
+	if (right_x != x) {
+		GO_ID *right = &gameboard[y][right_x];
+		SWAP((*right).raw, (*boardxy).raw);
+		subchunk_set_world(right_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Probability to mix with other objects */
+	ssize_t right_x2 = x + left_or_right;
+	GO_ID  *right	 = &gameboard[y][right_x2];
+	if (right->id != GO_NONE.id && right->updated &&
+		(fast_rand() % mixability) == 0 &&
+		GOBJECT(*right).density < gobj.density) {
+		SWAP((*right).raw, (*boardxy).raw);
+		subchunk_set_world(right_x2, y);
+		subchunk_set_world(x, y);
+	}
+
+	/* Move bottom-left if possible (or right if ltr is false) */
+	GO_ID *bottomleft = &gameboard[down_y][left_x];
+	if (IS_IN_BOUNDS(left_x, down_y) &&
+		((*bottomleft).raw == GO_NONE.raw ||
+		 ((fast_rand() % mixability) == 0 &&
+		  GOBJECT(*bottomleft).density < gobj.density))) {
+		SWAP((*bottomleft).raw, (*boardxy).raw);
+		subchunk_set_world(left_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-right if possible (or left if ltr is false) */
+	GO_ID *bottomright = &gameboard[down_y][right_x];
+	if (IS_IN_BOUNDS(right_x, down_y) &&
+		((*bottomright).raw == GO_NONE.raw ||
+		 ((fast_rand() % mixability) == 0 &&
+		  GOBJECT(*bottomright).density < gobj.density))) {
+		SWAP((*bottomright).raw, (*boardxy).raw);
+		subchunk_set_world(right_x, down_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	return false;
+}
+
+static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
+								 const size_t dispersion,
+								 const size_t mixability) {
+	ssize_t left_or_right = (ltr ? 1 : -1);
+
+	GO_ID *boardxy	   = &gameboard[y][x];
+	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+
+	GO_ID	   gobj_id = *boardxy;
+	GameObject gobj	   = GOBJECT(gobj_id);
+
+	/* Move down if possible */
+	size_t up_y = y - 1;
+	GO_ID *up	= &gameboard[up_y][x];
+	if (IS_IN_BOUNDS_V(up_y) && (*up).raw == GO_NONE.raw) {
+		(*up).id	   = gobj_id.id;
+		(*up).updated  = 1;
+		(*boardxy).raw = GO_NONE.raw;
+		subchunk_set_world(x, up_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move left if possible (or right if ltr is false) */
+	ssize_t left_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_left_x = left_x - left_or_right;
+		if (!IS_IN_BOUNDS_H(new_left_x))
+			break;
+
+		GO_ID left = gameboard[y][new_left_x];
+		if (left.updated)
+			break;
+
+		if (left.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_left = &GOBJECT(left);
+			if (!go_left->update || go_left->density > gobj.density)
+				break;
+
+			go_left->update(new_left_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_left_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		left_x = new_left_x;
+	}
+
+	if (left_x != x) {
+		GO_ID *left = &gameboard[y][left_x];
+		SWAP((*left).raw, (*boardxy).raw);
+		subchunk_set_world(left_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Probability to mix with other objects */
+	ssize_t left_x2 = x - left_or_right;
+	GO_ID  *left	= &gameboard[y][left_x2];
+	if (left->id != GO_NONE.id && left->updated &&
+		(fast_rand() % mixability) == 0 &&
+		GOBJECT(*left).density < gobj.density) {
+		SWAP((*left).raw, (*boardxy).raw);
+		subchunk_set_world(left_x2, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move right if possible (or left if ltr is false) */
+	ssize_t right_x = x;
+	for (size_t i = 0; i <= dispersion; i++) {
+		const ssize_t new_right_x = right_x + left_or_right;
+		if (!IS_IN_BOUNDS_H(new_right_x))
+			break;
+
+		GO_ID right = gameboard[y][new_right_x];
+		if (right.updated)
+			break;
+
+		if (right.raw != GO_NONE.raw) {
+			/* Try to push it if density is not greater */
+			GameObject *go_right = &GOBJECT(right);
+			if (!go_right->update || go_right->density > gobj.density)
+				break;
+
+			go_right->update(new_right_x, y, ltr);
+
+			/* If it's still there, break */
+			if (gameboard[y][new_right_x].raw != GO_NONE.raw)
+				break;
+		}
+
+		right_x = new_right_x;
+	}
+
+	if (right_x != x) {
+		GO_ID *right = &gameboard[y][right_x];
+		SWAP((*right).raw, (*boardxy).raw);
+		subchunk_set_world(right_x, y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Probability to mix with other objects */
+	ssize_t right_x2 = x + left_or_right;
+	GO_ID  *right	 = &gameboard[y][right_x2];
+	if (right->id != GO_NONE.id && right->updated &&
+		(fast_rand() % mixability) == 0 &&
+		GOBJECT(*right).density < gobj.density) {
+		SWAP((*right).raw, (*boardxy).raw);
+		subchunk_set_world(right_x2, y);
+		subchunk_set_world(x, y);
+	}
+
+	/* Move bottom-left if possible (or right if ltr is false) */
+	GO_ID *topleft = &gameboard[up_y][left_x];
+	if (IS_IN_BOUNDS(left_x, up_y) &&
+		((*topleft).raw == GO_NONE.raw ||
+		 ((fast_rand() % mixability) == 0 &&
+		  GOBJECT(*topleft).density < gobj.density))) {
+		SWAP((*topleft).raw, (*boardxy).raw);
+		subchunk_set_world(left_x, up_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Move bottom-right if possible (or left if ltr is false) */
+	GO_ID *topright = &gameboard[up_y][right_x];
+	if (IS_IN_BOUNDS(right_x, up_y) &&
+		((*topright).raw == GO_NONE.raw ||
+		 ((fast_rand() % mixability) == 0 &&
+		  GOBJECT(*topright).density < gobj.density))) {
+		SWAP((*topright).raw, (*boardxy).raw);
+		subchunk_set_world(right_x, up_y);
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	return false;
+}
+
 static Color C_SAND	 = {0xE2, 0xDB, 0xA4, 0xFF};
 static Color C_SAND2 = {0xFB, 0xF4, 0xBD, 0xFF};
 static Color C_SAND3 = {0xEA, 0xE3, 0xAD, 0xFF};
@@ -273,151 +559,8 @@ static void F_draw_water(size_t wx, size_t wy, int vx, int vy) {
 	vscreen[vscreen_idx(vx, vy)] = color;
 }
 
-static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
-								   const size_t dispersion,
-								   const size_t mixability) {
-	ssize_t left_or_right = (ltr ? 1 : -1);
-
-	GO_ID *boardxy	   = &gameboard[y][x];
-	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
-
-	GO_ID	   gobj_id = *boardxy;
-	GameObject gobj	   = GOBJECT(gobj_id);
-
-	/* Move down if possible */
-	size_t down_y = y + 1;
-	GO_ID *bottom = &gameboard[down_y][x];
-	if (IS_IN_BOUNDS_V(down_y) && (*bottom).raw == GO_NONE.raw) {
-		(*bottom).id	  = gobj_id.id;
-		(*bottom).updated = 1;
-		(*boardxy).raw	  = GO_NONE.raw;
-		subchunk_set_world(x, down_y);
-		subchunk_set_world(x, y);
-		return true;
-	}
-
-	/* Move left if possible (or right if ltr is false) */
-	ssize_t left_x = x;
-	for (size_t i = 0; i <= dispersion; i++) {
-		const ssize_t new_left_x = left_x - left_or_right;
-		if (!IS_IN_BOUNDS_H(new_left_x))
-			break;
-
-		GO_ID left = gameboard[y][new_left_x];
-		if (left.updated)
-			break;
-
-		if (left.raw != GO_NONE.raw) {
-			/* Try to push it if density is not greater */
-			GameObject *go_left = &GOBJECT(left);
-			if (!go_left->update || go_left->density > gobj.density)
-				break;
-
-			go_left->update(new_left_x, y, ltr);
-
-			/* If it's still there, break */
-			if (gameboard[y][new_left_x].raw != GO_NONE.raw)
-				break;
-		}
-
-		left_x = new_left_x;
-	}
-
-	if (left_x != x) {
-		GO_ID *left = &gameboard[y][left_x];
-		SWAP((*left).raw, (*boardxy).raw);
-		subchunk_set_world(left_x, y);
-		subchunk_set_world(x, y);
-		return true;
-	}
-
-	/* Probability to mix with other objects */
-	ssize_t left_x2 = x - left_or_right;
-	GO_ID  *left	= &gameboard[y][left_x2];
-	if (left->id != GO_NONE.id && left->updated &&
-		(fast_rand() % mixability) == 0 &&
-		GOBJECT(*left).density < gobj.density) {
-		SWAP((*left).raw, (*boardxy).raw);
-		subchunk_set_world(left_x2, y);
-		subchunk_set_world(x, y);
-		return true;
-	}
-
-	/* Move right if possible (or left if ltr is false) */
-	ssize_t right_x = x;
-	for (size_t i = 0; i <= dispersion; i++) {
-		const ssize_t new_right_x = right_x + left_or_right;
-		if (!IS_IN_BOUNDS_H(new_right_x))
-			break;
-
-		GO_ID right = gameboard[y][new_right_x];
-		if (right.updated)
-			break;
-
-		if (right.raw != GO_NONE.raw) {
-			/* Try to push it if density is not greater */
-			GameObject *go_right = &GOBJECT(right);
-			if (!go_right->update || go_right->density > gobj.density)
-				break;
-
-			go_right->update(new_right_x, y, ltr);
-
-			/* If it's still there, break */
-			if (gameboard[y][new_right_x].raw != GO_NONE.raw)
-				break;
-		}
-
-		right_x = new_right_x;
-	}
-
-	if (right_x != x) {
-		GO_ID *right = &gameboard[y][right_x];
-		SWAP((*right).raw, (*boardxy).raw);
-		subchunk_set_world(right_x, y);
-		subchunk_set_world(x, y);
-		return true;
-	}
-
-	/* Probability to mix with other objects */
-	ssize_t right_x2 = x + left_or_right;
-	GO_ID  *right	 = &gameboard[y][right_x2];
-	if (right->id != GO_NONE.id && right->updated &&
-		(fast_rand() % mixability) == 0 &&
-		GOBJECT(*right).density < gobj.density) {
-		SWAP((*right).raw, (*boardxy).raw);
-		subchunk_set_world(right_x2, y);
-		subchunk_set_world(x, y);
-	}
-
-	/* Move bottom-left if possible (or right if ltr is false) */
-	GO_ID *bottomleft = &gameboard[down_y][left_x];
-	if (IS_IN_BOUNDS(left_x, down_y) &&
-		((*bottomleft).raw == GO_NONE.raw ||
-		 ((fast_rand() % 8) == 0 &&
-		  GOBJECT(*bottomleft).density < gobj.density))) {
-		SWAP((*bottomleft).raw, (*boardxy).raw);
-		subchunk_set_world(left_x, down_y);
-		subchunk_set_world(x, y);
-		return true;
-	}
-
-	/* Move bottom-right if possible (or left if ltr is false) */
-	GO_ID *bottomright = &gameboard[down_y][right_x];
-	if (IS_IN_BOUNDS(right_x, down_y) &&
-		((*bottomright).raw == GO_NONE.raw ||
-		 ((fast_rand() % 8) == 0 &&
-		  GOBJECT(*bottomright).density < gobj.density))) {
-		SWAP((*bottomright).raw, (*boardxy).raw);
-		subchunk_set_world(right_x, down_y);
-		subchunk_set_world(x, y);
-		return true;
-	}
-
-	return false;
-}
-
 static bool F_update_water(size_t x, size_t y, const bool ltr) {
-	return F_dynamic_fluid_update(x, y, ltr, fast_rand() % 3 + 1, 8);
+	return F_dynamic_fluid_update(x, y, ltr, fast_rand() % 3 + 1, 4);
 }
 
 static Color C_OIL = {0x92, 0x32, 0x23, 0xCD};
@@ -457,8 +600,12 @@ static bool F_update_oil(size_t x, size_t y, const bool ltr) {
 	return F_dynamic_fluid_update(x, y, ltr, fast_rand() % 2, 16);
 }
 
+static bool F_update_vapor(size_t x, size_t y, const bool ltr) {
+	return F_dynamic_gas_update(x, y, ltr, fast_rand() % 3 + 1, 4);
+}
+
 void init_gameobjects() {
-	GO_VAPOR = register_gameobject(GO_GAS, 0.0f, C_VAPOR, NULL, NULL);
+	GO_VAPOR = register_gameobject(GO_GAS, 0.0f, C_VAPOR, NULL, F_update_vapor);
 	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, C_WATER, F_draw_water,
 								   F_update_water);
 	GO_SAND	 = register_gameobject(GO_POWDER, 2.0f, C_SAND, F_draw_sand,
