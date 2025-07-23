@@ -228,7 +228,7 @@ int main(int argc, char *argv[]) {
 	WORLD_SEED		= world_control->seed;
 	player.chunk_id = (Chunk){
 		.x		  = CHUNK_MAX_X / 2,
-		.y		  = GEN_SKY_Y - 1,
+		.y		  = GEN_SKY_Y - 1 + 2,
 		.modified = 0,
 	};
 
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
 	player.width  = 12;
 	player.height = 24;
 	player.x	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
-	player.y	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2;
+	player.y	  = CHUNK_SIZE + CHUNK_SIZE_DIV_2 + 128;
 
 	SDL_FRect camera = {0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT};
 
