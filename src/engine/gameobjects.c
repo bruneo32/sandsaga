@@ -36,8 +36,8 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 								   const size_t mixability) {
 	ssize_t left_or_right = (ltr ? 1 : -1);
 
-	GO_ID *boardxy	   = &gameboard[y][x];
-	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+	GO_ID *boardxy	 = &gameboard[y][x];
+	boardxy->updated = 1; /* IMPORTANT! Set updated bit */
 
 	GO_ID	   gobj_id = *boardxy;
 	GameObject gobj	   = GOBJECT(gobj_id);
@@ -45,10 +45,10 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 	/* Move down if possible */
 	size_t down_y = y + 1;
 	GO_ID *bottom = &gameboard[down_y][x];
-	if (IS_IN_BOUNDS_V(down_y) && (*bottom).raw == GO_NONE.raw) {
-		(*bottom).id	  = gobj_id.id;
-		(*bottom).updated = 1;
-		(*boardxy).raw	  = GO_NONE.raw;
+	if (IS_IN_BOUNDS_V(down_y) && bottom->raw == GO_NONE.raw) {
+		bottom->id		= gobj_id.id;
+		bottom->updated = 1;
+		boardxy->raw	= GO_NONE.raw;
 		subchunk_set_world(x, down_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -82,8 +82,10 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 	}
 
 	if (left_x != x) {
-		GO_ID *left = &gameboard[y][left_x];
-		SWAP((*left).raw, (*boardxy).raw);
+		GO_ID *left	  = &gameboard[y][left_x];
+		left->id	  = gobj_id.id;
+		left->updated = 1;
+		boardxy->raw  = GO_NONE.raw;
 		subchunk_set_world(left_x, y);
 		subchunk_set_world(x, y);
 		return true;
@@ -92,10 +94,11 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 	/* Probability to mix with other objects */
 	ssize_t left_x2 = x - left_or_right;
 	GO_ID  *left	= &gameboard[y][left_x2];
-	if (left->id != GO_NONE.id && left->updated &&
+	if (left->raw != GO_NONE.raw && left->updated &&
 		(fast_rand() % mixability) == 0 &&
 		GOBJECT(*left).density < gobj.density) {
-		SWAP((*left).raw, (*boardxy).raw);
+		left->updated = 1;
+		SWAP(left->raw, boardxy->raw);
 		subchunk_set_world(left_x2, y);
 		subchunk_set_world(x, y);
 		return true;
@@ -129,8 +132,10 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 	}
 
 	if (right_x != x) {
-		GO_ID *right = &gameboard[y][right_x];
-		SWAP((*right).raw, (*boardxy).raw);
+		GO_ID *right   = &gameboard[y][right_x];
+		right->id	   = gobj_id.id;
+		right->updated = 1;
+		boardxy->raw   = GO_NONE.raw;
 		subchunk_set_world(right_x, y);
 		subchunk_set_world(x, y);
 		return true;
@@ -139,10 +144,11 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 	/* Probability to mix with other objects */
 	ssize_t right_x2 = x + left_or_right;
 	GO_ID  *right	 = &gameboard[y][right_x2];
-	if (right->id != GO_NONE.id && right->updated &&
+	if (right->raw != GO_NONE.raw && right->updated &&
 		(fast_rand() % mixability) == 0 &&
 		GOBJECT(*right).density < gobj.density) {
-		SWAP((*right).raw, (*boardxy).raw);
+		right->updated = 1;
+		SWAP(right->raw, boardxy->raw);
 		subchunk_set_world(right_x2, y);
 		subchunk_set_world(x, y);
 	}
@@ -150,10 +156,12 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 	/* Move bottom-left if possible (or right if ltr is false) */
 	GO_ID *bottomleft = &gameboard[down_y][left_x];
 	if (IS_IN_BOUNDS(left_x, down_y) &&
-		((*bottomleft).raw == GO_NONE.raw ||
+		(bottomleft->raw == GO_NONE.raw ||
 		 ((fast_rand() % mixability) == 0 &&
 		  GOBJECT(*bottomleft).density < gobj.density))) {
-		SWAP((*bottomleft).raw, (*boardxy).raw);
+		if (bottomleft->raw != GO_NONE.raw)
+			bottomleft->updated = 1;
+		SWAP(bottomleft->raw, boardxy->raw);
 		subchunk_set_world(left_x, down_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -162,10 +170,12 @@ static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 	/* Move bottom-right if possible (or left if ltr is false) */
 	GO_ID *bottomright = &gameboard[down_y][right_x];
 	if (IS_IN_BOUNDS(right_x, down_y) &&
-		((*bottomright).raw == GO_NONE.raw ||
+		(bottomright->raw == GO_NONE.raw ||
 		 ((fast_rand() % mixability) == 0 &&
 		  GOBJECT(*bottomright).density < gobj.density))) {
-		SWAP((*bottomright).raw, (*boardxy).raw);
+		if (bottomright->raw != GO_NONE.raw)
+			bottomright->updated = 1;
+		SWAP(bottomright->raw, boardxy->raw);
 		subchunk_set_world(right_x, down_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -179,19 +189,19 @@ static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
 								 const size_t mixability) {
 	ssize_t left_or_right = (ltr ? 1 : -1);
 
-	GO_ID *boardxy	   = &gameboard[y][x];
-	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+	GO_ID *boardxy	 = &gameboard[y][x];
+	boardxy->updated = 1; /* IMPORTANT! Set updated bit */
 
 	GO_ID	   gobj_id = *boardxy;
 	GameObject gobj	   = GOBJECT(gobj_id);
 
 	/* Move down if possible */
 	size_t up_y = y - 1;
-	GO_ID *up	= &gameboard[up_y][x];
-	if (IS_IN_BOUNDS_V(up_y) && (*up).raw == GO_NONE.raw) {
-		(*up).id	   = gobj_id.id;
-		(*up).updated  = 1;
-		(*boardxy).raw = GO_NONE.raw;
+	GO_ID *top	= &gameboard[up_y][x];
+	if (IS_IN_BOUNDS_V(up_y) && top->raw == GO_NONE.raw) {
+		top->id		 = gobj_id.id;
+		top->updated = 1;
+		boardxy->raw = GO_NONE.raw;
 		subchunk_set_world(x, up_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -225,8 +235,10 @@ static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
 	}
 
 	if (left_x != x) {
-		GO_ID *left = &gameboard[y][left_x];
-		SWAP((*left).raw, (*boardxy).raw);
+		GO_ID *left	  = &gameboard[y][left_x];
+		left->id	  = gobj_id.id;
+		left->updated = 1;
+		boardxy->raw  = GO_NONE.raw;
 		subchunk_set_world(left_x, y);
 		subchunk_set_world(x, y);
 		return true;
@@ -235,10 +247,11 @@ static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
 	/* Probability to mix with other objects */
 	ssize_t left_x2 = x - left_or_right;
 	GO_ID  *left	= &gameboard[y][left_x2];
-	if (left->id != GO_NONE.id && left->updated &&
+	if (left->raw != GO_NONE.raw && left->updated &&
 		(fast_rand() % mixability) == 0 &&
 		GOBJECT(*left).density < gobj.density) {
-		SWAP((*left).raw, (*boardxy).raw);
+		left->updated = 1;
+		SWAP(left->raw, boardxy->raw);
 		subchunk_set_world(left_x2, y);
 		subchunk_set_world(x, y);
 		return true;
@@ -272,8 +285,10 @@ static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
 	}
 
 	if (right_x != x) {
-		GO_ID *right = &gameboard[y][right_x];
-		SWAP((*right).raw, (*boardxy).raw);
+		GO_ID *right   = &gameboard[y][right_x];
+		right->id	   = gobj_id.id;
+		right->updated = 1;
+		boardxy->raw   = GO_NONE.raw;
 		subchunk_set_world(right_x, y);
 		subchunk_set_world(x, y);
 		return true;
@@ -282,10 +297,11 @@ static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
 	/* Probability to mix with other objects */
 	ssize_t right_x2 = x + left_or_right;
 	GO_ID  *right	 = &gameboard[y][right_x2];
-	if (right->id != GO_NONE.id && right->updated &&
+	if (right->raw != GO_NONE.raw && right->updated &&
 		(fast_rand() % mixability) == 0 &&
 		GOBJECT(*right).density < gobj.density) {
-		SWAP((*right).raw, (*boardxy).raw);
+		right->updated = 1;
+		SWAP(right->raw, boardxy->raw);
 		subchunk_set_world(right_x2, y);
 		subchunk_set_world(x, y);
 	}
@@ -293,10 +309,12 @@ static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
 	/* Move bottom-left if possible (or right if ltr is false) */
 	GO_ID *topleft = &gameboard[up_y][left_x];
 	if (IS_IN_BOUNDS(left_x, up_y) &&
-		((*topleft).raw == GO_NONE.raw ||
+		(topleft->raw == GO_NONE.raw ||
 		 ((fast_rand() % mixability) == 0 &&
 		  GOBJECT(*topleft).density < gobj.density))) {
-		SWAP((*topleft).raw, (*boardxy).raw);
+		if (topleft->raw != GO_NONE.raw)
+			topleft->updated = 1;
+		SWAP(topleft->raw, boardxy->raw);
 		subchunk_set_world(left_x, up_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -305,10 +323,12 @@ static bool F_dynamic_gas_update(size_t x, size_t y, const bool ltr,
 	/* Move bottom-right if possible (or left if ltr is false) */
 	GO_ID *topright = &gameboard[up_y][right_x];
 	if (IS_IN_BOUNDS(right_x, up_y) &&
-		((*topright).raw == GO_NONE.raw ||
+		(topright->raw == GO_NONE.raw ||
 		 ((fast_rand() % mixability) == 0 &&
 		  GOBJECT(*topright).density < gobj.density))) {
-		SWAP((*topright).raw, (*boardxy).raw);
+		if (topright->raw != GO_NONE.raw)
+			topright->updated = 1;
+		SWAP(topright->raw, boardxy->raw);
 		subchunk_set_world(right_x, up_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -347,8 +367,8 @@ static void F_draw_sand(size_t wx, size_t wy, int vx, int vy) {
 static bool F_update_sand(size_t x, size_t y, const bool ltr) {
 	ssize_t left_or_right = (ltr ? 1 : -1);
 
-	GO_ID *boardxy	   = &gameboard[y][x];
-	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+	GO_ID *boardxy	 = &gameboard[y][x];
+	boardxy->updated = 1; /* IMPORTANT! Set updated bit */
 
 	GO_ID gobj_id = *boardxy;
 
@@ -359,26 +379,26 @@ static bool F_update_sand(size_t x, size_t y, const bool ltr) {
 
 	/* Move down if possible */
 	GO_ID *bottom = &gameboard[down_y][x];
-	if ((*bottom).raw == GO_NONE.raw) {
-		(*bottom).id	  = gobj_id.id;
-		(*bottom).updated = 1;
-		(*boardxy).raw	  = GO_NONE.raw;
+	if (bottom->raw == GO_NONE.raw) {
+		bottom->id		= gobj_id.id;
+		bottom->updated = 1;
+		boardxy->raw	= GO_NONE.raw;
 		subchunk_set_world(x, down_y);
 		subchunk_set_world(x, y);
 		return true;
 	}
 
 	/* 50% chance to stop and don't move, note that this is for sink too */
-	if (FAST_RAND_FLOAT < 0.5f)
+	if ((fast_rand() % 2) == 0)
 		return false;
 
 	/* Move bottom-left if possible (or right if ltr is false) */
 	size_t left_x	  = x - left_or_right;
 	GO_ID *bottomleft = &gameboard[down_y][left_x];
-	if (IS_IN_BOUNDS_H(left_x) && (*bottomleft).raw == GO_NONE.raw) {
-		(*bottomleft).id	  = gobj_id.id;
-		(*bottomleft).updated = 1;
-		(*boardxy).raw		  = GO_NONE.raw;
+	if (IS_IN_BOUNDS_H(left_x) && bottomleft->raw == GO_NONE.raw) {
+		bottomleft->id		= gobj_id.id;
+		bottomleft->updated = 1;
+		boardxy->raw		= GO_NONE.raw;
 		subchunk_set_world(left_x, down_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -387,10 +407,10 @@ static bool F_update_sand(size_t x, size_t y, const bool ltr) {
 	/* Move bottom-right if possible (or left if ltr is false) */
 	size_t right_x	   = x + left_or_right;
 	GO_ID *bottomright = &gameboard[down_y][right_x];
-	if (IS_IN_BOUNDS_H(right_x) && (*bottomright).raw == GO_NONE.raw) {
-		(*bottomright).id	   = gobj_id.id;
-		(*bottomright).updated = 1;
-		(*boardxy).raw		   = GO_NONE.raw;
+	if (IS_IN_BOUNDS_H(right_x) && bottomright->raw == GO_NONE.raw) {
+		bottomright->id		 = gobj_id.id;
+		bottomright->updated = 1;
+		boardxy->raw		 = GO_NONE.raw;
 		subchunk_set_world(right_x, down_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -400,9 +420,8 @@ static bool F_update_sand(size_t x, size_t y, const bool ltr) {
 	GameObject *gobj	  = &GOBJECT(gobj_id);
 	GameObject *go_bottom = &GOBJECT(*bottom);
 	if (GO_IS_FLUID(go_bottom->type) && go_bottom->density < gobj->density) {
-		SWAP((*bottom).raw, (*boardxy).raw);
-		(*bottom).updated  = 1;
-		(*boardxy).updated = 1;
+		bottom->updated = 1;
+		SWAP(bottom->raw, boardxy->raw);
 		subchunk_set_world(x, y);
 		subchunk_set_world(x, down_y);
 		return true;
@@ -442,8 +461,8 @@ static void F_draw_dirt(size_t wx, size_t wy, int vx, int vy) {
 static bool F_update_dirt(size_t x, size_t y, const bool ltr) {
 	ssize_t left_or_right = (ltr ? 1 : -1);
 
-	GO_ID *boardxy	   = &gameboard[y][x];
-	(*boardxy).updated = 1; /* IMPORTANT! Set updated bit */
+	GO_ID *boardxy	 = &gameboard[y][x];
+	boardxy->updated = 1; /* IMPORTANT! Set updated bit */
 
 	GO_ID gobj_id = *boardxy;
 
@@ -454,10 +473,10 @@ static bool F_update_dirt(size_t x, size_t y, const bool ltr) {
 
 	/* Move down if possible */
 	GO_ID *bottom = &gameboard[down_y][x];
-	if ((*bottom).raw == GO_NONE.raw) {
-		(*bottom).id	  = gobj_id.id;
-		(*bottom).updated = 1;
-		(*boardxy).raw	  = GO_NONE.raw;
+	if (bottom->raw == GO_NONE.raw) {
+		bottom->id		= gobj_id.id;
+		bottom->updated = 1;
+		boardxy->raw	= GO_NONE.raw;
 		subchunk_set_world(x, down_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -466,10 +485,10 @@ static bool F_update_dirt(size_t x, size_t y, const bool ltr) {
 	/* Move bottom-left if possible (or right if ltr is false) */
 	size_t left_x	  = x - left_or_right;
 	GO_ID *bottomleft = &gameboard[down_y][left_x];
-	if (IS_IN_BOUNDS_H(left_x) && (*bottomleft).raw == GO_NONE.raw) {
-		(*bottomleft).id	  = gobj_id.id;
-		(*bottomleft).updated = 1;
-		(*boardxy).raw		  = GO_NONE.raw;
+	if (IS_IN_BOUNDS_H(left_x) && bottomleft->raw == GO_NONE.raw) {
+		bottomleft->id		= gobj_id.id;
+		bottomleft->updated = 1;
+		boardxy->raw		= GO_NONE.raw;
 		subchunk_set_world(left_x, down_y);
 		subchunk_set_world(x, y);
 		return true;
@@ -478,26 +497,25 @@ static bool F_update_dirt(size_t x, size_t y, const bool ltr) {
 	/* Move bottom-right if possible (or left if ltr is false) */
 	size_t right_x	   = x + left_or_right;
 	GO_ID *bottomright = &gameboard[down_y][right_x];
-	if (IS_IN_BOUNDS_H(right_x) && (*bottomright).raw == GO_NONE.raw) {
-		(*bottomright).id	   = gobj_id.id;
-		(*bottomright).updated = 1;
-		(*boardxy).raw		   = GO_NONE.raw;
+	if (IS_IN_BOUNDS_H(right_x) && bottomright->raw == GO_NONE.raw) {
+		bottomright->id		 = gobj_id.id;
+		bottomright->updated = 1;
+		boardxy->raw		 = GO_NONE.raw;
 		subchunk_set_world(right_x, down_y);
 		subchunk_set_world(x, y);
 		return true;
 	}
 
 	/* 30% chance to stop and don't sink */
-	if (FAST_RAND_FLOAT < 0.3f)
+	if ((fast_rand() % 3) != 0)
 		return false;
 
 	/* Sink: Flow down in less dense fluids */
 	GameObject *gobj	  = &GOBJECT(gobj_id);
 	GameObject *go_bottom = &GOBJECT(*bottom);
 	if (GO_IS_FLUID(go_bottom->type) && go_bottom->density < gobj->density) {
-		SWAP((*bottom).raw, (*boardxy).raw);
-		(*bottom).updated  = 1;
-		(*boardxy).updated = 1;
+		bottom->updated = 1;
+		SWAP(bottom->raw, boardxy->raw);
 		subchunk_set_world(x, y);
 		subchunk_set_world(x, down_y);
 		return true;
@@ -631,11 +649,11 @@ static bool F_update_acid(size_t x, size_t y, const bool ltr) {
 		if (target->id == GO_NONE.id || target->id == GO_ACID.id)
 			break; /* Move (exit for) */
 
-		(*target).raw = GO_NONE.raw;
+		target->raw = GO_NONE.raw;
 		subchunk_set_world(x + rr, y + ll);
 
 		/* Self destroy */
-		(*boardxy).raw = GO_NONE.raw;
+		boardxy->raw = GO_NONE.raw;
 		subchunk_set_world(x, y);
 		return true;
 	}
