@@ -47,6 +47,7 @@ extern GO_ID GO_SAND;
 extern GO_ID GO_STONE;
 extern GO_ID GO_DIRT;
 extern GO_ID GO_OIL;
+extern GO_ID GO_ACID;
 
 #define GO_NONE		 ((GO_ID){.raw = 0})
 #define GO_FIRST	 ((GO_ID){.raw = 1})

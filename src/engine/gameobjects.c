@@ -14,6 +14,7 @@ GO_ID GO_SAND;
 GO_ID GO_STONE;
 GO_ID GO_DIRT;
 GO_ID GO_OIL;
+GO_ID GO_ACID;
 
 GO_ID register_gameobject(GO_Type type, float density, Color color,
 						  GO_Draw draw, GO_Update update) {
@@ -28,6 +29,7 @@ GO_ID register_gameobject(GO_Type type, float density, Color color,
 }
 
 static Color C_VAPOR = {0x7F, 0xFF, 0xFF, 0x69};
+static Color C_ACID	 = {0x55, 0xFF, 0x55, 0xCD};
 
 static bool F_dynamic_fluid_update(size_t x, size_t y, const bool ltr,
 								   const size_t dispersion,
@@ -604,6 +606,44 @@ static bool F_update_vapor(size_t x, size_t y, const bool ltr) {
 	return F_dynamic_gas_update(x, y, ltr, fast_rand() % 3 + 1, 4);
 }
 
+static bool F_update_acid(size_t x, size_t y, const bool ltr) {
+	const size_t chance_percent = 50;
+
+	/* Probability to eat through */
+	for (;;) {
+		if (fast_rand() % chance_percent != 0)
+			break;
+
+		GO_ID *boardxy = &gameboard[y][x];
+
+		/* Choose random direction to eat */
+		ssize_t ll = 0, rr = 0;
+		while (ll == 0 && rr == 0) {
+			ll = fast_rand() % 3 - 1;
+			rr = fast_rand() % 3 - 1;
+		}
+
+		/* Destroy that direction */
+		if (!IS_IN_BOUNDS(x + rr, y + ll))
+			break;
+
+		GO_ID *target = &gameboard[y + ll][x + rr];
+		if (target->id == GO_NONE.id || target->id == GO_ACID.id)
+			break; /* Move (exit for) */
+
+		(*target).raw = GO_NONE.raw;
+		subchunk_set_world(x + rr, y + ll);
+
+		/* Self destroy */
+		(*boardxy).raw = GO_NONE.raw;
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* If didn't eat, move normally */
+	return F_dynamic_fluid_update(x, y, ltr, fast_rand() % 2 + 1, 2);
+}
+
 void init_gameobjects() {
 	GO_VAPOR = register_gameobject(GO_GAS, 0.0f, C_VAPOR, NULL, F_update_vapor);
 	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, C_WATER, F_draw_water,
@@ -615,5 +655,7 @@ void init_gameobjects() {
 	GO_DIRT = register_gameobject(GO_POWDER, 2.0f, C_DIRT, F_draw_dirt,
 								  F_update_dirt);
 	GO_OIL =
-		register_gameobject(GO_LIQUID, 0.5f, C_OIL, F_draw_oil, F_update_oil);
+		register_gameobject(GO_LIQUID, 0.9f, C_OIL, F_draw_oil, F_update_oil);
+	GO_ACID =
+		register_gameobject(GO_LIQUID, 1.18f, C_ACID, NULL, F_update_acid);
 }
