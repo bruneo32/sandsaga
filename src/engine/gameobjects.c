@@ -15,12 +15,15 @@ GO_ID GO_STONE;
 GO_ID GO_DIRT;
 GO_ID GO_OIL;
 GO_ID GO_ACID;
+GO_ID GO_SMOKE;
+GO_ID GO_FIRE;
 
-GO_ID register_gameobject(GO_Type type, float density, Color color,
-						  GO_Draw draw, GO_Update update) {
+GO_ID register_gameobject(GO_Type type, float density, GO_Flags flags,
+						  Color color, GO_Draw draw, GO_Update update) {
 
 	go_table[go_table_size].type	= type;
 	go_table[go_table_size].density = density;
+	go_table[go_table_size].flags	= flags;
 	go_table[go_table_size].color	= color;
 	go_table[go_table_size].draw	= draw;
 	go_table[go_table_size].update	= update;
@@ -662,18 +665,103 @@ static bool F_update_acid(size_t x, size_t y, const bool ltr) {
 	return F_dynamic_fluid_update(x, y, ltr, fast_rand() % 2 + 1, 2);
 }
 
+static Color C_SMOKE = {0x36, 0x36, 0x36, 0xA0};
+
+static void F_draw_smoke(size_t wx, size_t wy, int vx, int vy) {
+	const size_t seed  = wy - (wx ^ wy);
+	const size_t noise = noise2(wx, wy, seed);
+
+	size_t inc	 = (noise % 32);
+	Color  color = C_SMOKE;
+	color.r -= inc;
+	color.g -= inc;
+	color.b -= inc;
+	color.a += inc;
+
+	vscreen[vscreen_idx(vx, vy)] = color;
+}
+
+static bool F_update_smoke(size_t x, size_t y, const bool ltr) {
+	GO_ID *boardxy	 = &gameboard[y][x];
+	boardxy->updated = 1;
+
+	/* Chance to extinguish */
+	if ((fast_rand() % 1024) == 0) {
+		boardxy->raw = GO_NONE.raw;
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	return F_dynamic_gas_update(x, y, ltr, fast_rand() % 2, 13);
+}
+
+static Color C_FIRE = {255, 90, 0, 255};
+
+static void F_draw_fire(size_t wx, size_t wy, int vx, int vy) {
+	const size_t seed  = frame_cx - (wx ^ wy);
+	const size_t noise = noise2(wx, wy, seed);
+
+	Color color = C_RED;
+
+	color.g = 255 - (noise % 255);
+	color.a = 128 + fast_rand() % 32;
+
+	vscreen[vscreen_idx(vx, vy)] = color;
+}
+
+static bool F_update_fire(size_t x, size_t y, const bool ltr) {
+	GO_ID *boardxy	 = &gameboard[y][x];
+	boardxy->updated = 1;
+
+	/* Chance to smoke */
+	if ((fast_rand() % 64) == 0) {
+		boardxy->id = GO_SMOKE.id;
+		subchunk_set_world(x, y);
+		return true;
+	}
+
+	/* Propagate */
+	size_t xx = x + fast_rand() % 3 - 1;
+	size_t yy = y + fast_rand() % 3 - 1;
+
+	GO_ID *target = &gameboard[yy][xx];
+	if (xx != x && yy != y && (GOBJECT(*target).flags & GO_FLAG_FLAMMABLE)) {
+		target->raw = GO_FIRE.raw;
+		subchunk_set_world(xx, yy);
+		return true;
+	}
+
+	/* Fall and rise */
+	return (fast_rand() % 2)
+			   ? F_dynamic_gas_update(x, y, ltr, fast_rand() % 2, 1)
+			   : F_dynamic_fluid_update(x, y, ltr, fast_rand() % 2, 1);
+}
+
 void init_gameobjects() {
-	GO_VAPOR = register_gameobject(GO_GAS, 0.0f, C_VAPOR, NULL, F_update_vapor);
-	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, C_WATER, F_draw_water,
+	GO_VAPOR =
+		register_gameobject(GO_GAS, 0.0f, 0, C_VAPOR, NULL, F_update_vapor);
+
+	GO_WATER = register_gameobject(GO_LIQUID, 1.0f, 0, C_WATER, F_draw_water,
 								   F_update_water);
-	GO_SAND	 = register_gameobject(GO_POWDER, 2.0f, C_SAND, F_draw_sand,
-								   F_update_sand);
+
+	GO_SAND = register_gameobject(GO_POWDER, 2.0f, 0, C_SAND, F_draw_sand,
+								  F_update_sand);
+
 	GO_STONE =
-		register_gameobject(GO_STATIC, 3.0f, C_STONE, F_draw_stone, NULL);
-	GO_DIRT = register_gameobject(GO_POWDER, 2.0f, C_DIRT, F_draw_dirt,
+		register_gameobject(GO_STATIC, 3.0f, 0, C_STONE, F_draw_stone, NULL);
+
+	GO_DIRT = register_gameobject(GO_POWDER, 2.0f, 0, C_DIRT, F_draw_dirt,
 								  F_update_dirt);
-	GO_OIL =
-		register_gameobject(GO_LIQUID, 0.9f, C_OIL, F_draw_oil, F_update_oil);
+
+	GO_OIL = register_gameobject(GO_LIQUID, 0.9f, GO_FLAG_FLAMMABLE, C_OIL,
+								 F_draw_oil, F_update_oil);
+
 	GO_ACID =
-		register_gameobject(GO_LIQUID, 1.18f, C_ACID, NULL, F_update_acid);
+		register_gameobject(GO_LIQUID, 1.18f, 0, C_ACID, NULL, F_update_acid);
+
+	GO_SMOKE = register_gameobject(GO_GAS, 0.01f, 0, C_SMOKE, F_draw_smoke,
+								   F_update_smoke);
+
+	GO_FIRE = register_gameobject(GO_GAS, 0.01f, 0, C_FIRE, F_draw_fire,
+								  F_update_fire);
 }

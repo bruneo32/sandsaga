@@ -15,6 +15,12 @@ typedef enum GO_Type {
 
 #define GO_IS_FLUID(gtype_) ((gtype_) >= GO_POWDER)
 
+typedef enum GO_Flags {
+	GO_FLAG_NONE	  = 0,
+	GO_FLAG_FLAMMABLE = 1,
+} GO_Flags;
+#define GO_Flags uint8_t
+
 typedef void (*GO_Draw)(size_t wx, size_t wy, int vx, int vy);
 typedef bool (*GO_Update)(size_t x, size_t y, const bool ltr);
 
@@ -30,6 +36,7 @@ typedef union GO_ID {
 typedef struct GameObject {
 	GO_Type	  type;
 	float	  density;
+	GO_Flags  flags;
 	Color	  color;
 	GO_Draw	  draw;
 	GO_Update update;
@@ -48,6 +55,8 @@ extern GO_ID GO_STONE;
 extern GO_ID GO_DIRT;
 extern GO_ID GO_OIL;
 extern GO_ID GO_ACID;
+extern GO_ID GO_SMOKE;
+extern GO_ID GO_FIRE;
 
 #define GO_NONE		 ((GO_ID){.raw = 0})
 #define GO_FIRST	 ((GO_ID){.raw = 1})
@@ -64,8 +73,8 @@ extern GO_ID GO_ACID;
  *
  * \return The id of the gameobject [1-127]. Zero is reserved for GO_NONE
  */
-GO_ID register_gameobject(GO_Type type, float density, Color color,
-						  GO_Draw draw, GO_Update update);
+GO_ID register_gameobject(GO_Type type, float density, GO_Flags flags,
+						  Color color, GO_Draw draw, GO_Update update);
 
 void init_gameobjects();
 
