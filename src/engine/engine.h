@@ -43,6 +43,7 @@ extern subchunk_t subchunkopt[SUBCHUNK_SIZE];
 
 typedef struct _SoilData {
 	b2Body *body;
+	b2Body *bouyant;
 } SoilData;
 extern SoilData soil_body[SUBCHUNK_SIZE][SUBCHUNK_SIZE];
 
@@ -139,10 +140,13 @@ void deactivate_soil(size_t si, size_t sj);
 		}                                                                      \
 	}
 #define recalculate_soil(_si, _sj)                                             \
-	if (soil_body[_sj][_si].body != NULL) {                                    \
-		deactivate_soil(_si, _sj);                                             \
-		activate_soil(_si, _sj);                                               \
-	}
+	({                                                                         \
+		if (soil_body[_sj][_si].body != NULL ||                                \
+			soil_body[_sj][_si].bouyant != NULL) {                             \
+			deactivate_soil(_si, _sj);                                         \
+			activate_soil(_si, _sj);                                           \
+		}                                                                      \
+	})
 #define recalculate_soil_world(_x, _y)                                         \
 	recalculate_soil((_x) / SUBCHUNK_WIDTH, (_y) / SUBCHUNK_HEIGHT);
 

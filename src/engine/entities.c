@@ -101,17 +101,17 @@ void create_player_body(Player *player) {
 	box2d_body_create_fixture(
 		player->body,
 		box2d_shape_box(player_width_div4_u, player_hd2_m_wd4m1_u, 0, 0),
-		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f);
+		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f, false, 0);
 
 	box2d_body_create_fixture(
 		player->body,
 		box2d_shape_circle(player_width_div4_u, 0, player_hd2_m_wd4m1_u),
-		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f);
+		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f, false, 0);
 
 	box2d_body_create_fixture(
 		player->body,
 		box2d_shape_circle(player_width_div4_u, 0, player_mhd2_p_wd4m1_u),
-		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f);
+		PLAYER_DENSITY, PLAYER_FRICTION, 0.0f, false, 0);
 
 	player->animation = &anim_player_idle;
 }

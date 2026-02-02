@@ -448,18 +448,27 @@ static bool F_IS_FLOOR(ssize_t x, ssize_t y) {
 			(&GOBJECT(gameboard[y][x]))->type == GO_POWDER);
 }
 
-void deactivate_soil(size_t si, size_t sj) {
-	/* Check if soil is invalid */
-	if ((((size_t)soil_body[sj][si].body) & 0x0000FFFFFFFFFFFF) == 0)
-		return;
+static bool F_IS_BUOYANT(ssize_t x, ssize_t y) {
+	return gameboard[y][x].raw != GO_NONE.raw &&
+		   (&GOBJECT(gameboard[y][x]))->type == GO_LIQUID;
+}
 
-	box2d_body_destroy(soil_body[sj][si].body);
-	soil_body[sj][si].body = NULL;
+void deactivate_soil(size_t si, size_t sj) {
+	SoilData soil = soil_body[sj][si];
+	/* Check if soil is invalid */
+	if (((uintptr_t)soil.body & 0x0000FFFFFFFFFFFF) != 0) {
+		box2d_body_destroy(soil_body[sj][si].body);
+		soil_body[sj][si].body = NULL;
+	}
+
+	if (((uintptr_t)soil.bouyant & 0x0000FFFFFFFFFFFF) != 0) {
+		box2d_body_destroy(soil_body[sj][si].bouyant);
+		soil_body[sj][si].bouyant = NULL;
+	}
 }
 
 void activate_soil(size_t si, size_t sj) {
-	if (soil_body[sj][si].body != NULL)
-		return;
+	CList *polygons;
 
 	const size_t start_i = clamp(si * SUBCHUNK_WIDTH, 0, VSCREEN_WIDTH);
 	const size_t start_j = clamp(sj * SUBCHUNK_HEIGHT, 0, VSCREEN_HEIGHT);
@@ -469,38 +478,86 @@ void activate_soil(size_t si, size_t sj) {
 	const size_t end_j =
 		clamp(start_j + SUBCHUNK_HEIGHT + 1, 0, VSCREEN_HEIGHT);
 
-	CList *polygons =
-		polygonlist_from_contour(start_i, end_i, start_j, end_j, F_IS_FLOOR);
+	/* Static floor */
+	if (!soil_body[sj][si].body) {
+		polygons = polygonlist_from_contour(start_i, end_i, start_j, end_j,
+											F_IS_FLOOR);
 
-	if (polygons != NULL && polygons->count > 0) {
-		b2Body *body = box2d_body_create(
-			b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
-			X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0), b2_staticBody, true, true);
+		if (polygons != NULL && polygons->count > 0) {
+			b2Body *body = box2d_body_create(
+				b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
+				X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0), b2_staticBody, true,
+				true);
 
-		for (size_t i = 0; i < polygons->count; ++i) {
-			PointList *mesh = (PointList *)polygons->data[i];
-			if (!mesh || mesh->count == 0 || !mesh->points)
-				continue;
+			for (size_t i = 0; i < polygons->count; ++i) {
+				PointList *mesh = (PointList *)polygons->data[i];
+				if (!mesh || mesh->count == 0 || !mesh->points)
+					continue;
 
-			/* Center pointlist to the center of the subchunk */
-			double cx = X_TO_U(SUBCHUNK_WIDTH / 2.0);
-			double cy = X_TO_U(SUBCHUNK_HEIGHT / 2.0);
-			center_pointlist(mesh, cx, cy);
+				/* Center pointlist to the center of the subchunk */
+				double cx = X_TO_U(SUBCHUNK_WIDTH / 2.0);
+				double cy = X_TO_U(SUBCHUNK_HEIGHT / 2.0);
+				center_pointlist(mesh, cx, cy);
 
-			b2ChainShape *loopchain =
-				box2d_shape_loop(mesh->points, mesh->count);
+				b2ChainShape *loopchain =
+					box2d_shape_loop(mesh->points, mesh->count);
 
-			if (loopchain)
-				box2d_body_create_fixture(body, (b2Shape *)loopchain, 5.0f,
-										  0.8f, 0.0f);
+				if (loopchain)
+					box2d_body_create_fixture(body, (b2Shape *)loopchain, 5.0f,
+											  0.8f, 0.0f, false, 0);
 
-			free(mesh->points);
-			free(mesh);
+				free(mesh->points);
+				free(mesh);
+			}
+
+			free(polygons->data);
+			free(polygons);
+
+			soil_body[sj][si].body = body;
 		}
+	}
 
-		free(polygons->data);
-		free(polygons);
+	/* Fluid buoyant area */
+	if (!soil_body[sj][si].bouyant) {
+		polygons = polygonlist_from_contour(start_i, end_i, start_j, end_j,
+											F_IS_BUOYANT);
 
-		soil_body[sj][si].body = body;
+		if (polygons != NULL && polygons->count > 0) {
+			b2Body *bouyant = box2d_body_create(
+				b2_world, X_TO_U(start_i + SUBCHUNK_WIDTH / 2.0),
+				X_TO_U(start_j + SUBCHUNK_HEIGHT / 2.0), b2_staticBody, true,
+				true);
+
+			for (size_t i = 0; i < polygons->count; ++i) {
+				PointList *mesh = (PointList *)polygons->data[i];
+				if (!mesh || mesh->count == 0 || !mesh->points)
+					continue;
+
+				/* Center pointlist to the center of the subchunk */
+				double cx = X_TO_U(SUBCHUNK_WIDTH / 2.0);
+				double cy = X_TO_U(SUBCHUNK_HEIGHT / 2.0);
+				center_pointlist(mesh, cx, cy);
+
+				b2ChainShape *loopchain =
+					box2d_shape_loop(mesh->points, mesh->count);
+
+				if (loopchain) {
+					FixtureData *data = malloc(sizeof(FixtureData));
+					data->id		  = SENSOR_BOUYANCY;
+
+					box2d_body_create_fixture(bouyant, (b2Shape *)loopchain,
+											  1.2f, 0.0f, 0.0f, true,
+											  (uintptr_t)data);
+				}
+
+				free(mesh->points);
+				free(mesh);
+			}
+
+			free(polygons->data);
+			free(polygons);
+
+			soil_body[sj][si].bouyant = bouyant;
+		}
 	}
 }

@@ -187,7 +187,8 @@ int main(int argc, char *argv[]) {
 	/* Initialize soil */
 	for (uint_fast8_t __j = 0; __j < SUBCHUNK_SIZE; ++__j) {
 		for (uint_fast8_t __i = 0; __i < SUBCHUNK_SIZE; ++__i) {
-			soil_body[__j][__i].body = NULL;
+			soil_body[__j][__i].body	= NULL;
+			soil_body[__j][__i].bouyant = NULL;
 		}
 	}
 

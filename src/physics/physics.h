@@ -62,26 +62,40 @@ enum {
 #define B2_IS_IN_BOUNDS(_u, _v)                                                \
 	((_u) >= 0 && (_v) >= 0 && (_u) < B2_WORLD_WIDTH && (_v) < B2_WORLD_HEIGHT)
 
-typedef struct _Point2D {
+typedef struct Point2D {
 	double x;
 	double y;
 } Point2D;
 
-typedef struct _PointList {
+typedef struct PointList {
 	size_t	 count;
 	Point2D *points;
 } PointList;
 
-typedef struct _Triangle {
+typedef struct Triangle {
 	Point2D p1;
 	Point2D p2;
 	Point2D p3;
 } Triangle;
 
-typedef struct _TriangleMesh {
+typedef struct TriangleMesh {
 	size_t	  count;
 	Triangle *triangles;
 } TriangleMesh;
+
+enum SensorType {
+	SENSOR_BOUYANCY = 1,
+};
+
+/* == Fixture Data structures == */
+typedef struct FixtureData {
+	byte id;
+} FixtureData;
+
+typedef struct BuoyancyData {
+	byte  id; /* Sensor ID : SENSOR_BOUYANCY */
+	float density;
+} BuoyancyData;
 
 /* =============================================================== */
 /* Box2D World functions */
@@ -119,7 +133,8 @@ b2PolygonShape *box2d_triangle(Point2D p1, Point2D p2, Point2D p3);
 b2ChainShape   *box2d_shape_loop(Point2D *points, unsigned int count);
 b2Fixture	   *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
 										  float density, float friction,
-										  float restitution);
+										  float restitution, bool isSensor,
+										  uintptr_t user_data_ptr);
 
 /* Box2D Raycasts */
 typedef struct _RaycastData {

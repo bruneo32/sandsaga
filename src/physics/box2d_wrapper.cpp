@@ -1,12 +1,21 @@
 #include "../graphics/graphics.h"
 #include "physics.h"
 #include <iostream>
+#include <set>
 #include <unordered_set>
 #include <vector>
 
 /* =============================================================== */
 /* Debug draw for b2World */
-Rect *renderCamera;
+Rect  *renderCamera;
+b2Vec2 gravity;
+
+using FixturePair = std::pair<b2Fixture *, b2Fixture *>;
+
+std::unordered_set<b2Body *> bodiesMarkedToDestroy;
+std::set<FixturePair>		 buoyantBodies;
+
+static void cleanup_body(b2Body *body);
 
 class DebugDraw : public b2Draw {
   public:
@@ -78,15 +87,89 @@ class DebugDraw : public b2Draw {
 		Render_Pixel((int)U_TO_X(p.x), (int)U_TO_X(p.y));
 	}
 };
-DebugDraw debug_draw;
 
-std::unordered_set<b2Body *> bodiesMarkedToDestroy;
+class SensorDispatcher : public b2ContactListener {
+  public:
+	void BeginContact(b2Contact *contact) override {
+		b2Fixture *self = contact->GetFixtureA();
+
+		FixtureData *fd = (FixtureData *)(self->GetUserData().pointer);
+		if (!fd)
+			return;
+
+		b2Fixture *other = contact->GetFixtureB();
+		if (other->GetBody()->GetType() != b2_dynamicBody)
+			return;
+
+		/* Dispatch based on your chosen scheme */
+		switch (fd->id) {
+		case SENSOR_BOUYANCY:
+			buoyantBodies.emplace(self, other);
+			break;
+		}
+	}
+
+	void EndContact(b2Contact *contact) override {
+		b2Fixture *self = contact->GetFixtureA();
+
+		FixtureData *fd = (FixtureData *)(self->GetUserData().pointer);
+		if (!fd)
+			return;
+
+		b2Fixture *other = contact->GetFixtureB();
+		if (other->GetBody()->GetType() != b2_dynamicBody)
+			return;
+
+		/* Dispatch based on your chosen scheme */
+		switch (fd->id) {
+		case SENSOR_BOUYANCY:
+			buoyantBodies.erase({self, other});
+			break;
+		}
+	}
+};
+
+DebugDraw		 debug_draw;
+SensorDispatcher contact_dispatcher;
+
+/* =============================================================== */
+/* == Helper functions == */
+static inline void cleanup_body(b2Body *body) {
+	/* Destroy fixtures data */
+	for (b2Fixture *fixture = body->GetFixtureList(); fixture != NULL;
+		 fixture			= fixture->GetNext()) {
+		void *data = (void *)fixture->GetUserData().pointer;
+		if (data)
+			free(data);
+	}
+
+	/* Free body data */
+	void *data = (void *)body->GetUserData().pointer;
+	if (data)
+		free(data);
+}
+
+static inline void applyBuoyancy(FixturePair fp) {
+	b2Fixture *f_fluid = fp.first;
+	b2Fixture *f_body  = fp.second;
+
+	b2Body *body = f_body->GetBody();
+
+	const float mass = body->GetMass();
+
+	const float density = f_fluid->GetDensity();
+
+	b2Vec2 F(0, -gravity.y * density * mass);
+	body->ApplyForceToCenter(F, true);
+}
 
 /* =============================================================== */
 /* Box2D World functions */
 b2World *box2d_world_create(float gravity_x, float gravity_y) {
-	b2World *world = new b2World(b2Vec2(gravity_x, gravity_y));
+	gravity		   = b2Vec2(gravity_x, gravity_y);
+	b2World *world = new b2World(gravity);
 	world->SetDebugDraw(&debug_draw);
+	world->SetContactListener(&contact_dispatcher);
 	return world;
 }
 
@@ -94,14 +177,45 @@ void box2d_world_step(b2World *world, float timeStep, int velocityIterations,
 					  int positionIterations) {
 	world->Step(timeStep, velocityIterations, positionIterations);
 
-	/* After stepping, you should clear any forces you have applied to your
-	 * bodies. This lets you take multiple sub-steps with the same force
-	 * field. */
-	world->ClearForces();
-
 	if (!world->IsLocked()) {
+		/* After stepping, you should clear any forces you have applied to your
+		 * bodies. This lets you take multiple sub-steps with the same force
+		 * field. */
+		world->ClearForces();
+
+		/* Buoyant bodies */
+		for (auto it = buoyantBodies.begin(); it != buoyantBodies.end();) {
+			const FixturePair &fp = *it;
+
+			if (!fp.first || !fp.second || !fp.first->GetBody() ||
+				!fp.second->GetBody() ||
+				bodiesMarkedToDestroy.find(fp.first->GetBody()) !=
+					bodiesMarkedToDestroy.end() ||
+				bodiesMarkedToDestroy.find(fp.second->GetBody()) !=
+					bodiesMarkedToDestroy.end()) {
+				it = buoyantBodies.erase(it);
+				continue;
+			}
+
+			/* Check if they are not in contact anymore (if EndContact missed)
+			 */
+			bool stillOverlapping =
+				b2TestOverlap(fp.first->GetShape(), 0, fp.second->GetShape(), 0,
+							  fp.first->GetBody()->GetTransform(),
+							  fp.second->GetBody()->GetTransform());
+			if (!stillOverlapping) {
+				it = buoyantBodies.erase(it);
+				continue;
+			}
+
+			applyBuoyancy(fp);
+
+			++it;
+		}
+
 		/* Remove marked bodies */
 		for (b2Body *body : bodiesMarkedToDestroy) {
+			cleanup_body(body);
 			world->DestroyBody(body);
 			bodiesMarkedToDestroy.extract(body);
 		}
@@ -110,8 +224,10 @@ void box2d_world_step(b2World *world, float timeStep, int velocityIterations,
 		for (b2Body *body = world->GetBodyList(); body != NULL;
 			 body		  = body->GetNext()) {
 			b2Vec2 pos = body->GetPosition();
-			if (!B2_IS_IN_BOUNDS(pos.x, pos.y))
+			if (!B2_IS_IN_BOUNDS(pos.x, pos.y)) {
+				cleanup_body(body);
 				world->DestroyBody(body);
+			}
 		}
 	}
 }
@@ -230,6 +346,7 @@ void box2d_body_destroy(b2Body *body) {
 		return;
 
 	if (!world->IsLocked()) {
+		cleanup_body(body);
 		world->DestroyBody(body);
 	} else {
 		bodiesMarkedToDestroy.insert(body);
@@ -303,12 +420,18 @@ b2ChainShape *box2d_shape_loop(Point2D *points, unsigned int count) {
 
 b2Fixture *box2d_body_create_fixture(b2Body *body, b2Shape *shape,
 									 float density, float friction,
-									 float restitution) {
+									 float restitution, bool isSensor,
+									 uintptr_t user_data_ptr) {
 	b2FixtureDef *fixture = new b2FixtureDef;
-	fixture->shape		  = shape;
-	fixture->density	  = density;
-	fixture->friction	  = friction;
-	fixture->restitution  = restitution;
+
+	fixture->shape		 = shape;
+	fixture->density	 = density;
+	fixture->friction	 = friction;
+	fixture->restitution = restitution;
+	fixture->isSensor	 = isSensor;
+
+	fixture->userData.pointer = (uintptr_t)user_data_ptr;
+
 	return body->CreateFixture(fixture);
 }
 
